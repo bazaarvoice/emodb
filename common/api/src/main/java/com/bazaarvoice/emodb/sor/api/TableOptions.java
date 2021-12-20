@@ -8,14 +8,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public final class TableOptions {
     private final String _placement;
     private final List<FacadeOptions> _facades;
 
     TableOptions(@JsonProperty("placement") String placement, @JsonProperty("facades") List<FacadeOptions> facadeOptions) {
-        _placement = checkNotNull(placement, "Table option is required: placement");
+        _placement = requireNonNull(placement, "Table option is required: placement");
         _facades = Optional.ofNullable(facadeOptions).orElse(Collections.emptyList());
     }
 

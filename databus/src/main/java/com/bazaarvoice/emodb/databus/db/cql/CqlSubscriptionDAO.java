@@ -27,7 +27,7 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.insertInto;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.ttl;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class CqlSubscriptionDAO implements SubscriptionDAO {
 
@@ -44,8 +44,8 @@ public class CqlSubscriptionDAO implements SubscriptionDAO {
 
     @Inject
     public CqlSubscriptionDAO(CassandraKeyspace keyspace, Clock clock) {
-        _keyspace = checkNotNull(keyspace, "keyspace");
-        _clock = checkNotNull(clock, "clock");
+        _keyspace = requireNonNull(keyspace, "keyspace");
+        _clock = requireNonNull(clock, "clock");
     }
 
     @Timed(name = "bv.emodb.databus.CqlSubscriptionDAO.insertSubscription", absolute = true)
@@ -114,9 +114,9 @@ public class CqlSubscriptionDAO implements SubscriptionDAO {
     private OwnedSubscription rowToOwnedSubscription(Row row) {
         String name = row.getString(0);
         Map<?, ?> json = JsonHelper.fromJson(row.getString(1), Map.class);
-        Condition tableFilter = Conditions.fromString((String) checkNotNull(json.get("filter"), "filter"));
-        Date expiresAt = new Date(((Number) checkNotNull(json.get("expiresAt"), "expiresAt")).longValue());
-        Duration eventTtl = Duration.ofSeconds(((Number) checkNotNull(json.get("eventTtl"), "eventTtl")).intValue());
+        Condition tableFilter = Conditions.fromString((String) requireNonNull(json.get("filter"), "filter"));
+        Date expiresAt = new Date(((Number) requireNonNull(json.get("expiresAt"), "expiresAt")).longValue());
+        Duration eventTtl = Duration.ofSeconds(((Number) requireNonNull(json.get("eventTtl"), "eventTtl")).intValue());
         // TODO:  Once API keys are fully integrated enforce non-null
         String ownerId = (String) json.get("ownerId");
         return new DefaultOwnedSubscription(name, tableFilter, expiresAt, eventTtl, ownerId);

@@ -34,7 +34,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A back door into the raw event stream behind the Databus, for debugging.  This is intended for internal use only
@@ -70,7 +70,7 @@ public class RawDatabusResource1 {
     private final DatabusEventStore _eventStore;
 
     public RawDatabusResource1(DatabusEventStore eventStore) {
-        _eventStore = checkNotNull(eventStore, "eventStore");
+        _eventStore = requireNonNull(eventStore, "eventStore");
     }
 
     @POST

@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class MapDeltaImpl extends AbstractDelta implements MapDelta {
 
@@ -24,7 +24,7 @@ public class MapDeltaImpl extends AbstractDelta implements MapDelta {
 
     public MapDeltaImpl(boolean removeRest, Map<String, Delta> entries, boolean deleteIfEmpty) {
         _removeRest = removeRest;
-        _entries = checkNotNull(entries, "entries");
+        _entries = requireNonNull(entries, "entries");
         _deleteIfEmpty = deleteIfEmpty;
         _constant = computeConstant();
     }

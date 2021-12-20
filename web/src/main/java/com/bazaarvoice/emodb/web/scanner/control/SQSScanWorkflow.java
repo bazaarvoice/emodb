@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Implementation of ScanWorkflow that uses Amazon SQS queues as the backing mechanism.  There are two queues used:
@@ -46,9 +46,9 @@ public class SQSScanWorkflow implements ScanWorkflow {
     private final LoadingCache<String, String> _queueUrls;
 
     public SQSScanWorkflow(AmazonSQS sqs, String pendingScanRangeQueue, String completeScanRangeQueue) {
-        _sqs = checkNotNull(sqs, "amazonSQS");
-        _pendingScanRangeQueue = checkNotNull(pendingScanRangeQueue, "pendingScanRangeQueue");
-        _completeScanRangeQueue = checkNotNull(completeScanRangeQueue, "completeScanRangeQueue");
+        _sqs = requireNonNull(sqs, "amazonSQS");
+        _pendingScanRangeQueue = requireNonNull(pendingScanRangeQueue, "pendingScanRangeQueue");
+        _completeScanRangeQueue = requireNonNull(completeScanRangeQueue, "completeScanRangeQueue");
         _queueUrls = CacheBuilder.newBuilder()
                 .build(new CacheLoader<String, String>() {
                     @Override
@@ -80,7 +80,7 @@ public class SQSScanWorkflow implements ScanWorkflow {
 
     @Override
     public void scanStatusUpdated(String scanId) {
-        checkNotNull(scanId, "scanId");
+        requireNonNull(scanId, "scanId");
         // Send a scan range complete message.  This forces the monitor to looks for available scan ranges.
         signalScanRangeComplete(scanId);
     }

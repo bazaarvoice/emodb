@@ -5,7 +5,7 @@ import com.google.common.base.Optional;
 
 import java.util.EventObject;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class InvalidationEvent extends EventObject {
     private final String _cache;
@@ -22,9 +22,9 @@ public class InvalidationEvent extends EventObject {
 
     private InvalidationEvent(Object source, String cache, InvalidationScope scope, Optional<Iterable<String>> keys) {
         super(source);
-        _cache = checkNotNull(cache, "cache");
-        _scope = checkNotNull(scope, "scope");
-        _keys = checkNotNull(keys, "keys");
+        _cache = requireNonNull(cache, "cache");
+        _scope = requireNonNull(scope, "scope");
+        _keys = requireNonNull(keys, "keys");
     }
 
     public String getCache() {

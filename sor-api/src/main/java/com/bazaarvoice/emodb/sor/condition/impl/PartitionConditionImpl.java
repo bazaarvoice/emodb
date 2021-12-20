@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class PartitionConditionImpl extends AbstractCondition implements PartitionCondition {
 
@@ -31,7 +31,7 @@ public class PartitionConditionImpl extends AbstractCondition implements Partiti
 
     public PartitionConditionImpl(int numPartitions, Condition condition) {
         _numPartitions = numPartitions;
-        _condition = checkNotNull(condition, "condition");
+        _condition = requireNonNull(condition, "condition");
         checkArgument(numPartitions > 0, "Number of partitions must be at least 1");
         // Validate the condition
         condition.visit(new PartitionConditionValidationVisitor(), null);

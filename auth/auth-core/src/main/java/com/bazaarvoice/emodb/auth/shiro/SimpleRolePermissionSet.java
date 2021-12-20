@@ -5,7 +5,7 @@ import org.apache.shiro.authz.Permission;
 
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Trivial implementation of {@link RolePermissionSet} using a Set.
@@ -15,7 +15,7 @@ public class SimpleRolePermissionSet implements RolePermissionSet {
     private Set<Permission> _permissions;
 
     public SimpleRolePermissionSet(Set<Permission> permissions) {
-        _permissions = checkNotNull(permissions, "permissions");
+        _permissions = requireNonNull(permissions, "permissions");
     }
 
     public Set<Permission> permissions() {

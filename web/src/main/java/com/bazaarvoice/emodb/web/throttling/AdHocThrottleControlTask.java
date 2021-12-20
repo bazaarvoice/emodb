@@ -13,7 +13,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Dropwizard task to add and update ad-hoc throttling by API endpoint.  A few caveats:
@@ -50,7 +50,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  *     # Clear all throttled endpoints
  *     curl -s -XPOST 'localhost:8081/tasks/adhoc-throttle?clear'
  * </pre>
- *
+ * <p>
  * Note that setting the limit to 0 effectively blocks all access to the throttled endpoint.
  */
 public class AdHocThrottleControlTask extends Task {
@@ -64,7 +64,7 @@ public class AdHocThrottleControlTask extends Task {
     public AdHocThrottleControlTask(TaskRegistry taskRegistry,
                                     AdHocThrottleManager throttleManager) {
         super("adhoc-throttle");
-        _throttleManager = checkNotNull(throttleManager, "throttleManager");
+        _throttleManager = requireNonNull(throttleManager, "throttleManager");
         taskRegistry.addTask(this);
     }
 
@@ -91,7 +91,7 @@ public class AdHocThrottleControlTask extends Task {
         }
 
         if (parameters.keySet().contains(Action.remove.toString())) {
-            for (String path: parameters.get(Action.remove.toString())) {
+            for (String path : parameters.get(Action.remove.toString())) {
                 _throttleManager.removeThrottle(new AdHocThrottleEndpoint(method, path));
                 out.printf("Endpoint throttle removed: %s %s\n", method, path);
             }

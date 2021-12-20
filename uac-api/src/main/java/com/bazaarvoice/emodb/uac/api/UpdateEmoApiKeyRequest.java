@@ -16,7 +16,7 @@ import java.io.IOException;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Request object for updating an existing API key.  The request can update the key's owner, description, roles
@@ -100,7 +100,7 @@ public class UpdateEmoApiKeyRequest extends UserAccessControlRequest {
     }
 
     public UpdateEmoApiKeyRequest assignRoles(Set<EmoRoleKey> addedRoles) {
-        checkNotNull(addedRoles, "roles");
+        requireNonNull(addedRoles, "roles");
         checkArgument(Sets.intersection(addedRoles, _unassignedRoles).isEmpty(),
                 "Cannot both assign and unassign the same role");
         _assignedRoles.addAll(addedRoles);
@@ -118,7 +118,7 @@ public class UpdateEmoApiKeyRequest extends UserAccessControlRequest {
     }
 
     public UpdateEmoApiKeyRequest unassignRoles(Set<EmoRoleKey> unassignedRoles) {
-        checkNotNull(unassignedRoles, "roles");
+        requireNonNull(unassignedRoles, "roles");
         checkArgument(Sets.intersection(unassignedRoles, _assignedRoles).isEmpty(),
                 "Cannot both assign and unassign the same role");
         _unassignedRoles.addAll(unassignedRoles);

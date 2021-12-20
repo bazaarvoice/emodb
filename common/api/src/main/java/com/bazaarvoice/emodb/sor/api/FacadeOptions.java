@@ -4,13 +4,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public final class FacadeOptions {
     private final String _placement;
 
     public FacadeOptions(@JsonProperty ("placement") String placement) {
-        _placement = checkNotNull(placement, "Facade option is required: placement");
+        _placement = requireNonNull(placement, "Facade option is required: placement");
     }
 
     /**

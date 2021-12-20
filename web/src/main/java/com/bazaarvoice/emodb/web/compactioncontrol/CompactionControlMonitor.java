@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A service that checks the stash times, updates the metrics and deletes the expired entries.
@@ -34,9 +34,9 @@ class CompactionControlMonitor extends AbstractScheduledService {
     private volatile long _lag;
 
     CompactionControlMonitor(CompactionControlSource compactionControlSource, Clock clock, MetricRegistry metricRegistry) {
-        _compactionControlSource = checkNotNull(compactionControlSource, "compactionControlSource");
-        _clock = checkNotNull(clock, "clock");
-        _metricRegistry = checkNotNull(metricRegistry, "metricRegistry");
+        _compactionControlSource = requireNonNull(compactionControlSource, "compactionControlSource");
+        _clock = requireNonNull(clock, "clock");
+        _metricRegistry = requireNonNull(metricRegistry, "metricRegistry");
     }
 
     @Override

@@ -8,7 +8,6 @@ import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
 import com.bazaarvoice.emodb.sor.condition.ConstantCondition;
 import com.bazaarvoice.emodb.sor.condition.ContainsCondition;
-import com.bazaarvoice.emodb.sor.condition.PartitionCondition;
 import com.bazaarvoice.emodb.sor.condition.EqualCondition;
 import com.bazaarvoice.emodb.sor.condition.InCondition;
 import com.bazaarvoice.emodb.sor.condition.IntrinsicCondition;
@@ -17,6 +16,7 @@ import com.bazaarvoice.emodb.sor.condition.LikeCondition;
 import com.bazaarvoice.emodb.sor.condition.MapCondition;
 import com.bazaarvoice.emodb.sor.condition.NotCondition;
 import com.bazaarvoice.emodb.sor.condition.OrCondition;
+import com.bazaarvoice.emodb.sor.condition.PartitionCondition;
 import com.bazaarvoice.emodb.sor.condition.State;
 import com.bazaarvoice.emodb.sor.delta.eval.DeltaEvaluator;
 import com.bazaarvoice.emodb.sor.delta.eval.Intrinsics;
@@ -33,7 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class ConditionEvaluator implements ConditionVisitor<Object, Boolean> {
 
@@ -68,7 +68,7 @@ public class ConditionEvaluator implements ConditionVisitor<Object, Boolean> {
     }
 
     private Object getIntrinsicValue(String name) {
-        Intrinsics intrinsics = checkNotNull(_intrinsics, "May not reference intrinsic values from this context.");
+        Intrinsics intrinsics = requireNonNull(_intrinsics, "May not reference intrinsic values from this context.");
         if (Intrinsic.ID.equals(name)) {
             return intrinsics.getId();
         } else if (Intrinsic.TABLE.equals(name)) {
@@ -264,7 +264,7 @@ public class ConditionEvaluator implements ConditionVisitor<Object, Boolean> {
     @Nullable
     @Override
     public Boolean visit(PartitionCondition condition, @Nullable Object ignore) {
-        checkNotNull(_intrinsics, "May not reference intrinsic values from this context.");
+        requireNonNull(_intrinsics, "May not reference intrinsic values from this context.");
         int modulo = Math.abs(
                 Hashing.murmur3_32().newHasher()
                     .putString(_intrinsics.getTable(), Charsets.UTF_8)

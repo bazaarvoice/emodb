@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The {@link EventStore} used by the {@link @Databus}.
@@ -40,9 +40,9 @@ public class DatabusEventStore implements BaseEventStore {
     @Inject
     public DatabusEventStore(EventStore eventStore, DedupEventStore dedupEventStore,
                              @DedupEnabled Supplier<Boolean> dedupEnabled) {
-        _eventStore = checkNotNull(eventStore, "eventStore");
-        _dedupEventStore = checkNotNull(dedupEventStore, "dedupEventStore");
-        _dedupEnabled = checkNotNull(dedupEnabled, "dedupEnabled");
+        _eventStore = requireNonNull(eventStore, "eventStore");
+        _dedupEventStore = requireNonNull(dedupEventStore, "dedupEventStore");
+        _dedupEnabled = requireNonNull(dedupEnabled, "dedupEnabled");
     }
 
     private BaseEventStore select(String subscription) {

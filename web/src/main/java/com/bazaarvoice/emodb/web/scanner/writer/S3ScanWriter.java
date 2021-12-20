@@ -41,7 +41,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * ScanWriter implementation which uploads files to S3.
@@ -63,11 +63,11 @@ public class S3ScanWriter extends TemporaryFileScanWriter {
                         @ScanUploadService ScheduledExecutorService uploadService, ObjectMapper objectMapper) {
         super("s3", taskId, baseUri, Compression.GZIP, metricRegistry, maxOpenShards, objectMapper);
 
-        checkNotNull(amazonS3Provider, "amazonS3Provider is required");
+        requireNonNull(amazonS3Provider, "amazonS3Provider is required");
         String bucket = baseUri.getHost();
         checkArgument(!Strings.isNullOrEmpty(bucket), "bucket is required");
         _amazonS3 = amazonS3Provider.getS3ClientForBucket(bucket);
-        _uploadService = checkNotNull(uploadService, "uploadService is required");
+        _uploadService = requireNonNull(uploadService, "uploadService is required");
     }
 
     public void setRetryDelay(Duration retryDelay) {

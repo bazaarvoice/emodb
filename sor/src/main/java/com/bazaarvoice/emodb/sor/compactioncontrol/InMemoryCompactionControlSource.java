@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /* For Testing Purpose only */
 public class InMemoryCompactionControlSource implements CompactionControlSource {
@@ -24,9 +24,9 @@ public class InMemoryCompactionControlSource implements CompactionControlSource 
 
     @Override
     public void updateStashTime(String id, long timestamp, List<String> placements, long expiredTimestamp, String dataCenter) {
-        checkNotNull(id, "id");
-        checkNotNull(placements, "placements");
-        checkNotNull(dataCenter, "dataCenter");
+        requireNonNull(id, "id");
+        requireNonNull(placements, "placements");
+        requireNonNull(dataCenter, "dataCenter");
 
         try {
             _stashStartTimestampInfo.put(zkKey(id, dataCenter), new StashRunTimeInfo(timestamp, placements, dataCenter, expiredTimestamp));
@@ -38,7 +38,7 @@ public class InMemoryCompactionControlSource implements CompactionControlSource 
 
     @Override
     public void deleteStashTime(String id, String dataCenter) {
-        checkNotNull(id, "id");
+        requireNonNull(id, "id");
 
         try {
             _stashStartTimestampInfo.remove(zkKey(id, dataCenter));
@@ -50,7 +50,7 @@ public class InMemoryCompactionControlSource implements CompactionControlSource 
 
     @Override
     public StashRunTimeInfo getStashTime(String id, String dataCenter) {
-        checkNotNull(id, "id");
+        requireNonNull(id, "id");
 
         return _stashStartTimestampInfo.get(zkKey(id, dataCenter));
     }

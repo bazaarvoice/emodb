@@ -2,8 +2,8 @@ package com.bazaarvoice.emodb.web.resources.sor;
 
 import java.util.Iterator;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Wraps an {@code Iterator} as an {@code Iterable} that can only be used once.
@@ -17,7 +17,7 @@ class OneTimeIterable<T> implements Iterable<T> {
     }
 
     private OneTimeIterable(Iterator<T> iterator) {
-        _iterator = checkNotNull(iterator, "iterator");
+        _iterator = requireNonNull(iterator, "iterator");
     }
 
     @Override

@@ -38,7 +38,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Wakes up once a minute, checks which other data centers exist, and starts/stops inbound databus event replication
@@ -60,12 +60,12 @@ public class DefaultReplicationManager extends AbstractScheduledService {
     public DefaultReplicationManager(LifeCycleRegistry lifeCycle, FanoutManager fanoutManager, DataCenters dataCenters,
                                      Client jerseyClient, @ReplicationEnabled ValueStore<Boolean> replicationEnabled,
                                      @ReplicationKey String replicationApiKey, MetricRegistry metrics) {
-        _fanoutManager = checkNotNull(fanoutManager, "fanoutManager");
-        _dataCenters = checkNotNull(dataCenters, "dataCenters");
-        _jerseyClient = checkNotNull(jerseyClient, "jerseyClient");
-        _replicationEnabled = checkNotNull(replicationEnabled, "replicationEnabled");
-        _replicationApiKey = checkNotNull(replicationApiKey, "replicationApiKey");
-        _metrics = checkNotNull(metrics, "metrics");
+        _fanoutManager = requireNonNull(fanoutManager, "fanoutManager");
+        _dataCenters = requireNonNull(dataCenters, "dataCenters");
+        _jerseyClient = requireNonNull(jerseyClient, "jerseyClient");
+        _replicationEnabled = requireNonNull(replicationEnabled, "replicationEnabled");
+        _replicationApiKey = requireNonNull(replicationApiKey, "replicationApiKey");
+        _metrics = requireNonNull(metrics, "metrics");
         _healthCheckExecutor = defaultScheduledExecutor(lifeCycle, "Databus Replication HealthCheck");
 
         lifeCycle.manage(new ManagedGuavaService(this));

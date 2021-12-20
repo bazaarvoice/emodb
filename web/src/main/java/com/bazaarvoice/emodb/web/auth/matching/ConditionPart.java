@@ -10,7 +10,6 @@ import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.condition.ConstantCondition;
 import com.bazaarvoice.emodb.sor.condition.ContainsCondition;
-import com.bazaarvoice.emodb.sor.condition.PartitionCondition;
 import com.bazaarvoice.emodb.sor.condition.EqualCondition;
 import com.bazaarvoice.emodb.sor.condition.InCondition;
 import com.bazaarvoice.emodb.sor.condition.IntrinsicCondition;
@@ -19,13 +18,14 @@ import com.bazaarvoice.emodb.sor.condition.LikeCondition;
 import com.bazaarvoice.emodb.sor.condition.MapCondition;
 import com.bazaarvoice.emodb.sor.condition.NotCondition;
 import com.bazaarvoice.emodb.sor.condition.OrCondition;
+import com.bazaarvoice.emodb.sor.condition.PartitionCondition;
 import com.bazaarvoice.emodb.sor.condition.eval.SubsetEvaluator;
 import com.google.common.base.Objects;
 
 import javax.annotation.Nullable;
 import java.util.List;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * ConditionPart can be used to match a permission part using conditionals.  For example:
@@ -44,7 +44,7 @@ public class ConditionPart extends EmoMatchingPart {
     private final Condition _condition;
 
     public ConditionPart(Condition condition) {
-        _condition = checkNotNull(condition, "condition");
+        _condition = requireNonNull(condition, "condition");
         _condition.visit(_validator, null);
     }
 

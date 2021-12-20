@@ -16,7 +16,7 @@ import com.google.inject.Inject;
 import io.dropwizard.setup.Environment;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Registers a Jersey resource with Dropwizard and ZooKeeper.
@@ -30,10 +30,10 @@ public class DropwizardResourceRegistry implements ResourceRegistry {
     @Inject
     public DropwizardResourceRegistry(Environment environment, ServiceRegistry serviceRegistry,
                                       @SelfHostAndPort HostAndPort self, @SelfAdminHostAndPort HostAndPort selfAdmin) {
-        _environment = checkNotNull(environment, "environment");
-        _serviceRegistry = checkNotNull(serviceRegistry, "serviceRegistry");
-        _self = checkNotNull(self, "self");
-        _selfAdmin = checkNotNull(selfAdmin, "selfAdmin");
+        _environment = requireNonNull(environment, "environment");
+        _serviceRegistry = requireNonNull(serviceRegistry, "serviceRegistry");
+        _self = requireNonNull(self, "self");
+        _selfAdmin = requireNonNull(selfAdmin, "selfAdmin");
         checkArgument(self.getHostText().equals(selfAdmin.getHostText()));
     }
 

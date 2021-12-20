@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.PrintWriter;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Dropwizard task for administratively disabling cross-region Databus replication.  When disabled, databus events
@@ -37,7 +37,7 @@ public class ReplicationEnabledTask extends Task {
     public ReplicationEnabledTask(TaskRegistry tasks, LifeCycleRegistry lifeCycle,
                                   @ReplicationEnabled ValueStore<Boolean> enabled) {
         super("busrepl");
-        _enabled = checkNotNull(enabled, "enabled");
+        _enabled = requireNonNull(enabled, "enabled");
         tasks.addTask(this);
 
         // Default is enabled, so warn if disabled since otherwise essential functionality won't work.

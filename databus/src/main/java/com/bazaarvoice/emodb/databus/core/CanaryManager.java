@@ -30,8 +30,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 /** Starts the Databus canary threads, one for each SoR Cassandra cluster, subject to ZooKeeper leader election. */
 public class CanaryManager {
@@ -85,8 +85,8 @@ public class CanaryManager {
 
             @Override
             public Service create(String clusterName) {
-                ClusterInfo cluster = checkNotNull(clusterInfoMap.get(clusterName), clusterName);
-                Condition condition = checkNotNull(clusterToConditionMap.get(clusterName), clusterName);
+                ClusterInfo cluster = requireNonNull(clusterInfoMap.get(clusterName), clusterName);
+                Condition condition = requireNonNull(clusterToConditionMap.get(clusterName), clusterName);
                 Databus databus = databusFactory.forOwner(systemId);
                 return new Canary(cluster, condition, databus, logFactory, metricRegistry);
             }

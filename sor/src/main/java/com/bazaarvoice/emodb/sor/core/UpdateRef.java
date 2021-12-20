@@ -5,7 +5,7 @@ import com.google.common.base.Objects;
 import java.util.Set;
 import java.util.UUID;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Reference to a System of Record update.
@@ -18,10 +18,10 @@ public final class UpdateRef {
     private final Set<String> _tags;
 
     public UpdateRef(String table, String key, UUID changeId, Set<String> tags) {
-        _table = checkNotNull(table, "table");
-        _key = checkNotNull(key, "key");
-        _changeId = checkNotNull(changeId, "changeId");
-        _tags = checkNotNull(tags, "tags");
+        _table = requireNonNull(table, "table");
+        _key = requireNonNull(key, "key");
+        _changeId = requireNonNull(changeId, "changeId");
+        _tags = requireNonNull(tags, "tags");
     }
 
     public String getTable() {

@@ -43,7 +43,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import static com.bazaarvoice.emodb.job.api.JobIdentifier.createNew;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static org.mockito.Mockito.mock;
 import static org.testng.Assert.assertTrue;
 
@@ -106,7 +106,7 @@ public class PurgeTest {
         //checking for PurgeJob registration
         JobType jobType = testPurgeJobRequest.getType();
         JobIdentifier newJobID = createNew(jobType);
-        checkNotNull(newJobID, "jobId");
+        requireNonNull(newJobID, "jobId");
 
         // submitting a job to registry purge drops the table
         JobIdentifier jobID = _service.submitJob(new JobRequest<>(PurgeJob.INSTANCE, new PurgeRequest(TABLE, newAudit("submitting purge job directly via submitJob"))));

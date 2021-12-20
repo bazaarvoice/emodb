@@ -10,7 +10,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Implementation of AuthQueueService that defers all calls to an {@link QueueService} which doesn't require authentication.
@@ -23,7 +23,7 @@ public class TrustedQueueService implements AuthQueueService {
     private final QueueService _queueService;
 
     public TrustedQueueService(QueueService queueService) {
-        _queueService = checkNotNull(queueService, "queueService");
+        _queueService = requireNonNull(queueService, "queueService");
     }
 
     @Override

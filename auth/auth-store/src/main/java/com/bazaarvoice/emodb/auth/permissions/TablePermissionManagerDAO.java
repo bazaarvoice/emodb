@@ -23,7 +23,7 @@ import java.util.Set;
 import java.util.Spliterators;
 import java.util.stream.StreamSupport;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Permission manager that uses an EmoDB table to store permissions.
@@ -41,15 +41,15 @@ public class TablePermissionManagerDAO implements PermissionManager {
 
     public TablePermissionManagerDAO(PermissionResolver permissionResolver, DataStore dataStore,
                                      String tableName, String placement) {
-        _permissionResolver = checkNotNull(permissionResolver, "permissionResolver");
-        _dataStore = checkNotNull(dataStore, "dataStore");
-        _tableName = checkNotNull(tableName, "tableName");
-        _placement = checkNotNull(placement, "placement");
+        _permissionResolver = requireNonNull(permissionResolver, "permissionResolver");
+        _dataStore = requireNonNull(dataStore, "dataStore");
+        _tableName = requireNonNull(tableName, "tableName");
+        _placement = requireNonNull(placement, "placement");
     }
 
     @Override
     public Set<Permission> getPermissions(String id) {
-        checkNotNull(id, "id");
+        requireNonNull(id, "id");
         validateTable();
         Map<String, Object> map = _dataStore.get(_tableName, id, ReadConsistency.STRONG);
         return extractPermissionsFromRecord(map);
@@ -69,8 +69,8 @@ public class TablePermissionManagerDAO implements PermissionManager {
 
     @Override
     public void updatePermissions(String id, PermissionUpdateRequest request) {
-        checkNotNull(id, "id");
-        checkNotNull(request, "request");
+        requireNonNull(id, "id");
+        requireNonNull(request, "request");
         validateTable();
 
         // Only update if the request may potentially modify the permissions
@@ -116,7 +116,7 @@ public class TablePermissionManagerDAO implements PermissionManager {
 
     @Override
     public void revokePermissions(String id) {
-        checkNotNull(id, "id");
+        requireNonNull(id, "id");
         validateTable();
 
         _dataStore.update(

@@ -7,7 +7,7 @@ import com.google.common.base.Strings;
 import com.google.common.cache.Cache;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 class NamespacedCacheRegistry implements CacheRegistry {
     private final CacheRegistry _root;
@@ -17,7 +17,7 @@ class NamespacedCacheRegistry implements CacheRegistry {
         checkArgument(!Strings.isNullOrEmpty(namespace), "Namespace is null or empty");
         checkArgument(!namespace.startsWith("."), "Namespace starts with \".\"");
         checkArgument(!namespace.endsWith("."), "Namespace ends with \".\"");
-        _root = checkNotNull(root, "root");
+        _root = requireNonNull(root, "root");
         _prefix = namespace + ".";
     }
 

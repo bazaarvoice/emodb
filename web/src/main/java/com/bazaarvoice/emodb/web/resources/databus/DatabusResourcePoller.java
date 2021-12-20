@@ -9,7 +9,6 @@ import com.codahale.metrics.Timer;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Iterators;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +25,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Helper class for asynchronously polling databus resource requests.
@@ -56,7 +55,7 @@ public class DatabusResourcePoller {
     @Inject
     public DatabusResourcePoller(Optional<LongPollingExecutorServices> longPollingExecutorServices,
                                  MetricRegistry metricRegistry) {
-        checkNotNull(longPollingExecutorServices, "longPollingExecutorServices");
+        requireNonNull(longPollingExecutorServices, "longPollingExecutorServices");
         if (longPollingExecutorServices.isPresent()) {
             _keepAliveExecutorService = longPollingExecutorServices.get().getKeepAlive();
             _pollingExecutorService = longPollingExecutorServices.get().getPoller();

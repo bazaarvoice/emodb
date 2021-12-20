@@ -8,7 +8,7 @@ import com.google.inject.Inject;
 
 import java.time.Duration;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class DatabusChannelConfiguration implements ChannelConfiguration {
     private static final Duration FANOUT_TTL = Duration.ofDays(365);  // Basically forever
@@ -21,7 +21,7 @@ public class DatabusChannelConfiguration implements ChannelConfiguration {
 
     @Inject
     public DatabusChannelConfiguration(SubscriptionDAO subscriptionDao) {
-        _subscriptionDao = checkNotNull(subscriptionDao);
+        _subscriptionDao = requireNonNull(subscriptionDao);
     }
 
     @Override

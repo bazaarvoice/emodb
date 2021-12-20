@@ -3,7 +3,7 @@ package com.bazaarvoice.emodb.web.throttling;
 import com.google.common.base.Objects;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * POJO to describe a request method and path that has an ad-hoc throttle set.
@@ -16,8 +16,8 @@ public class AdHocThrottleEndpoint {
     private final String _path;
 
     public AdHocThrottleEndpoint(String method, String path) {
-        _method = checkNotNull(method, "method").toUpperCase();
-        checkNotNull(path, "path");
+        _method = requireNonNull(method, "method").toUpperCase();
+        requireNonNull(path, "path");
         // Remove the leading slash if it was explicitly provided
         if (path.startsWith("/")) {
             _path = path.substring(1);
@@ -66,7 +66,7 @@ public class AdHocThrottleEndpoint {
         int firstUnderbar = string.indexOf('_');
         checkArgument(firstUnderbar > 0, "Method separator not found");
         String method = string.substring(0, firstUnderbar);
-        String path = string.substring(firstUnderbar+1).replaceAll(SLASH_REPLACEMENT_STRING, "/");
+        String path = string.substring(firstUnderbar + 1).replaceAll(SLASH_REPLACEMENT_STRING, "/");
         return new AdHocThrottleEndpoint(method, path);
     }
 }

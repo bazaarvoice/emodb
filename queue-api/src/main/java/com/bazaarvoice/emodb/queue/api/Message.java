@@ -5,14 +5,14 @@ import com.google.common.base.Objects;
 
 import javax.annotation.Nullable;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public final class Message {
     private final String _id;
     private final Object _payload;
 
     public Message(@JsonProperty("id") String id, @JsonProperty("payload") @Nullable Object payload) {
-        _id = checkNotNull(id, "id");
+        _id = requireNonNull(id, "id");
         _payload = payload;
     }
 

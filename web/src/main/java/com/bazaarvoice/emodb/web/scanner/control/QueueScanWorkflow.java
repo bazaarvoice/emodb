@@ -14,7 +14,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Implementation of ScanWorkflow that uses EmoDB queues as the backing mechanism.  There are two queues used:
@@ -27,14 +27,14 @@ public class QueueScanWorkflow implements ScanWorkflow {
     private final String _completeScanRangeQueue;
 
     public QueueScanWorkflow(QueueService queueService, String pendingScanRangeQueue, String completeScanRangeQueue) {
-        _queueService = checkNotNull(queueService, "queueService");
-        _pendingScanRangeQueue = checkNotNull(pendingScanRangeQueue, "pendingScanRangeQueue");
-        _completeScanRangeQueue = checkNotNull(completeScanRangeQueue, "completeScanRangeQueue");
+        _queueService = requireNonNull(queueService, "queueService");
+        _pendingScanRangeQueue = requireNonNull(pendingScanRangeQueue, "pendingScanRangeQueue");
+        _completeScanRangeQueue = requireNonNull(completeScanRangeQueue, "completeScanRangeQueue");
     }
 
     @Override
     public void scanStatusUpdated(String scanId) {
-        checkNotNull(scanId, "scanId");
+        requireNonNull(scanId, "scanId");
         // Send a scan range complete message.  This forces the monitor to looks for available scan ranges.
         signalScanRangeComplete(scanId);
     }

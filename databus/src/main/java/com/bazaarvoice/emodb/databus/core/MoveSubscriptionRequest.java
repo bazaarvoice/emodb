@@ -3,7 +3,7 @@ package com.bazaarvoice.emodb.databus.core;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class MoveSubscriptionRequest {
 
@@ -15,9 +15,9 @@ public class MoveSubscriptionRequest {
     public MoveSubscriptionRequest(@JsonProperty ("ownerId") String ownerId,
                                    @JsonProperty ("from") String from,
                                    @JsonProperty ("to") String to) {
-        _ownerId = checkNotNull(ownerId, "ownerId");
-        _from = checkNotNull(from, "from");
-        _to = checkNotNull(to, "to");
+        _ownerId = requireNonNull(ownerId, "ownerId");
+        _from = requireNonNull(from, "from");
+        _to = requireNonNull(to, "to");
     }
 
     public String getOwnerId() {

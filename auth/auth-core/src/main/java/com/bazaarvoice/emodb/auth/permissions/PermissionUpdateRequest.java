@@ -6,7 +6,7 @@ import com.google.common.collect.Maps;
 import java.util.Arrays;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Helper class for updating permissions using {@link PermissionManager#updatePermissions(String, PermissionUpdateRequest)}
@@ -36,7 +36,7 @@ public class PermissionUpdateRequest {
 
     private void update(Boolean permitted, Iterable<String> permissions) {
         for (String permission : permissions) {
-            checkNotNull(permission, "permission");
+            requireNonNull(permission, "permission");
             _permissions.put(permission, permitted);
         }
     }

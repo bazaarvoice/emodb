@@ -4,14 +4,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public final class TableAvailability {
     private final String _placement;
     private final boolean _facade;
 
     public TableAvailability(@JsonProperty ("placement") String placement, @JsonProperty ("facade") boolean facade) {
-        _placement = checkNotNull(placement, "Table option is required: placement");
+        _placement = requireNonNull(placement, "Table option is required: placement");
         _facade = facade;
     }
 

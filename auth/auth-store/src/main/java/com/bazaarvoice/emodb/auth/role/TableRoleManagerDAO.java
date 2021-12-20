@@ -37,7 +37,7 @@ import java.util.stream.StreamSupport;
 import static com.bazaarvoice.emodb.common.api.Names.isLegalRoleGroupName;
 import static com.bazaarvoice.emodb.common.api.Names.isLegalRoleName;
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * RoleManager implementation which persists roles using tables in a {@link DataStore}.
@@ -65,12 +65,12 @@ public class TableRoleManagerDAO implements RoleManager {
 
     public TableRoleManagerDAO(DataStore dataStore, String roleTableName, String groupTableName, String placement,
                                PermissionManager permissionManager) {
-        _dataStore = checkNotNull(dataStore, "dataStore");
-        _roleTableName = checkNotNull(roleTableName, "roleTableName");
-        _groupTableName = checkNotNull(groupTableName, "groupTableName");
+        _dataStore = requireNonNull(dataStore, "dataStore");
+        _roleTableName = requireNonNull(roleTableName, "roleTableName");
+        _groupTableName = requireNonNull(groupTableName, "groupTableName");
         checkArgument(!roleTableName.equals(groupTableName), "Role and group tables must be unique");
-        _placement = checkNotNull(placement, "placement");
-        _permissionManager = checkNotNull(permissionManager, "permissionManager");
+        _placement = requireNonNull(placement, "placement");
+        _permissionManager = requireNonNull(permissionManager, "permissionManager");
     }
 
     private String checkGroup(@Nullable String group) {
@@ -82,7 +82,7 @@ public class TableRoleManagerDAO implements RoleManager {
 
     @Override
     public Role getRole(RoleIdentifier id) {
-        checkNotNull(id, "id");
+        requireNonNull(id, "id");
         checkGroup(id.getGroup());
         validateTables();
 
@@ -138,7 +138,7 @@ public class TableRoleManagerDAO implements RoleManager {
 
     @Override
     public Set<String> getPermissionsForRole(RoleIdentifier id) {
-        checkNotNull(id, "id");
+        requireNonNull(id, "id");
         return ImmutableSortedSet.copyOf(
                 _permissionManager.getPermissions(PermissionIDs.forRole(id))
                         .stream()
@@ -148,7 +148,7 @@ public class TableRoleManagerDAO implements RoleManager {
 
     @Override
     public Role createRole(RoleIdentifier id, RoleModification modification) {
-        checkNotNull(id, "id");
+        requireNonNull(id, "id");
         checkArgument(isLegalRoleName(id.getId()), "Role cannot have ID %s", id.getId());
         String groupKey = checkGroup(id.getGroup());
 

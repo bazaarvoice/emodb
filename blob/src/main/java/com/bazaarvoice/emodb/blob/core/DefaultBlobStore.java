@@ -50,8 +50,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Stores large binary objects like photos, videos.
@@ -75,9 +75,9 @@ public class DefaultBlobStore implements BlobStore {
                             StorageProvider storageProvider,
                             MetadataProvider metadataProvider,
                             MetricRegistry metricRegistry) {
-        _tableDao = checkNotNull(tableDao, "tableDao");
-        _storageProvider = checkNotNull(storageProvider, "storageProvider");
-        _metadataProvider = checkNotNull(metadataProvider, "metadataProvider");
+        _tableDao = requireNonNull(tableDao, "tableDao");
+        _storageProvider = requireNonNull(storageProvider, "storageProvider");
+        _metadataProvider = requireNonNull(metadataProvider, "metadataProvider");
         _metaDataNotPresentMeter = metricRegistry.meter(getMetricName("data-inconsistency"));
     }
 
@@ -114,10 +114,10 @@ public class DefaultBlobStore implements BlobStore {
     @Override
     public void createTable(String table, TableOptions options, Map<String, String> attributes, Audit audit) throws TableExistsException {
         checkLegalTableName(table);
-        checkNotNull(options, "options");
-        checkNotNull(attributes, "attributes");
+        requireNonNull(options, "options");
+        requireNonNull(attributes, "attributes");
         checkMapOfStrings(attributes, "attributes");  // Defensive check that generic type restrictions aren't bypassed
-        checkNotNull(audit, "audit");
+        requireNonNull(audit, "audit");
         _tableDao.create(table, options, attributes, audit);
     }
 
@@ -131,7 +131,7 @@ public class DefaultBlobStore implements BlobStore {
     @Override
     public void dropTable(String table, Audit audit) throws UnknownTableException {
         checkLegalTableName(table);
-        checkNotNull(audit, "audit");
+        requireNonNull(audit, "audit");
         _tableDao.drop(table, audit);
     }
 
@@ -195,9 +195,9 @@ public class DefaultBlobStore implements BlobStore {
     @Override
     public void setTableAttributes(String table, Map<String, String> attributes, Audit audit) throws UnknownTableException {
         checkLegalTableName(table);
-        checkNotNull(attributes, "attributes");
+        requireNonNull(attributes, "attributes");
         checkMapOfStrings(attributes, "attributes");  // Defensive check that generic type restrictions aren't bypassed
-        checkNotNull(audit, "audit");
+        requireNonNull(audit, "audit");
         _tableDao.setAttributes(table, attributes, audit);
     }
 
@@ -351,8 +351,8 @@ public class DefaultBlobStore implements BlobStore {
     public void put(String tableName, String blobId, Supplier<? extends InputStream> in, Map<String, String> attributes) throws IOException {
         checkLegalTableName(tableName);
         checkLegalBlobId(blobId);
-        checkNotNull(in, "in");
-        checkNotNull(attributes, "attributes");
+        requireNonNull(in, "in");
+        requireNonNull(attributes, "attributes");
 
         Table table = _tableDao.get(tableName);
 

@@ -29,8 +29,6 @@ import org.apache.curator.framework.recipes.locks.InterProcessMutex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
-import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Queue;
@@ -46,8 +44,8 @@ import static com.bazaarvoice.emodb.job.api.JobIdentifier.fromString;
 import static com.bazaarvoice.emodb.job.api.JobIdentifier.getJobTypeNameFromId;
 import static com.bazaarvoice.emodb.job.util.JobStatusUtil.narrow;
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
 public class DefaultJobService implements JobService, Managed {
 
@@ -80,16 +78,16 @@ public class DefaultJobService implements JobService, Managed {
                              @QueueRefreshTime Duration queueRefreshTime,
                              final @QueuePeekLimit Integer queuePeekLimit,
                              @NotOwnerRetryDelay Duration notOwnerRetryDelay) {
-        _queueService = checkNotNull(queueService, "queueService");
-        _queueName = checkNotNull(queueName, "queueName");
-        _jobHandlerRegistry = checkNotNull(jobHandlerRegistry, "jobHandlerRegistry");
-        _jobStatusDAO = checkNotNull(jobStatusDAO, "jobStatusDAO");
-        _curator = checkNotNull(curator, "curator");
-        _concurrencyLevel = checkNotNull(concurrencyLevel, "concurrencyLevel");
+        _queueService = requireNonNull(queueService, "queueService");
+        _queueName = requireNonNull(queueName, "queueName");
+        _jobHandlerRegistry = requireNonNull(jobHandlerRegistry, "jobHandlerRegistry");
+        _jobStatusDAO = requireNonNull(jobStatusDAO, "jobStatusDAO");
+        _curator = requireNonNull(curator, "curator");
+        _concurrencyLevel = requireNonNull(concurrencyLevel, "concurrencyLevel");
         checkArgument(_concurrencyLevel >= 0, "Concurrency level cannot be negative");
-        _notOwnerRetryDelay = checkNotNull(notOwnerRetryDelay, "notOwnerRetryDelay");
-        checkNotNull(queuePeekLimit, "queuePeekLimit");
-        checkNotNull(lifeCycleRegistry, "lifecycleRegistry");
+        _notOwnerRetryDelay = requireNonNull(notOwnerRetryDelay, "notOwnerRetryDelay");
+        requireNonNull(queuePeekLimit, "queuePeekLimit");
+        requireNonNull(lifeCycleRegistry, "lifecycleRegistry");
 
         _recentNotOwnerDelays = CacheBuilder.newBuilder()
                 .expireAfterWrite(notOwnerRetryDelay.toMillis(), TimeUnit.MILLISECONDS)
@@ -102,7 +100,7 @@ public class DefaultJobService implements JobService, Managed {
             }
         };
 
-        checkNotNull(queueRefreshTime, "queueRefreshTime");
+        requireNonNull(queueRefreshTime, "queueRefreshTime");
         if (queueRefreshTime.isZero()) {
             _messageSupplier = sourceMessageSupplier;
         } else {
@@ -158,7 +156,7 @@ public class DefaultJobService implements JobService, Managed {
 
     @Override
     public <Q, R> JobIdentifier<Q, R> submitJob(JobRequest<Q, R> jobRequest) {
-        checkNotNull(jobRequest, "jobRequest");
+        requireNonNull(jobRequest, "jobRequest");
         JobType<Q, R> jobType = jobRequest.getType();
 
         // Ensure there is a handler for this job type
@@ -182,7 +180,7 @@ public class DefaultJobService implements JobService, Managed {
 
     @Override
     public <Q, R> JobStatus<Q, R> getJobStatus(JobIdentifier<Q, R> id) {
-        checkNotNull(id);
+        requireNonNull(id);
         JobStatus<?, ?> jobStatus = _jobStatusDAO.getJobStatus(id);
         if (jobStatus == null) {
             return null;

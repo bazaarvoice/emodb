@@ -8,7 +8,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Similar to {@link com.google.common.collect.Iterators#partition(java.util.Iterator, int)} except that it
@@ -48,7 +48,7 @@ public class TimePartitioningIterator<T> extends AbstractIterator<List<T>> {
      */
     public TimePartitioningIterator(Iterator<T> iterator, int initialSize, int minSize, int maxSize, Duration iterationGoal) {
         checkArgument(iterationGoal.compareTo(Duration.ZERO) > 0);
-        _iterator = checkNotNull(iterator);
+        _iterator = requireNonNull(iterator);
         checkArgument(minSize > 0 && minSize <= maxSize);
         _minSize = minSize;
         _maxSize = maxSize;

@@ -22,7 +22,7 @@ import javax.annotation.Nullable;
 import java.util.Map;
 
 import static com.bazaarvoice.emodb.job.util.JobStatusUtil.narrow;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class DataStoreJobStatusDAO implements JobStatusDAO {
 
@@ -60,8 +60,8 @@ public class DataStoreJobStatusDAO implements JobStatusDAO {
 
     @Override
     public <Q, R> void updateJobStatus(JobIdentifier<Q, R> jobId, JobStatus<Q, R> jobStatus) {
-        checkNotNull(jobId, "jobId");
-        checkNotNull(jobStatus, "jobStatus");
+        requireNonNull(jobId, "jobId");
+        requireNonNull(jobStatus, "jobStatus");
 
         Delta delta = Deltas.mapBuilder()
                 .put("status", JsonHelper.convert(jobStatus, Object.class))
@@ -73,7 +73,7 @@ public class DataStoreJobStatusDAO implements JobStatusDAO {
     @Nullable
     @Override
     public <Q, R> JobStatus<Q, R> getJobStatus(JobIdentifier<Q, R> jobId) {
-        checkNotNull(jobId, "jobId");
+        requireNonNull(jobId, "jobId");
 
         Map<String, Object> result = _dataStore.get(getTableName(), jobId.toString(), ReadConsistency.STRONG);
 
@@ -87,7 +87,7 @@ public class DataStoreJobStatusDAO implements JobStatusDAO {
 
     @Override
     public void deleteJobStatus(JobIdentifier<?, ?> jobId) {
-        checkNotNull(jobId, "jobId");
+        requireNonNull(jobId, "jobId");
 
         write(jobId, Deltas.delete(), "Deleting job status");
     }

@@ -12,7 +12,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.UUID;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class AstyanaxHistoryBatchPersister implements HistoryBatchPersister {
     private MutationBatch _mutation;
@@ -21,10 +21,10 @@ public class AstyanaxHistoryBatchPersister implements HistoryBatchPersister {
     private HistoryStore _historyStore;
     private AstyanaxHistoryBatchPersister(MutationBatch mutation, ColumnFamily<ByteBuffer, UUID> columnFamily,
                                           ChangeEncoder changeEncoder, HistoryStore historyStore) {
-        _mutation = checkNotNull(mutation);
-        _columnFamily = checkNotNull(columnFamily);
-        _changeEncoder = checkNotNull(changeEncoder);
-        _historyStore = checkNotNull(historyStore);
+        _mutation = requireNonNull(mutation);
+        _columnFamily = requireNonNull(columnFamily);
+        _changeEncoder = requireNonNull(changeEncoder);
+        _historyStore = requireNonNull(historyStore);
     }
 
     @Override

@@ -9,7 +9,7 @@ import org.eclipse.jetty.server.UserIdentity;
 import java.security.Principal;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class PrincipalWithRoles implements Principal {
     private final String _authenticationId;
@@ -18,9 +18,9 @@ public class PrincipalWithRoles implements Principal {
     private UserIdentity _userIdentity;
 
     public PrincipalWithRoles(String authenticationId, String id, Set<String> roles) {
-        _authenticationId = checkNotNull(authenticationId, "authenticationId");
-        _id = checkNotNull(id, "id");
-        _roles = checkNotNull(roles, "roles");
+        _authenticationId = requireNonNull(authenticationId, "authenticationId");
+        _id = requireNonNull(id, "id");
+        _roles = requireNonNull(roles, "roles");
     }
 
     @Override

@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.sor.db;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class MultiTableScanOptions {
     private String _placement;
@@ -13,7 +13,7 @@ public class MultiTableScanOptions {
     }
 
     public MultiTableScanOptions setPlacement(String placement) {
-        _placement = checkNotNull(placement, "placement");
+        _placement = requireNonNull(placement, "placement");
         return this;
     }
 

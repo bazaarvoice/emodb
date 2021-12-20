@@ -28,8 +28,8 @@ import java.util.List;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 public class AstyanaxEventWriterDAO implements EventWriterDAO {
     private final CassandraKeyspace _keyspace;
@@ -49,7 +49,7 @@ public class AstyanaxEventWriterDAO implements EventWriterDAO {
     @ParameterizedTimed(type="AstyanaxEventWriterDAO")
     @Override
     public void addAll(Multimap<String, ByteBuffer> eventsByChannel, @Nullable EventSink sink) {
-        checkNotNull(eventsByChannel, "eventsByChannel");
+        requireNonNull(eventsByChannel, "eventsByChannel");
 
         List<SlabAllocation> allocationsToRelease = Lists.newArrayList();
         try {
@@ -125,8 +125,8 @@ public class AstyanaxEventWriterDAO implements EventWriterDAO {
 
     @Override
     public void delete(String channel, Collection<EventId> eventIds) {
-        checkNotNull(channel, "channel");
-        checkNotNull(eventIds, "eventIds");
+        requireNonNull(channel, "channel");
+        requireNonNull(eventIds, "eventIds");
 
         ListMultimap<ByteBuffer, Integer> eventsBySlab = ArrayListMultimap.create();
         for (EventId eventId : eventIds) {
@@ -155,7 +155,7 @@ public class AstyanaxEventWriterDAO implements EventWriterDAO {
 
     @Override
     public void deleteAll(final String channel) {
-        checkNotNull(channel, "channel");
+        requireNonNull(channel, "channel");
 
         // There isn't really a good way to delete events en masse because (a) there may be many processes writing to
         // the queue, (b) it's impractical to expect all those processes to close all their open slabs, therefore (c)

@@ -10,7 +10,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Implementation of AuthDedupQueueService that defers all calls to a {@link DedupQueueService} which doesn't require authentication.
@@ -23,7 +23,7 @@ public class TrustedDedupQueueService implements AuthDedupQueueService {
     private final DedupQueueService _dedupQueueService;
 
     public TrustedDedupQueueService(DedupQueueService dedupQueueService) {
-        _dedupQueueService = checkNotNull(dedupQueueService, "dedupQueueService");
+        _dedupQueueService = requireNonNull(dedupQueueService, "dedupQueueService");
     }
 
     @Override

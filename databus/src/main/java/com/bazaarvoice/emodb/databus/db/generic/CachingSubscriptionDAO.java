@@ -35,7 +35,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Wraps a {@link SubscriptionDAO} with a cache that makes it fast and efficient to lookup subscription metadata.  The
@@ -108,9 +108,9 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
                                   @CachingSubscriptionDAORegistry CacheRegistry cacheRegistry,
                                   @CachingSubscriptionDAOExecutorService ListeningExecutorService refreshService,
                                   MetricRegistry metricRegistry, Clock clock, CachingMode cachingMode) {
-        _delegate = checkNotNull(delegate, "delegate");
-        _refreshService = checkNotNull(refreshService, "refreshService");
-        _cachingMode = checkNotNull(cachingMode, "cachingMode");
+        _delegate = requireNonNull(delegate, "delegate");
+        _refreshService = requireNonNull(refreshService, "refreshService");
+        _cachingMode = requireNonNull(cachingMode, "cachingMode");
 
         Ticker ticker = ClockTicker.getTicker(clock);
         _reloadAllSubscriptionsTimer = metricRegistry.timer(MetricRegistry.name("bv.emodb.databus", "CachingSubscriptionDAO", "reload-all-subscriptions"));
