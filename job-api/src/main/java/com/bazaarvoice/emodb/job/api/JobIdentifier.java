@@ -61,7 +61,7 @@ public class JobIdentifier<Q, R> {
             buildStream.write(Longs.toByteArray(uuid.getLeastSignificantBits()));
             buildStream.write(type.getBytes(Charsets.UTF_8));
         } catch (IOException e) {
-            Throwables.propagateIfPossible(e);
+            Throwables.throwIfUnchecked(e);
             throw new RuntimeException(e);  // Won't happen, StringWriter won't throw IOException
         }
 

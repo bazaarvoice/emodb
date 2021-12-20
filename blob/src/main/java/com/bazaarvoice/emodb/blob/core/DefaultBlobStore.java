@@ -392,7 +392,7 @@ public class DefaultBlobStore implements BlobStore {
                 chunkLength = ByteStreams.read(sha1In, bytes, 0, bytes.length);
             } catch (IOException e) {
                 LOGGER.error("Failed to read input stream", e);
-                Throwables.propagateIfPossible(e);
+                Throwables.throwIfUnchecked(e);
                 throw new RuntimeException(e);
             }
             if (chunkLength == 0) {

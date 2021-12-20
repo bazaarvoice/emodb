@@ -287,7 +287,7 @@ public class PersistentSortedQueue implements SortedQueue {
                 return;
             }
         } catch (InterruptedException e) {
-            Throwables.propagateIfPossible(e);
+            Throwables.throwIfUnchecked(e);
             throw new RuntimeException(e);
         }
         try {

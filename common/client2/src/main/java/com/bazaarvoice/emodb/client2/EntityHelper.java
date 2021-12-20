@@ -29,7 +29,7 @@ abstract public class EntityHelper {
         try {
             return JsonHelper.readJson(in, clazz);
         } catch (IOException e) {
-            Throwables.propagateIfPossible(e);
+            Throwables.throwIfUnchecked(e);
             throw new RuntimeException(e);
         }
     }
@@ -54,7 +54,7 @@ abstract public class EntityHelper {
         try {
             return JsonHelper.readJson(in, reference);
         } catch (IOException e) {
-            Throwables.propagateIfPossible(e);
+            Throwables.throwIfUnchecked(e);
             throw new RuntimeException(e);
         }
     }

@@ -36,7 +36,7 @@ public class PlacementCache {
         try {
             return _placementCache.getUnchecked(name);
         } catch (UncheckedExecutionException e) {
-            Throwables.propagateIfPossible(e);
+            Throwables.throwIfUnchecked(e);
             throw new RuntimeException(e.getCause());
         }
     }

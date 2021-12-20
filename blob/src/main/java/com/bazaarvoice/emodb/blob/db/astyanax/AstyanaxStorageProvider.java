@@ -181,7 +181,7 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
         } catch (NotFoundException e) {
             return null;
         } catch (ConnectionException e) {
-            Throwables.propagateIfPossible(e);
+            Throwables.throwIfUnchecked(e);
             throw new RuntimeException(e);
         }
         Column<Composite> column = operationResult.getResult();
@@ -463,7 +463,7 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
                         } catch (NotFoundException e) {
                             continue;  // Unusual, but possible if racing a delete.
                         } catch (ConnectionException e) {
-                            Throwables.propagateIfPossible(e);
+                            Throwables.throwIfUnchecked(e);
                             throw new RuntimeException(e);
                         }
 
@@ -675,7 +675,7 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
         try {
             operationResult = execution.execute();
         } catch (ConnectionException e) {
-            Throwables.propagateIfPossible(e);
+            Throwables.throwIfUnchecked(e);
             throw new RuntimeException(e);
         }
         return operationResult.getResult();

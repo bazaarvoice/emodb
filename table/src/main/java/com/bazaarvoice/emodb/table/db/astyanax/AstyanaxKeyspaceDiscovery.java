@@ -50,7 +50,7 @@ public class AstyanaxKeyspaceDiscovery implements KeyspaceDiscovery {
         try {
             return keyspace.getAstyanaxKeyspace().describeKeyspace();
         } catch (ConnectionException e) {
-            Throwables.propagateIfPossible(e);
+            Throwables.throwIfUnchecked(e);
             throw new RuntimeException(e);
         }
     }

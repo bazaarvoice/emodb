@@ -172,7 +172,7 @@ public class CassandraKeyspace implements Managed {
                 return partitioner;
             }
         } catch (ConnectionException e) {
-            Throwables.propagateIfPossible(e);
+            Throwables.throwIfUnchecked(e);
             throw new RuntimeException(e);
         } catch (IllegalArgumentException e) {
             // Only thrown if the partitioner doesn't match any compatible partitioner, so by definition it is mismatched.

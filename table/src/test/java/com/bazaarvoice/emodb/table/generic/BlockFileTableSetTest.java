@@ -65,8 +65,8 @@ public class BlockFileTableSetTest {
 
                 return ImmutableSet.of(uuid);
             } catch (Exception e) {
-                Throwables.propagateIfInstanceOf(e, UnknownTableException.class);
-                Throwables.propagateIfPossible(e);
+                Throwables.throwIfInstanceOf(e, UnknownTableException.class);
+                Throwables.throwIfUnchecked(e);
                 throw new RuntimeException(e);
             }        }
 
@@ -83,7 +83,7 @@ public class BlockFileTableSetTest {
 
                 return new InMemoryTable(name, options, attributes);
             } catch (Exception e) {
-                Throwables.propagateIfPossible(e);
+                Throwables.throwIfUnchecked(e);
                 throw new RuntimeException(e);
             }
         }

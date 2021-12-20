@@ -127,7 +127,7 @@ public class LiteralImpl extends AbstractDelta implements Literal {
             return thisStr.toString().compareTo(thatStr.toString());
         } catch (IOException e) {
             // Should never happen
-            Throwables.propagateIfPossible(e);
+            Throwables.throwIfUnchecked(e);
             throw new RuntimeException(e);
         }
 

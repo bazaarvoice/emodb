@@ -33,7 +33,7 @@ public abstract class JsonHelper {
             return writer.writeValueAsString(value);
         } catch (IOException e) {
             // Shouldn't get I/O errors writing to a string.
-            Throwables.propagateIfPossible(e);
+            Throwables.throwIfUnchecked(e);
             throw new RuntimeException(e);
         }
     }
@@ -48,7 +48,7 @@ public abstract class JsonHelper {
             return writer.writeValueAsBytes(value);
         } catch (IOException e) {
             // Shouldn't get I/O errors writing to a string.
-            Throwables.propagateIfPossible(e);
+            Throwables.throwIfUnchecked(e);
             throw new RuntimeException(e);
         }
     }
@@ -118,7 +118,7 @@ public abstract class JsonHelper {
                 date = ISO8601Utils.parse(string, new ParsePosition(0));
             }
         } catch (ParseException e) {
-            Throwables.propagateIfPossible(e);
+            Throwables.throwIfUnchecked(e);
             throw new RuntimeException(e);
         }
         return date;

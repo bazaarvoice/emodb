@@ -46,7 +46,7 @@ public class RisonHelper {
             return O_RISON.writeValueAsString(value);
         } catch (IOException e) {
             // Shouldn't get I/O errors writing to a string.
-            Throwables.propagateIfPossible(e);
+            Throwables.throwIfUnchecked(e);
             throw new RuntimeException(e);
         }
     }

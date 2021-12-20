@@ -148,7 +148,7 @@ public class ContainsConditionImpl implements ContainsCondition {
             appendTo(builder);
         } catch (IOException e) {
             // Should never happen
-            Throwables.propagateIfPossible(e);
+            Throwables.throwIfUnchecked(e);
             throw new RuntimeException(e);
         }
         return builder.toString();

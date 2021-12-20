@@ -45,7 +45,7 @@ abstract public class ResourceTestAuthUtil {
             field.setAccessible(true);
             properties = (Map<String, Object>) field.get(test);
         } catch (Exception e) {
-            Throwables.propagateIfPossible(e);
+            Throwables.throwIfUnchecked(e);
             throw new RuntimeException(e);
         }
 

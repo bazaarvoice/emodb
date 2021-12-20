@@ -31,7 +31,7 @@ public class RetryUtils {
                 snooze(5 + new Random().nextInt(9));
             } catch (Exception e) {
                 LOGGER.error(String.format("Exception, Attempt: %s", attempt), e);
-                Throwables.propagateIfPossible(e);
+                Throwables.throwIfUnchecked(e);
                 throw new RuntimeException(e);
             }
         } while (++attempt <= attempts);

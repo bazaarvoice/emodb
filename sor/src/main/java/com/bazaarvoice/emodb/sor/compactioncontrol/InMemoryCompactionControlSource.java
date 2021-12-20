@@ -32,7 +32,7 @@ public class InMemoryCompactionControlSource implements CompactionControlSource 
             _stashStartTimestampInfo.put(zkKey(id, dataCenter), new StashRunTimeInfo(timestamp, placements, dataCenter, expiredTimestamp));
         } catch (Exception e) {
             _log.error("Failed to update stash timestamp info for id: {}", id, e);
-            Throwables.propagateIfPossible(e);
+            Throwables.throwIfUnchecked(e);
             throw new RuntimeException(e);
         }
     }
@@ -45,7 +45,7 @@ public class InMemoryCompactionControlSource implements CompactionControlSource 
             _stashStartTimestampInfo.remove(zkKey(id, dataCenter));
         } catch (Exception e) {
             _log.error("Failed to delete stash timestamp info for id: {}", id, e);
-            Throwables.propagateIfPossible(e);
+            Throwables.throwIfUnchecked(e);
             throw new RuntimeException(e);
         }
     }

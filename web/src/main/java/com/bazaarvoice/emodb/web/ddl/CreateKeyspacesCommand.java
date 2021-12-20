@@ -215,7 +215,7 @@ public final class CreateKeyspacesCommand extends ConfiguredCommand<EmoConfigura
                 _log.warn("could not acquire index lock after {} millis!!", LOCK_ACQUIRE_TIMEOUT.toMillis());
             }
         } catch (Exception e) {
-            Throwables.propagateIfPossible(e);
+            Throwables.throwIfUnchecked(e);
             throw new RuntimeException(e);
         }
     }

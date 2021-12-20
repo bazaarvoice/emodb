@@ -146,7 +146,7 @@ public class DefaultReplicationManager extends AbstractScheduledService {
                 try {
                     _fanout.start();
                 } catch (Exception e) {
-                    Throwables.propagateIfPossible(e);
+                    Throwables.throwIfUnchecked(e);
                     throw new RuntimeException(e);
                 }
                 notifyStarted();
@@ -160,7 +160,7 @@ public class DefaultReplicationManager extends AbstractScheduledService {
                         _fanout = null;
                     }
                 } catch (Exception e) {
-                    Throwables.propagateIfPossible(e);
+                    Throwables.throwIfUnchecked(e);
                     throw new RuntimeException(e);
                 }
                 notifyStopped();

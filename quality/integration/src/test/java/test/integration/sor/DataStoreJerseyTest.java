@@ -1042,7 +1042,7 @@ public class DataStoreJerseyTest extends ResourceTest {
                 try {
                     Thread.sleep(100);
                 } catch (InterruptedException e) {
-                    Throwables.propagateIfPossible(e);
+                    Throwables.throwIfUnchecked(e);
                     throw new RuntimeException(e);
                 }
             }

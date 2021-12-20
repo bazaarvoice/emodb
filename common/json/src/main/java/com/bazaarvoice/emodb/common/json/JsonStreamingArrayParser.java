@@ -58,7 +58,7 @@ public class JsonStreamingArrayParser<T> extends AbstractIterator<T> implements 
                         _jp.getCurrentToken(), _jp.getTokenLocation());
             }
         } catch (Exception e) {
-            Throwables.propagateIfPossible(e);
+            Throwables.throwIfUnchecked(e);
             throw new RuntimeException(e);
         }
     }

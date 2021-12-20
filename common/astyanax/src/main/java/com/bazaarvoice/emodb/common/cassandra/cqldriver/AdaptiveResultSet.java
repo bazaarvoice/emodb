@@ -73,7 +73,7 @@ public class AdaptiveResultSet implements ResultSet {
                 _log.debug("Repeating previous query with fetch size {} due to {}", reducedFetchSize, t.getMessage());
                 return executeAdaptiveQueryAsync(session, statement, reducedFetchSize, remainingAdaptations - 1);
             }
-            Throwables.propagateIfPossible(t);
+            Throwables.throwIfUnchecked(t);
             throw new RuntimeException(t);
         });
     }
@@ -94,7 +94,7 @@ public class AdaptiveResultSet implements ResultSet {
                     fetchSize = Math.max(fetchSize / 2, MIN_FETCH_SIZE);
                     _log.debug("Repeating previous query with fetch size {} due to {}", fetchSize, t.getMessage());
                 } else {
-                    Throwables.propagateIfPossible(t);
+                    Throwables.throwIfUnchecked(t);
                     throw new RuntimeException(t);
                 }
             }
@@ -170,7 +170,7 @@ public class AdaptiveResultSet implements ResultSet {
         // This code is only reachable if there was an exception fetching more rows.  If appropriate reduce the fetch
         // size and try again, otherwise propagate the exception.
         if (!reduceFetchSize(fetchException)) {
-            Throwables.propagateIfPossible(fetchException);
+            Throwables.throwIfUnchecked(fetchException);
             throw new RuntimeException(fetchException);
         }
 

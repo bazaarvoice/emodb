@@ -128,7 +128,7 @@ public class AstyanaxManifestPersister implements ManifestPersister {
         try {
             operationResult = execution.execute();
         } catch (ConnectionException e) {
-            Throwables.propagateIfPossible(e);
+            Throwables.throwIfUnchecked(e);
             throw new RuntimeException(e);
         }
         return operationResult.getResult();

@@ -41,7 +41,7 @@ class StashSplitIterator extends AbstractIterator<Map<String, Object>> implement
             } catch (IOException ignore) {
                 // Won't happen, already caught and logged
             }
-            Throwables.propagateIfPossible(e);
+            Throwables.throwIfUnchecked(e);
             throw new RuntimeException(e);
         }
     }
@@ -52,7 +52,7 @@ class StashSplitIterator extends AbstractIterator<Map<String, Object>> implement
         try {
             line = _reader.readLine();
         } catch (IOException e) {
-            Throwables.propagateIfPossible(e);
+            Throwables.throwIfUnchecked(e);
             throw new RuntimeException(e);
         }
 

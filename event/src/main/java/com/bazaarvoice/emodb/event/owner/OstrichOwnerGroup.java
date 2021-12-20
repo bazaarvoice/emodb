@@ -134,7 +134,7 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
             try {
                 Thread.sleep(10);
             } catch (InterruptedException e) {
-                Throwables.propagateIfPossible(e);
+                Throwables.throwIfUnchecked(e);
                 throw new RuntimeException(e);
             }
         }

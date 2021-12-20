@@ -209,7 +209,7 @@ public class TableRoleManagerDAO implements RoleManager {
                     _log.warn("Failed to delete role after failed permission create: {}", id, rollbackException);
                 }
 
-                Throwables.propagateIfPossible(e);
+                Throwables.throwIfUnchecked(e);
                 throw new RuntimeException(e);
             }
         }
@@ -264,7 +264,7 @@ public class TableRoleManagerDAO implements RoleManager {
                     }
                 }
 
-                Throwables.propagateIfPossible(e);
+                Throwables.throwIfUnchecked(e);
                 throw new RuntimeException(e);
             }
         }
