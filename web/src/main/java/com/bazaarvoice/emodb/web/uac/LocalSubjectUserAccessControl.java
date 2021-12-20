@@ -630,7 +630,8 @@ public class LocalSubjectUserAccessControl implements SubjectUserAccessControl {
             _lockTimeoutMeter.mark();
             throw new ServiceUnavailableException("Failed to acquire update lock, try again later", new Random().nextInt(5) + 1);
         }
-        throw Throwables.propagate(e);
+        Throwables.propagateIfPossible(e);
+        throw new RuntimeException(e);
     }
 
     // The following methods are helpful converters for transforming UAC and Auth representations of roles and keys.

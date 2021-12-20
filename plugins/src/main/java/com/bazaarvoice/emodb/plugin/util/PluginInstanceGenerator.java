@@ -114,7 +114,8 @@ public class PluginInstanceGenerator {
 
             return instance;
         } catch (Throwable t) {
-            throw Throwables.propagate(t);
+            Throwables.propagateIfPossible(t);
+            throw new RuntimeException(t);
         }
     }
 }

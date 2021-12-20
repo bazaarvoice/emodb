@@ -338,7 +338,8 @@ public class DatabusResourcePoller {
             // it empty.
             return Response.ok().build();
         } catch (IOException ex) {
-            throw Throwables.propagate(ex);
+            Throwables.propagateIfPossible(ex);
+            throw new RuntimeException(ex);
         } finally {
             // Make sure that we close out the request if our jobs (which would close it for us) failed to get scheduled
             if (!jobsScheduled) {

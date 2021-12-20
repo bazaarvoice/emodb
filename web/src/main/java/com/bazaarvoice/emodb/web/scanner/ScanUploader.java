@@ -208,7 +208,8 @@ public class ScanUploader {
                 _compactionControlSource.updateStashTime(scanId, compactionControlTime, Lists.newArrayList(status.getOptions().getPlacements()), expireTime, _dataCenters.getSelf().getName());
             } catch (Exception e) {
                 _log.error("Failed to update the stash time for scan {}", scanId, e);
-                throw Throwables.propagate(e);
+                Throwables.propagateIfPossible(e);
+                throw new RuntimeException(e);
             }
         }
 

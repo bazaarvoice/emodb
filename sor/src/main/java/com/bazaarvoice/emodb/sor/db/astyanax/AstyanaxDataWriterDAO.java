@@ -383,7 +383,8 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
             args.write(new TBinaryProtocol(transport));
             return (int) countingOut.getCount();
         } catch (TException | IOException e) {
-            throw Throwables.propagate(e);
+            Throwables.propagateIfPossible(e);
+            throw new RuntimeException(e);
         }
     }
 

@@ -101,7 +101,8 @@ public class StashRoleInclusionTest extends BaseRoleRestHelper {
                 }
             }
         } catch (Exception e) {
-            throw Throwables.propagate(e);
+            Throwables.propagateIfPossible(e);
+            throw new RuntimeException(e);
         }
         return null;
     }

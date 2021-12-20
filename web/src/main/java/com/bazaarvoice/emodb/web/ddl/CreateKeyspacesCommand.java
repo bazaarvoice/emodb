@@ -1,7 +1,6 @@
 package com.bazaarvoice.emodb.web.ddl;
 
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
-import com.bazaarvoice.emodb.common.json.CustomJsonObjectMapperFactory;
 import com.bazaarvoice.emodb.web.EmoConfiguration;
 import com.bazaarvoice.emodb.web.util.EmoServiceObjectMapperFactory;
 import com.codahale.metrics.MetricRegistry;
@@ -216,7 +215,8 @@ public final class CreateKeyspacesCommand extends ConfiguredCommand<EmoConfigura
                 _log.warn("could not acquire index lock after {} millis!!", LOCK_ACQUIRE_TIMEOUT.toMillis());
             }
         } catch (Exception e) {
-            throw Throwables.propagate(e);
+            Throwables.propagateIfPossible(e);
+            throw new RuntimeException(e);
         }
     }
 

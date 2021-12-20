@@ -120,7 +120,8 @@ abstract public class AbstractBatchReader<T> extends AbstractIterator<T> {
 
             // Check if the exception was not due to a timeout or size limit, or if the batch size is already at the minimum
             if (!(isTimeout || isDataSize) || _currentBatchSize == _minBatchSize) {
-                throw Throwables.propagate(batchFetchException);
+                Throwables.propagateIfPossible(batchFetchException);
+                throw new RuntimeException(batchFetchException);
             }
 
             // Reduce the current batch size by half, but not below the minimum size

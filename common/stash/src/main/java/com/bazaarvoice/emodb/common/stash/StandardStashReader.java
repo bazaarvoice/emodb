@@ -150,7 +150,8 @@ public class StandardStashReader extends StashReader {
         try (BufferedReader in = new BufferedReader(new InputStreamReader(s3Object.getObjectContent(), Charsets.UTF_8))) {
             return in.readLine();
         } catch (IOException e) {
-            throw Throwables.propagate(e);
+            Throwables.propagateIfPossible(e);
+            throw new RuntimeException(e);
         }
     }
 

@@ -118,7 +118,8 @@ public class PartitionAwareServiceFactory<S> implements MultiThreadedServiceFact
                         _errorMeter.mark();
                         throw new PartitionForwardingException("Failed to handle request at endpoint", targetException.getCause());
                     }
-                    throw Throwables.propagate(targetException);
+                    Throwables.propagateIfPossible(e);
+                    throw new RuntimeException(targetException);
                 }
             }
         });

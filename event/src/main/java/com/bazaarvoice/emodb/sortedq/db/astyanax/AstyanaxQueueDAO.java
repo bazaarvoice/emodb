@@ -230,7 +230,8 @@ public class AstyanaxQueueDAO implements QueueDAO {
         try {
             operationResult = execution.execute();
         } catch (ConnectionException e) {
-            throw Throwables.propagate(e);
+            Throwables.propagateIfPossible(e);
+            throw new RuntimeException(e);
         }
         return operationResult.getResult();
     }

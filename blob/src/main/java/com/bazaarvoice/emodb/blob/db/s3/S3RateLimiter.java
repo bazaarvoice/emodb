@@ -154,7 +154,8 @@ public class S3RateLimiter {
                 // noinspection unchecked
                 Throwables.propagateIfInstanceOf(t, (Class<? extends Throwable>) declaredException);
             }
-            throw Throwables.propagate(t);
+            Throwables.propagateIfPossible(t);
+            throw new RuntimeException(t);
         }
     }
 }

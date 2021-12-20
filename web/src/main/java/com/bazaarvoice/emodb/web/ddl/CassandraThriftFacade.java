@@ -40,7 +40,8 @@ final class CassandraThriftFacade implements Closeable {
         try {
             _transport.open();
         } catch (Exception e) {
-            throw Throwables.propagate(e);
+            Throwables.propagateIfPossible(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -49,7 +50,8 @@ final class CassandraThriftFacade implements Closeable {
         try {
             _transport.close();
         } catch (Exception e) {
-            throw Throwables.propagate(e);
+            Throwables.propagateIfPossible(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -58,7 +60,8 @@ final class CassandraThriftFacade implements Closeable {
         try {
             return _client.describe_version();
         } catch (Exception e) {
-            throw Throwables.propagate(e);
+            Throwables.propagateIfPossible(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -75,7 +78,8 @@ final class CassandraThriftFacade implements Closeable {
         try {
             _client.system_add_keyspace(keyspaceDefinition);
         } catch (Exception e) {
-            throw Throwables.propagate(e);
+            Throwables.propagateIfPossible(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -83,7 +87,8 @@ final class CassandraThriftFacade implements Closeable {
         try {
             _client.system_update_keyspace(keyspaceDefinition);
         } catch (Exception e) {
-            throw Throwables.propagate(e);
+            Throwables.propagateIfPossible(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -97,7 +102,8 @@ final class CassandraThriftFacade implements Closeable {
                 }
             }
         } catch (Exception e) {
-            throw Throwables.propagate(e);
+            Throwables.propagateIfPossible(e);
+            throw new RuntimeException(e);
         }
     }
 

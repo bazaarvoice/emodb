@@ -145,7 +145,8 @@ public class ScanUploadTest {
                 future.get();
             }
         } catch (Exception e) {
-            throw Throwables.propagate(e);
+            Throwables.propagateIfPossible(e);
+            throw new RuntimeException(e);
         } finally {
             populationService.shutdownNow();
         }

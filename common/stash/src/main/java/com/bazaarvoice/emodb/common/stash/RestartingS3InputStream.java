@@ -163,7 +163,8 @@ public class RestartingS3InputStream extends InputStream {
                 try {
                     Thread.sleep(200 * attempt);
                 } catch (InterruptedException interrupt) {
-                    throw Throwables.propagate(interrupt);
+                    Throwables.propagateIfPossible(e);
+                    throw new RuntimeException(interrupt);
                 }
             }
         }

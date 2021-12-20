@@ -591,7 +591,8 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                 _log.warn("Unable to store min split size for table {}", tableName);
             }
 
-            throw Throwables.propagate(timeoutException);
+            Throwables.propagateIfPossible(timeoutException);
+            throw new RuntimeException(timeoutException);
         }
     }
 
