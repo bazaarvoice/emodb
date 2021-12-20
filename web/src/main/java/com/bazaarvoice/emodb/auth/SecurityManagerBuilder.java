@@ -12,7 +12,7 @@ import org.apache.shiro.util.LifecycleUtils;
 
 import javax.annotation.Nullable;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Creates a {@link SecurityManager} which can be used for performing authentication and authorization.
@@ -39,22 +39,22 @@ public class SecurityManagerBuilder {
     }
 
     public SecurityManagerBuilder withRealmName(String realmName) {
-        _realmName = checkNotNull(realmName, "realmName");
+        _realmName = requireNonNull(realmName, "realmName");
         return this;
     }
 
     public SecurityManagerBuilder withAuthIdentityReader(AuthIdentityReader<ApiKey> authIdentityReader) {
-        _authIdentityReader = checkNotNull(authIdentityReader, "authIdentityReader");
+        _authIdentityReader = requireNonNull(authIdentityReader, "authIdentityReader");
         return this;
     }
 
     public SecurityManagerBuilder withPermissionReader(PermissionReader permissionReader) {
-        _permissionReader = checkNotNull(permissionReader, "permissionReader");
+        _permissionReader = requireNonNull(permissionReader, "permissionReader");
         return this;
     }
 
     public SecurityManagerBuilder withCacheManager(CacheManager cacheManager) {
-        _cacheManager = checkNotNull(cacheManager, "cacheManager");
+        _cacheManager = requireNonNull(cacheManager, "cacheManager");
         return this;
     }
 
@@ -69,8 +69,8 @@ public class SecurityManagerBuilder {
     }
 
     public EmoSecurityManager build() {
-        checkNotNull(_authIdentityReader, "authIdentityManager not set");
-        checkNotNull(_permissionReader, "permissionManager not set");
+        requireNonNull(_authIdentityReader, "authIdentityManager not set");
+        requireNonNull(_permissionReader, "permissionManager not set");
         if (_cacheManager == null) { // intended for test use
             _cacheManager = new GuavaCacheManager(null);
         }

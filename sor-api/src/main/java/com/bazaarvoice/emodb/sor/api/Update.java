@@ -12,7 +12,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public final class Update {
     private final String _table;
@@ -30,7 +30,7 @@ public final class Update {
     public Update(@JsonProperty("table") String table, @JsonProperty("key") String key,
                   @JsonProperty("changeId") @Nullable UUID changeId, @JsonProperty("delta") Delta delta,
                   @JsonProperty("audit") Audit audit, @JsonProperty("consistency") @Nullable WriteConsistency consistency) {
-        _table = checkNotNull(table, "table");
+        _table = requireNonNull(table, "table");
         checkArgument(Names.isLegalTableName(table),
                 "Table name must be a lowercase ASCII string between 1 and 255 characters in length. " +
                         "Allowed punctuation characters are -.:@_ and the table name may not start with a single underscore character. " +
@@ -39,8 +39,8 @@ public final class Update {
         _key = key;
         _changeId = Optional.ofNullable(changeId).orElse(TimeUUIDs.newUUID());
         checkArgument(_changeId.version() == 1, "The changeId must be an RFC 4122 version 1 UUID (a time UUID).");
-        _delta = checkNotNull(delta, "delta");
-        _audit = checkNotNull(audit, "audit");
+        _delta = requireNonNull(delta, "delta");
+        _audit = requireNonNull(audit, "audit");
         _consistency = Optional.ofNullable(consistency).orElse(WriteConsistency.STRONG);
     }
 

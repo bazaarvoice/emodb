@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class SetDeltaImpl extends AbstractDelta implements SetDelta {
 
@@ -23,8 +23,8 @@ public class SetDeltaImpl extends AbstractDelta implements SetDelta {
 
     public SetDeltaImpl(boolean removeRest, Collection<Literal> addedValues, Collection<Literal> removedValues, boolean deleteIfEmpty) {
         _removeRest = removeRest;
-        _addedValues = sorted(checkNotNull(addedValues, "addedValues"));
-        _removedValues = sorted(checkNotNull(removedValues, "removedValues"));
+        _addedValues = sorted(requireNonNull(addedValues, "addedValues"));
+        _removedValues = sorted(requireNonNull(removedValues, "removedValues"));
         _deleteIfEmpty = deleteIfEmpty;
     }
 

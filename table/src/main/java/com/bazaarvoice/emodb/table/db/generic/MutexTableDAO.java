@@ -26,7 +26,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Wraps a {@link TableDAO} with a global mutex that serializes create and drop table operations across the entire
@@ -40,8 +40,8 @@ public class MutexTableDAO implements TableDAO {
 
     @Inject
     public MutexTableDAO(@MutexTableDAODelegate TableDAO delegate, Optional<TableMutexManager> mutexManager) {
-        _delegate = checkNotNull(delegate, "delegate");
-        _mutexManager = checkNotNull(mutexManager, "table mutex manager");
+        _delegate = requireNonNull(delegate, "delegate");
+        _mutexManager = requireNonNull(mutexManager, "table mutex manager");
     }
 
     @Override
@@ -51,7 +51,7 @@ public class MutexTableDAO implements TableDAO {
 
     @Override
     public void writeUnpublishedDatabusEvent(String name, UnpublishedDatabusEventType attribute){
-        checkNotNull(name, "table");
+        requireNonNull(name, "table");
         _delegate.writeUnpublishedDatabusEvent(name, attribute);
     }
 

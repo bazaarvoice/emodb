@@ -11,7 +11,7 @@ import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Role object for an Emo role.  Each role is uniquely identified by a {@link EmoRoleKey}.  Although it is useful
@@ -29,11 +29,11 @@ public class EmoRole {
     private EmoRole(@JsonProperty("group") String group, @JsonProperty("id") String id) {
         this(new EmoRoleKey(
                 Optional.ofNullable(group).orElse(EmoRoleKey.NO_GROUP),
-                checkNotNull(id, "id")));
+                requireNonNull(id, "id")));
     }
 
     public EmoRole(EmoRoleKey id) {
-        _id = checkNotNull(id, "id");
+        _id = requireNonNull(id, "id");
     }
 
     @JsonProperty("group")

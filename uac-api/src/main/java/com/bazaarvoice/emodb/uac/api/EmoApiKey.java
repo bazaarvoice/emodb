@@ -9,7 +9,7 @@ import com.google.common.collect.ImmutableSet;
 import java.util.Date;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * API key object for an Emo user.  Each API key has two identifiers:  The private key used for authentication and
@@ -30,9 +30,9 @@ public class EmoApiKey {
     @JsonCreator
     public EmoApiKey(@JsonProperty("id") String id, @JsonProperty("maskedKey") String maskedKey,
                      @JsonProperty("issued") Date issued) {
-        _id = checkNotNull(id, "id");
-        _maskedKey = checkNotNull(maskedKey, "maskedKey");
-        _issued = checkNotNull(issued, "issued");
+        _id = requireNonNull(id, "id");
+        _maskedKey = requireNonNull(maskedKey, "maskedKey");
+        _issued = requireNonNull(issued, "issued");
     }
 
     public String getId() {
@@ -71,7 +71,7 @@ public class EmoApiKey {
     }
 
     public EmoApiKey setRoles(Set<EmoRoleKey> roles) {
-        _roles = checkNotNull(roles, "roles");
+        _roles = requireNonNull(roles, "roles");
         return this;
     }
 

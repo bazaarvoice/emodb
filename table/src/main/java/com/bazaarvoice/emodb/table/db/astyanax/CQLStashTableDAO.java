@@ -23,7 +23,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * This class is used to create and query a snapshot of tables for Stash.  For example, if a table is deleted, moved or
@@ -61,9 +61,9 @@ public class CQLStashTableDAO {
     @Inject
     public CQLStashTableDAO(@SystemTablePlacement String systemTablePlacement,
                             PlacementCache placementCache, DataCenters dataCenters) {
-        _systemTablePlacement = checkNotNull(systemTablePlacement, "systemTablePlacement");
-        _placementCache = checkNotNull(placementCache, "placementCache");
-        _dataCenters = checkNotNull(dataCenters, "dataCenters");
+        _systemTablePlacement = requireNonNull(systemTablePlacement, "systemTablePlacement");
+        _placementCache = requireNonNull(placementCache, "placementCache");
+        _dataCenters = requireNonNull(dataCenters, "dataCenters");
     }
 
     public void addTokenRangesForTable(String stashId, AstyanaxStorage readStorage, TableJson tableJson) {

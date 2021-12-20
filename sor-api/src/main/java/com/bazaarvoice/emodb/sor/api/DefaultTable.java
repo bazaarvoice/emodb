@@ -6,7 +6,7 @@ import com.google.common.base.Objects;
 import javax.annotation.Nullable;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public final class DefaultTable implements Table {
     private final String _name;
@@ -18,9 +18,9 @@ public final class DefaultTable implements Table {
                         @JsonProperty("options") TableOptions options,
                         @JsonProperty("template") Map<String, Object> template,
                         @JsonProperty("availability") @Nullable TableAvailability availability) {
-        _name = checkNotNull(name, "name");
-        _options = checkNotNull(options, "options");
-        _template = checkNotNull(template, "template");
+        _name = requireNonNull(name, "name");
+        _options = requireNonNull(options, "options");
+        _template = requireNonNull(template, "template");
         _availability = availability;
     }
 

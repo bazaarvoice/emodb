@@ -106,7 +106,7 @@ import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Asp
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.throttle;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.uac;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.web;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class EmoService extends Application<EmoConfiguration> {
 
@@ -137,8 +137,8 @@ public class EmoService extends Application<EmoConfiguration> {
     }
 
     public EmoService(String emoDdlPath, File configFile) {
-        _pathToDdl = checkNotNull(emoDdlPath, "emoDdlPath");
-        _configFile = checkNotNull(configFile, "configFile");
+        _pathToDdl = requireNonNull(emoDdlPath, "emoDdlPath");
+        _configFile = requireNonNull(configFile, "configFile");
     }
 
     @Override

@@ -13,7 +13,7 @@ import com.bazaarvoice.emodb.uac.api.UpdateEmoRoleRequest;
 
 import java.util.Iterator;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Implementation of SubjectUserAccessControl which takes two delegates, a read and a write delegate.
@@ -30,8 +30,8 @@ public class ReadWriteDelegatingSubjectUserAccessControl implements SubjectUserA
     private final SubjectUserAccessControl _write;
 
     public ReadWriteDelegatingSubjectUserAccessControl(SubjectUserAccessControl read, SubjectUserAccessControl write) {
-        _read = checkNotNull(read, "read");
-        _write = checkNotNull(write, "write");
+        _read = requireNonNull(read, "read");
+        _write = requireNonNull(write, "write");
     }
 
     @Override

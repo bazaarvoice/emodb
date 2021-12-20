@@ -6,7 +6,7 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * OutputStream wrapper that updates a counter metric with the number of bytes written to the stream.
@@ -18,8 +18,8 @@ public class MetricCounterOutputStream extends FilterOutputStream {
     private long _bufferedCount;
 
     public MetricCounterOutputStream(OutputStream delegate, Counter counter) {
-        super(checkNotNull(delegate, "delegate"));
-        _counter = checkNotNull(counter, "counter");
+        super(requireNonNull(delegate, "delegate"));
+        _counter = requireNonNull(counter, "counter");
     }
 
     @Override

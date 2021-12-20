@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * This part is used for verifying permissions for creating a new table by other permissions.  As such no permissions
@@ -25,8 +25,8 @@ public class CreateTablePart extends EmoMatchingPart {
     @JsonCreator
     public CreateTablePart(@JsonProperty("name") String name, @JsonProperty("placement") String placement,
                            @JsonProperty("attributes") Map<String, ?> attributes) {
-        _name = checkNotNull(name, "name");
-        _placement = checkNotNull(placement, "placement");
+        _name = requireNonNull(name, "name");
+        _placement = requireNonNull(placement, "placement");
         _attributes = Optional.ofNullable(attributes).orElse(Collections.EMPTY_MAP);
     }
 

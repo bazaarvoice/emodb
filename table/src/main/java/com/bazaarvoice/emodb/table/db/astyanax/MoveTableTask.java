@@ -34,9 +34,9 @@ import java.util.Map;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Shows the current scheduled table maintenance (for move and drop operations) and allows scheduling table moves,
@@ -86,9 +86,9 @@ public class MoveTableTask extends Task {
                          TableDAO tableDao, MaintenanceDAO maintDao,
                          @PlacementsUnderMove Map<String, String> placementsUnderMove) {
         super(scope + "-move");
-        _tableDao = checkNotNull(tableDao, "tableDAO");
-        _maintDao = checkNotNull(maintDao, "maintDao");
-        _placementsUnderMove = checkNotNull(placementsUnderMove, "placementsUnderMove");
+        _tableDao = requireNonNull(tableDao, "tableDAO");
+        _maintDao = requireNonNull(maintDao, "maintDao");
+        _placementsUnderMove = requireNonNull(placementsUnderMove, "placementsUnderMove");
         taskRegistry.addTask(this);
     }
 

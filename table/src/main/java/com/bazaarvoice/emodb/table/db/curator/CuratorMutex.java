@@ -9,7 +9,7 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Data-center-wide mutex spans all instances of the DataStore for a particular deployment in a particular data center.
@@ -19,8 +19,8 @@ public class CuratorMutex implements Mutex {
     private final String _path;
 
     public CuratorMutex(CuratorFramework curatorFramework, String path) {
-        _curatorFramework = checkNotNull(curatorFramework, "curatorFramework");
-        _path = checkNotNull(path, "path");
+        _curatorFramework = requireNonNull(curatorFramework, "curatorFramework");
+        _path = requireNonNull(path, "path");
     }
 
     @Override

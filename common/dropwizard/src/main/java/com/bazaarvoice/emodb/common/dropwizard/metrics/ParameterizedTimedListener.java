@@ -11,7 +11,7 @@ import org.aopalliance.intercept.MethodInvocation;
 
 import java.lang.reflect.Method;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Guice type listener that looks for methods annotated with {@link ParameterizedTimed} and tracks their
@@ -24,7 +24,7 @@ public class ParameterizedTimedListener implements TypeListener {
     private final MetricRegistry _metricRegistry;
 
     public ParameterizedTimedListener(String group, MetricRegistry metricRegistry) {
-        _group = checkNotNull(group, "group");
+        _group = requireNonNull(group, "group");
         _metricRegistry = metricRegistry;
     }
 

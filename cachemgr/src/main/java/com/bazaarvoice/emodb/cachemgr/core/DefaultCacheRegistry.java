@@ -26,7 +26,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class DefaultCacheRegistry implements CacheRegistry, Closeable {
     private static Logger _log = LoggerFactory.getLogger(DefaultCacheRegistry.class);
@@ -110,7 +110,7 @@ public class DefaultCacheRegistry implements CacheRegistry, Closeable {
         private final AtomicReference<Cache<String, ?>> _cache = new AtomicReference<>();
 
         private HandleImpl(String name) {
-            _name = checkNotNull(name, "name");
+            _name = requireNonNull(name, "name");
         }
 
         private void setCache(Cache<String, ?> cache) {

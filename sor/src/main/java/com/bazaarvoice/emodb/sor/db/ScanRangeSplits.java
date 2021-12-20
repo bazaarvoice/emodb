@@ -9,7 +9,7 @@ import com.google.common.collect.Table;
 import java.util.List;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * POJO used to group splits in the following way:
@@ -30,7 +30,7 @@ public class ScanRangeSplits {
     private final List<SplitGroup> _splitGroups;
 
     public ScanRangeSplits(List<SplitGroup> splitGroups) {
-        _splitGroups = checkNotNull(splitGroups, "splitGroups");
+        _splitGroups = requireNonNull(splitGroups, "splitGroups");
     }
 
     public List<SplitGroup> getSplitGroups() {

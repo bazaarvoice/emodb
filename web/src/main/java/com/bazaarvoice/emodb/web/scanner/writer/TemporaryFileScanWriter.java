@@ -1,6 +1,5 @@
 package com.bazaarvoice.emodb.web.scanner.writer;
 
-import com.bazaarvoice.emodb.common.dropwizard.time.ClockTicker;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,8 +31,8 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
 /**
  * ScanWriter that writes to a temporary file first, then transfers it.
@@ -58,14 +57,14 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
                                       MetricRegistry metricRegistry, Optional<Integer> maxOpenShards,
                                       ObjectMapper objectMapper) {
         super(type, taskId, baseUri, compression, metricRegistry);
-        checkNotNull(maxOpenShards, "maxOpenShards");
+        requireNonNull(maxOpenShards, "maxOpenShards");
 
         _maxOpenShards = maxOpenShards.or(DEFAULT_MAX_OPEN_SHARDS);
         checkArgument(_maxOpenShards > 0, "maxOpenShards <= 0");
 
         _openTransfers = metricRegistry.counter(MetricRegistry.name("bv.emodb.scan", "ScanUploader", "open-transfers"));
         _blockedNewShards = metricRegistry.counter(MetricRegistry.name("bv.emodb.scan", "ScanUploader", "blocked-new-shards"));
-        _mapper = checkNotNull(objectMapper, "objectMapper");
+        _mapper = requireNonNull(objectMapper, "objectMapper");
     }
 
     /**

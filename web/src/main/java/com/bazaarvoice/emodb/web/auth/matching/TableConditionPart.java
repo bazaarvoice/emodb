@@ -11,7 +11,6 @@ import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.condition.ConstantCondition;
 import com.bazaarvoice.emodb.sor.condition.ContainsCondition;
-import com.bazaarvoice.emodb.sor.condition.PartitionCondition;
 import com.bazaarvoice.emodb.sor.condition.EqualCondition;
 import com.bazaarvoice.emodb.sor.condition.InCondition;
 import com.bazaarvoice.emodb.sor.condition.IntrinsicCondition;
@@ -20,6 +19,7 @@ import com.bazaarvoice.emodb.sor.condition.LikeCondition;
 import com.bazaarvoice.emodb.sor.condition.MapCondition;
 import com.bazaarvoice.emodb.sor.condition.NotCondition;
 import com.bazaarvoice.emodb.sor.condition.OrCondition;
+import com.bazaarvoice.emodb.sor.condition.PartitionCondition;
 import com.bazaarvoice.emodb.sor.condition.eval.ConditionEvaluator;
 import com.bazaarvoice.emodb.sor.condition.eval.SubsetEvaluator;
 import com.bazaarvoice.emodb.web.auth.Permissions;
@@ -30,7 +30,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Base class for evaluating whether a table matches a permission by using conditions.  This is the same syntax and
@@ -71,7 +71,7 @@ abstract public class TableConditionPart extends EmoMatchingPart {
     private final boolean _requiresTableMetadata;
 
     public TableConditionPart(Condition condition) {
-        _condition = checkNotNull(condition, "condition");
+        _condition = requireNonNull(condition, "condition");
         _requiresTableMetadata = condition.visit(_requiresMetadataVisitor, null);
     }
 

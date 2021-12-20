@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link StashRequestDAO} implementation which uses a DataStore table for persistence.
@@ -61,8 +61,8 @@ public class DataStoreStashRequestDAO implements StashRequestDAO {
 
     @Override
     public void requestStash(String scanId, StashRequest request) {
-        checkNotNull(scanId, "scanId");
-        checkNotNull(request, "request");
+        requireNonNull(scanId, "scanId");
+        requireNonNull(request, "request");
 
         _dataStore.update(getTable(), scanId, TimeUUIDs.newUUID(),
                 Deltas.mapBuilder()
@@ -76,18 +76,18 @@ public class DataStoreStashRequestDAO implements StashRequestDAO {
 
     @Override
     public void undoRequestStash(String scanId, StashRequest request) {
-        checkNotNull(scanId, "scanId");
-        checkNotNull(request, "request");
+        requireNonNull(scanId, "scanId");
+        requireNonNull(request, "request");
 
         _dataStore.update(getTable(), scanId, TimeUUIDs.newUUID(),
                 Deltas.conditional(Conditions.isDefined(),
-                    Deltas.mapBuilder()
-                            .update("requests",
-                                    Deltas.conditional(Conditions.isDefined(),
-                                            Deltas.mapBuilder()
-                                                    .update(request.getRequestedBy(), Deltas.delete())
-                                                    .build()))
-                            .build()),
+                        Deltas.mapBuilder()
+                                .update("requests",
+                                        Deltas.conditional(Conditions.isDefined(),
+                                                Deltas.mapBuilder()
+                                                        .update(request.getRequestedBy(), Deltas.delete())
+                                                        .build()))
+                                .build()),
                 new AuditBuilder().setComment("Removed scan request").set("requestedBy", request.getRequestedBy()).build());
     }
 

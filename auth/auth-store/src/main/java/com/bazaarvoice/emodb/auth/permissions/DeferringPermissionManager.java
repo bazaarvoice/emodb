@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link PermissionManager} which can explicitly provide some permissions and defer all others to another instance.
@@ -21,13 +21,13 @@ public class DeferringPermissionManager implements PermissionManager {
     private final Map<String, Set<Permission>> _permissions;
 
     public DeferringPermissionManager(PermissionManager manager, @Nullable Map<String, Set<Permission>> permissions) {
-        _manager = checkNotNull(manager, "manager");
+        _manager = requireNonNull(manager, "manager");
         _permissions = permissions != null ? ImmutableMap.copyOf(permissions) : ImmutableMap.<String, Set<Permission>>of();
     }
 
     @Override
     public Set<Permission> getPermissions(String id) {
-        checkNotNull(id, "id");
+        requireNonNull(id, "id");
         Set<Permission> permissions = _permissions.get(id);
         if (permissions == null) {
             permissions = _manager.getPermissions(id);

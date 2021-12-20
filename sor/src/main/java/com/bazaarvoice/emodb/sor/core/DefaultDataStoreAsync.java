@@ -15,7 +15,7 @@ import com.google.inject.Inject;
 
 import java.util.Date;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Created by andee.liao on 6/7/16.
@@ -29,7 +29,7 @@ public class DefaultDataStoreAsync implements DataStoreAsync {
         _dataStore = dataStore;
         _jobService = jobService;
 
-        checkNotNull(jobHandlerRegistry, "jobHandlerRegistry");
+        requireNonNull(jobHandlerRegistry, "jobHandlerRegistry");
         registerPurgeJobHandler(jobHandlerRegistry);
     }
 
@@ -56,7 +56,7 @@ public class DefaultDataStoreAsync implements DataStoreAsync {
 
     @Override
     public String purgeTableAsync(String table, Audit audit) {
-        checkNotNull(audit, "audit");
+        requireNonNull(audit, "audit");
 
         JobIdentifier<PurgeRequest, PurgeResult> jobId =
                 _jobService.submitJob(
@@ -66,7 +66,7 @@ public class DefaultDataStoreAsync implements DataStoreAsync {
 
     @Override
     public PurgeStatus getPurgeStatus( String table, String jobID) {
-        checkNotNull(table, "table");
+        requireNonNull(table, "table");
 
         JobIdentifier<PurgeRequest, PurgeResult> jobId;
         try {

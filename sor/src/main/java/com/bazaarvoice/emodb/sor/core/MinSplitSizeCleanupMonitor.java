@@ -10,17 +10,18 @@ import com.bazaarvoice.emodb.sor.DataStoreZooKeeper;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.inject.Inject;
+import org.apache.curator.framework.CuratorFramework;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.time.Clock;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import org.apache.curator.framework.CuratorFramework;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Leader elected moniotor that cleans up expired {@link DataStoreMinSplitSize}'s in Zookeeper.
@@ -48,8 +49,8 @@ public class MinSplitSizeCleanupMonitor extends LeaderService {
         private final Clock _clock;
 
         public MinSplitSizeCleanupService(MapStore<DataStoreMinSplitSize> minSplitSizeMap, Clock clock) {
-            _minSplitSizeMap = checkNotNull(minSplitSizeMap);
-            _clock = checkNotNull(clock);
+            _minSplitSizeMap = requireNonNull(minSplitSizeMap);
+            _clock = requireNonNull(clock);
         }
 
         @Override

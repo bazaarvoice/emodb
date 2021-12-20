@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * ScanWriter implementation which allows writing to multiple ScanWriters concurrently.
@@ -22,7 +22,7 @@ public class MultiScanWriter implements ScanWriter {
     private final List<ScanWriter> _scanWriters;
 
     public MultiScanWriter(List<ScanWriter> scanWriters) {
-        checkNotNull(scanWriters, "scanWriters");
+        requireNonNull(scanWriters, "scanWriters");
         checkArgument(!scanWriters.isEmpty(), "scanWriters.isEmpty()");
         _scanWriters = scanWriters;
     }

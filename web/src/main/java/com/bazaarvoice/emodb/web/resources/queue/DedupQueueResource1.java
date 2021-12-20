@@ -38,7 +38,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 @Path("/dedupq/1")
 @Produces(MediaType.APPLICATION_JSON)
@@ -50,8 +50,8 @@ public class DedupQueueResource1 {
     private final DedupQueueServiceAuthenticator _queueClient;
 
     public DedupQueueResource1(DedupQueueService queueService, DedupQueueServiceAuthenticator queueClient) {
-        _queueService = checkNotNull(queueService, "queueService");
-        _queueClient = checkNotNull(queueClient, "queueClient");
+        _queueService = requireNonNull(queueService, "queueService");
+        _queueClient = requireNonNull(queueClient, "queueClient");
     }
 
     @POST

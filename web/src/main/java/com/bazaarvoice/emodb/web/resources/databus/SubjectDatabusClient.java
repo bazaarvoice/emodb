@@ -5,7 +5,7 @@ import com.bazaarvoice.emodb.databus.api.AuthDatabus;
 import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.databus.client.DatabusAuthenticator;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * SubjectDatabus implementation which forwards calls to an {@link AuthDatabus} using the API key as the authenticator.
@@ -16,7 +16,7 @@ public class SubjectDatabusClient extends AbstractSubjectDatabus {
     private final DatabusAuthenticator _authenticator;
 
     public SubjectDatabusClient(AuthDatabus authDatabus) {
-        _authDatabus = checkNotNull(authDatabus, "authDatabus");
+        _authDatabus = requireNonNull(authDatabus, "authDatabus");
         _authenticator = DatabusAuthenticator.proxied(_authDatabus);
     }
 

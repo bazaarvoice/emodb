@@ -35,8 +35,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Arrays.asList;
+import static java.util.Objects.requireNonNull;
 import static org.twdata.maven.mojoexecutor.MojoExecutor.configuration;
 import static org.twdata.maven.mojoexecutor.MojoExecutor.element;
 import static org.twdata.maven.mojoexecutor.MojoExecutor.executeMojo;
@@ -291,7 +291,7 @@ public class EmoStartMojo extends AbstractEmoMojo {
             String adminApiKey = getAdminApiKey(config);
 
             for (RoleParameter role : roles) {
-                String name = checkNotNull(role.getName(), "Role configuration must include a name");
+                String name = requireNonNull(role.getName(), "Role configuration must include a name");
                 getLog().info("Creating role " + name);
 
                 Map<String, Object> entity = ImmutableMap.of(
@@ -313,7 +313,7 @@ public class EmoStartMojo extends AbstractEmoMojo {
             }
 
             for (ApiKeyParameter apiKey : apiKeys) {
-                String value = checkNotNull(apiKey.getValue(), "API key configuration must include a value");
+                String value = requireNonNull(apiKey.getValue(), "API key configuration must include a value");
                 getLog().info("Creating API key " + value);
 
                 Map<String, Object> entity = ImmutableMap.of(

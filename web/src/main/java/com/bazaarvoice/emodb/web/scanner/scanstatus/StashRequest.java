@@ -5,7 +5,7 @@ import com.google.common.base.Objects;
 
 import java.util.Date;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * POJO for metadata about a request for a scan.
@@ -16,8 +16,8 @@ public class StashRequest {
     private final Date _requestTime;
 
     public StashRequest(String requestedBy, Date requestTime) {
-        _requestedBy = checkNotNull(requestedBy, "requestedBy");
-        _requestTime = checkNotNull(requestTime, "requestTime");
+        _requestedBy = requireNonNull(requestedBy, "requestedBy");
+        _requestTime = requireNonNull(requestTime, "requestTime");
     }
 
     public String getRequestedBy() {

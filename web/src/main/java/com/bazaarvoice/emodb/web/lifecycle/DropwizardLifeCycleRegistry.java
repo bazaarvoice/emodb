@@ -8,7 +8,7 @@ import io.dropwizard.setup.Environment;
 
 import java.io.Closeable;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Implementation of {@link LifeCycleRegistry} for Dropwizard {@code Environment} objects.
@@ -18,7 +18,7 @@ public class DropwizardLifeCycleRegistry implements LifeCycleRegistry {
 
     @Inject
     public DropwizardLifeCycleRegistry(Environment environment) {
-        _environment = checkNotNull(environment, "environment");
+        _environment = requireNonNull(environment, "environment");
     }
 
     @Override

@@ -18,7 +18,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import java.util.List;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 @Path("/busrepl/1")
 @Produces(MediaType.APPLICATION_JSON)
@@ -26,7 +26,7 @@ public class ReplicationResource1 {
     private final ReplicationSource _replicationSource;
 
     public ReplicationResource1(ReplicationSource replicationSource) {
-        _replicationSource = checkNotNull(replicationSource, "replicationSource");
+        _replicationSource = requireNonNull(replicationSource, "replicationSource");
     }
 
     @GET

@@ -16,7 +16,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * When used internally within the EmoDB server databus operations require the context of the owner which is making each
@@ -37,7 +37,7 @@ public class DatabusFactory {
     }
 
     public Databus forOwner(final String ownerId) {
-        checkNotNull(ownerId, "ownerId");
+        requireNonNull(ownerId, "ownerId");
 
         /**
          * Proxy class for Databus that simply inserts the owner ID where appropriate.

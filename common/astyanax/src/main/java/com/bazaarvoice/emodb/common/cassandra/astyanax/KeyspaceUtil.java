@@ -9,7 +9,7 @@ import com.netflix.astyanax.shallows.EmptyKeyspaceTracerFactory;
 import com.netflix.astyanax.thrift.ThriftKeyspaceImpl;
 import org.apache.cassandra.thrift.Cassandra;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Helper utility for Keyspace operations
@@ -32,7 +32,7 @@ public final class KeyspaceUtil {
         private final Keyspace _keyspace;
 
         private PinnedKeyspaceBuilder(Keyspace keyspace) {
-            _keyspace = checkNotNull(keyspace, "keyspace");
+            _keyspace = requireNonNull(keyspace, "keyspace");
         }
 
         public Keyspace toHost(String hostName) throws ConnectionException {

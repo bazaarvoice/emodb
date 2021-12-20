@@ -30,7 +30,7 @@ import java.util.List;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * TableSerializer which caches tables locally and in ZooKeeper to provide a consistent view for all clients
@@ -57,14 +57,14 @@ public class DistributedTableSerializer implements TableSerializer, Closeable {
     private boolean _cleanupOnClose = false;
 
     public DistributedTableSerializer(TableSerializer tableSerializer, CuratorFramework curator, String basePath) {
-        _source = checkNotNull(tableSerializer, "tableSerializer");
-        _curator = checkNotNull(curator, "curator");
-        _basePath = checkNotNull(basePath, "basePath");
+        _source = requireNonNull(tableSerializer, "tableSerializer");
+        _curator = requireNonNull(curator, "curator");
+        _basePath = requireNonNull(basePath, "basePath");
         _ensurePath = curator.newNamespaceAwareEnsurePath(basePath);
     }
 
     public DistributedTableSerializer(SerializingTableSet sourceTableSet, CuratorFramework curator, String basePath) {
-        this(checkNotNull(sourceTableSet, "sourceTableSet").getTableSerializer(), curator, basePath);
+        this(requireNonNull(sourceTableSet, "sourceTableSet").getTableSerializer(), curator, basePath);
     }
 
     public DistributedTableSerializer(TableSet sourceTableSet, CuratorFramework curator, String basePath) {
@@ -72,7 +72,7 @@ public class DistributedTableSerializer implements TableSerializer, Closeable {
     }
 
     private static SerializingTableSet narrowToSerializingTableSet(TableSet tableSet) {
-        checkNotNull(tableSet, "tableSet");
+        requireNonNull(tableSet, "tableSet");
         checkArgument(tableSet instanceof SerializingTableSet, "TableSet must implement SerializingTableSet");
         //noinspection ConstantConditions
         return (SerializingTableSet) tableSet;

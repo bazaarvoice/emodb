@@ -11,8 +11,8 @@ import com.datastax.driver.core.querybuilder.QueryBuilder;
 
 import java.util.List;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.ttl;
+import static java.util.Objects.requireNonNull;
 
 public class CqlHistoryBatchPersister implements HistoryBatchPersister {
 
@@ -26,10 +26,10 @@ public class CqlHistoryBatchPersister implements HistoryBatchPersister {
     private CqlHistoryBatchPersister(BatchStatement batchStatement, TableDDL tableDDL,
                                      ChangeEncoder changeEncoder, HistoryStore historyStore,
                                      ConsistencyLevel consistencyLevel) {
-        _batchStatement = checkNotNull(batchStatement);
-        _tableDDL = checkNotNull(tableDDL);
-        _changeEncoder = checkNotNull(changeEncoder);
-        _historyStore = checkNotNull(historyStore);
+        _batchStatement = requireNonNull(batchStatement);
+        _tableDDL = requireNonNull(tableDDL);
+        _changeEncoder = requireNonNull(changeEncoder);
+        _historyStore = requireNonNull(historyStore);
         _consistencyLevel = consistencyLevel;
     }
 

@@ -17,7 +17,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Implementation of AuthDatabus that defers all calls to a {@link Databus} which doesn't require authentication.
@@ -30,7 +30,7 @@ public class TrustedDatabus implements AuthDatabus {
     private final Databus _databus;
 
     public TrustedDatabus(Databus databus) {
-        _databus = checkNotNull(databus, "databus");
+        _databus = requireNonNull(databus, "databus");
     }
 
     public Iterator<Subscription> listSubscriptions(@Credential String apiKey, @Nullable String fromSubscriptionExclusive, long limit) {

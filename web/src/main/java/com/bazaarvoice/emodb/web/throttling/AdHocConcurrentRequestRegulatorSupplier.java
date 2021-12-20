@@ -8,7 +8,7 @@ import com.sun.jersey.spi.container.ContainerRequest;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentMap;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Implementation of {@link ConcurrentRequestRegulatorSupplier} which supplies regulators which will throttle based
@@ -23,7 +23,7 @@ public class AdHocConcurrentRequestRegulatorSupplier implements ConcurrentReques
     private final Meter _meter;
 
     public AdHocConcurrentRequestRegulatorSupplier(AdHocThrottleManager throttleStore, MetricRegistry metricRegistry) {
-        _throttleStore = checkNotNull(throttleStore, "throttleStore");
+        _throttleStore = requireNonNull(throttleStore, "throttleStore");
         _meter = metricRegistry.meter(MetricRegistry.name("bv.emodb.web", "Throttle", "adhoc-throttled-requests"));
     }
 

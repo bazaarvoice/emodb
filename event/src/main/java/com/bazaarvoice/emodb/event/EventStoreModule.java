@@ -51,7 +51,7 @@ import org.apache.curator.framework.CuratorFramework;
 import javax.annotation.Nullable;
 import java.time.Duration;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Guice module for constructing an {@link com.bazaarvoice.emodb.event.api.EventStore}.
@@ -78,7 +78,7 @@ public class EventStoreModule extends PrivateModule {
     private MetricRegistry _metricRegistry;
 
     public EventStoreModule(String metricsGroup, MetricRegistry metricRegistry) {
-        _metricsGroup = checkNotNull(metricsGroup, "metricsGroup");
+        _metricsGroup = requireNonNull(metricsGroup, "metricsGroup");
         _metricRegistry = metricRegistry;
     }
 

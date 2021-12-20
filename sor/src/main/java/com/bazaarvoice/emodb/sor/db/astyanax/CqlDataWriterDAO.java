@@ -7,7 +7,11 @@ import com.bazaarvoice.emodb.sor.api.History;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.HistoryBatchPersister;
 import com.bazaarvoice.emodb.sor.core.HistoryStore;
-import com.bazaarvoice.emodb.sor.db.*;
+import com.bazaarvoice.emodb.sor.db.DAOUtils;
+import com.bazaarvoice.emodb.sor.db.DataWriterDAO;
+import com.bazaarvoice.emodb.sor.db.HistoryMigrationScanResult;
+import com.bazaarvoice.emodb.sor.db.MigrationScanResult;
+import com.bazaarvoice.emodb.sor.db.RecordUpdate;
 import com.bazaarvoice.emodb.sor.db.cql.CqlWriterDAODelegate;
 import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
 import com.bazaarvoice.emodb.sor.delta.Delta;
@@ -17,29 +21,27 @@ import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxTable;
 import com.bazaarvoice.emodb.table.db.astyanax.PlacementCache;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
-import com.datastax.driver.core.*;
+import com.datastax.driver.core.BatchStatement;
+import com.datastax.driver.core.ConsistencyLevel;
+import com.datastax.driver.core.ResultSetFuture;
+import com.datastax.driver.core.Session;
+import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.RateLimiter;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.StringUtils;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.Phaser;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.ttl;
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 
 public class CqlDataWriterDAO implements DataWriterDAO, DataCopyWriterDAO {
@@ -69,9 +71,9 @@ public class CqlDataWriterDAO implements DataWriterDAO, DataCopyWriterDAO {
                             @CellTombstoneCompactionEnabled boolean cellTombstoneCompactionEnabled, @CellTombstoneBlockLimit int cellTombstoneBlockLimit) {
 
 
-        _astyanaxWriterDAO = checkNotNull(delegate, "delegate");
-        _historyStore = checkNotNull(historyStore, "historyStore");
-        _changeEncoder = checkNotNull(changeEncoder, "changeEncoder");
+        _astyanaxWriterDAO = requireNonNull(delegate, "delegate");
+        _historyStore = requireNonNull(historyStore, "historyStore");
+        _changeEncoder = requireNonNull(changeEncoder, "changeEncoder");
         _blockedRowsMigratedMeter = metricRegistry.meter(getMetricName("blockedMigratedRows"));
         _daoUtils = daoUtils;
         _deltaPrefix = StringUtils.repeat('0', deltaPrefixLength);
@@ -102,14 +104,14 @@ public class CqlDataWriterDAO implements DataWriterDAO, DataCopyWriterDAO {
 
     @Override
     public void compact(Table tbl, String key, UUID compactionKey, Compaction compaction, UUID changeId, Delta delta, Collection<DeltaClusteringKey> changesToDelete, List<History> historyList, WriteConsistency consistency) {
-        checkNotNull(tbl, "table");
-        checkNotNull(key, "key");
-        checkNotNull(compactionKey, "compactionKey");
-        checkNotNull(compaction, "compaction");
-        checkNotNull(changeId, "changeId");
-        checkNotNull(delta, "delta");
-        checkNotNull(changesToDelete, "changesToDelete");
-        checkNotNull(consistency, "consistency");
+        requireNonNull(tbl, "table");
+        requireNonNull(key, "key");
+        requireNonNull(compactionKey, "compactionKey");
+        requireNonNull(compaction, "compaction");
+        requireNonNull(changeId, "changeId");
+        requireNonNull(delta, "delta");
+        requireNonNull(changesToDelete, "changesToDelete");
+        requireNonNull(consistency, "consistency");
 
         AstyanaxTable table = (AstyanaxTable) tbl;
         for (AstyanaxStorage storage : table.getWriteStorage()) {
