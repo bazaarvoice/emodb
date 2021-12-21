@@ -2,12 +2,12 @@ package com.bazaarvoice.emodb.sor.api;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 
 public final class TableOptions {
@@ -48,7 +48,7 @@ public final class TableOptions {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_placement, _facades);
+        return hash(_placement, _facades);
     }
 
     @Override

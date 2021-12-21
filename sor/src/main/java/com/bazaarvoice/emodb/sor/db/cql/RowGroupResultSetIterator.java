@@ -1,9 +1,7 @@
 package com.bazaarvoice.emodb.sor.db.cql;
 
 import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.ResultSetFuture;
 import com.datastax.driver.core.Row;
-import com.google.common.base.Objects;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.AbstractIterator;
@@ -12,6 +10,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import java.util.Iterator;
+import java.util.Objects;
 
 abstract public class RowGroupResultSetIterator extends AbstractIterator<RowGroup> {
 
@@ -90,7 +89,7 @@ abstract public class RowGroupResultSetIterator extends AbstractIterator<RowGrou
 
             _currentRow = nextRow();
 
-            if (_currentRow == null || !Objects.equal(_currentKey, getKeyForRow(_currentRow))) {
+            if (_currentRow == null || !Objects.equals(_currentKey, getKeyForRow(_currentRow))) {
                 // End of the complete result set or the start of a new group
                 setFirstRowOfNextGroup(_currentRow);
                 // The current group has now been fully iterated

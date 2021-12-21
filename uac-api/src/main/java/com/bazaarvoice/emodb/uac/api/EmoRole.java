@@ -5,9 +5,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableSet;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -88,8 +88,8 @@ public class EmoRole {
         EmoRole emoRole = (EmoRole) o;
 
         return _id.equals(emoRole.getId()) &&
-                Objects.equal(_name, emoRole.getName()) &&
-                Objects.equal(_description, emoRole.getDescription()) &&
+                Objects.equals(_name, emoRole.getName()) &&
+                Objects.equals(_description, emoRole.getDescription()) &&
                 _permissions.equals(emoRole.getPermissions());
     }
 

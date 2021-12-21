@@ -2,8 +2,10 @@ package com.bazaarvoice.emodb.sor.api;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
 
+import java.util.Objects;
+
+import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 
 public final class TableAvailability {
@@ -38,13 +40,13 @@ public final class TableAvailability {
             return false;
         }
         TableAvailability that = (TableAvailability) o;
-        return Objects.equal(_placement, that._placement) &&
-                Objects.equal(_facade, that._facade);
+        return Objects.equals(_placement, that._placement) &&
+                Objects.equals(_facade, that._facade);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_placement, _facade);
+        return hash(_placement, _facade);
     }
 
     @Override

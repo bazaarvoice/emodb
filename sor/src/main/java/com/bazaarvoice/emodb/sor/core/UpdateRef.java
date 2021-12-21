@@ -1,10 +1,10 @@
 package com.bazaarvoice.emodb.sor.core;
 
-import com.google.common.base.Objects;
-
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
+import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -49,15 +49,15 @@ public final class UpdateRef {
             return false;
         }
         UpdateRef that = (UpdateRef) o;
-        return Objects.equal(_table, that._table) &&
-                Objects.equal(_key, that._key) &&
-                Objects.equal(_changeId, that._changeId) &&
-                Objects.equal(_tags, that._tags);
+        return Objects.equals(_table, that._table) &&
+                Objects.equals(_key, that._key) &&
+                Objects.equals(_changeId, that._changeId) &&
+                Objects.equals(_tags, that._tags);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_table, _key, _changeId, _tags);
+        return hash(_table, _key, _changeId, _tags);
     }
 
 }

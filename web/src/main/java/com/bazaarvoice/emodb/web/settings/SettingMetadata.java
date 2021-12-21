@@ -1,8 +1,8 @@
 package com.bazaarvoice.emodb.web.settings;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Objects;
 
+import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -56,6 +56,6 @@ public class SettingMetadata<T> {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_name, _defaultValue);
+        return hash(_name, _defaultValue);
     }
 }

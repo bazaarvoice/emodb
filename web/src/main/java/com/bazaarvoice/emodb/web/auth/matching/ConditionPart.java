@@ -20,10 +20,10 @@ import com.bazaarvoice.emodb.sor.condition.NotCondition;
 import com.bazaarvoice.emodb.sor.condition.OrCondition;
 import com.bazaarvoice.emodb.sor.condition.PartitionCondition;
 import com.bazaarvoice.emodb.sor.condition.eval.SubsetEvaluator;
-import com.google.common.base.Objects;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 
@@ -200,7 +200,7 @@ public class ConditionPart extends EmoMatchingPart {
         @Nullable
         @Override
         public Boolean visit(EqualCondition condition, @Nullable String context) {
-            return Objects.equal(condition.getValue(), context);
+            return Objects.equals(condition.getValue(), context);
         }
 
         @Nullable

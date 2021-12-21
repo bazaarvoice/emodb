@@ -4,7 +4,6 @@ import com.bazaarvoice.emodb.common.json.OrderedJson;
 import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
 import com.bazaarvoice.emodb.sor.condition.ContainsCondition;
 import com.google.common.base.Joiner;
-import com.google.common.base.Objects;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Sets;
 
@@ -12,6 +11,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Set;
 
+import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 
 public class ContainsConditionImpl implements ContainsCondition {
@@ -138,7 +138,7 @@ public class ContainsConditionImpl implements ContainsCondition {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_values, _containment);
+        return hash(_values, _containment);
     }
 
     @Override

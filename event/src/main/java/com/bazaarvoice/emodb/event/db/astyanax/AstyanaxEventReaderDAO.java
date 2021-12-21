@@ -13,7 +13,6 @@ import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
 import com.google.common.base.Throwables;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -61,6 +60,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.hash;
 
 public class AstyanaxEventReaderDAO implements EventReaderDAO {
     private static final Logger _log = LoggerFactory.getLogger(AstyanaxEventReaderDAO.class);
@@ -621,7 +621,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
 
         @Override
         public int hashCode() {
-            return Objects.hashCode(_channel, _slabId);
+            return hash(_channel, _slabId);
         }
 
         @Override
