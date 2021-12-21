@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A group of services that should only run when the current server is considered the owner of the specified object.
@@ -63,12 +63,12 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
                              HostAndPort self,
                              LeaderServiceTask dropwizardTask,
                              MetricRegistry metricRegistry) {
-        _group = checkNotNull(group, "group");
-        _factory = checkNotNull(factory, "factory");
-        _curator = checkNotNull(curator, "curator");
-        _hostDiscovery = checkNotNull(hostDiscovery, "hostDiscovery");
-        _selfId = checkNotNull(self, "self").toString();
-        _dropwizardTask = checkNotNull(dropwizardTask, "dropwizardTask");
+        _group = requireNonNull(group, "group");
+        _factory = requireNonNull(factory, "factory");
+        _curator = requireNonNull(curator, "curator");
+        _hostDiscovery = requireNonNull(hostDiscovery, "hostDiscovery");
+        _selfId = requireNonNull(self, "self").toString();
+        _dropwizardTask = requireNonNull(dropwizardTask, "dropwizardTask");
         _expireWhenInactive = (expireWhenInactive != null);
         _metricRegistry = metricRegistry;
 
@@ -80,7 +80,7 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
         cacheBuilder.removalListener(new RemovalListener<String, Optional<LeaderService>>() {
             @Override
             public void onRemoval(RemovalNotification<String, Optional<LeaderService>> notification) {
-                stopService(checkNotNull(notification.getKey()), checkNotNull(notification.getValue()));
+                stopService(requireNonNull(notification.getKey()), requireNonNull(notification.getValue()));
             }
         });
         _leaderMap = cacheBuilder.build(new CacheLoader<String, Optional<LeaderService>>() {

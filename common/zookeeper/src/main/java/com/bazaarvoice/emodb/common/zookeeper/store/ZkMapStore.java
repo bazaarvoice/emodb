@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Stores a Map<String, T> in ZooKeeper, watches for changes made by other servers, and caches
@@ -37,9 +37,9 @@ public class ZkMapStore<T> implements MapStore<T>, Managed {
     private final List<MapStoreListener> _listeners = Lists.newCopyOnWriteArrayList();
 
     public ZkMapStore(CuratorFramework curator, String zkPath, ZkValueSerializer<T> serializer) {
-        _curator = checkNotNull(curator, "curator");
-        _zkPath = checkNotNull(zkPath, "zkPath");
-        _serializer = checkNotNull(serializer, "serializer");
+        _curator = requireNonNull(curator, "curator");
+        _zkPath = requireNonNull(zkPath, "zkPath");
+        _serializer = requireNonNull(serializer, "serializer");
         _nodeDiscovery = new NodeDiscovery<>(curator, zkPath, new NodeDiscovery.NodeDataParser<T>() {
             @Override
             public T parse(String s, byte[] bytes) {

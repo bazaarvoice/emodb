@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.annotation.Nullable;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class JobStatus<Q, R> {
 
@@ -31,7 +31,7 @@ public class JobStatus<Q, R> {
             @JsonProperty ("request") @Nullable Q request,
             @JsonProperty ("result") @Nullable R result,
             @JsonProperty ("errorMessage") @Nullable String errorMessage) {
-        _status = checkNotNull(status, "status");
+        _status = requireNonNull(status, "status");
         _request = request;
         _result = result;
         _errorMessage = errorMessage;

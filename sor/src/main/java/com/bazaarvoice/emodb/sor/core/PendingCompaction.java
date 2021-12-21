@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The result of consolidating deltas and compaction records.
@@ -37,7 +37,7 @@ public class PendingCompaction {
         _delta = delta;
         _keysToDelete = keysToDelete;
         _compactionKeysToDelete = compactionKeysToDelete;
-        _deltasToArchive = checkNotNull(deltasToArchive, "deltasToArchive");
+        _deltasToArchive = requireNonNull(deltasToArchive, "deltasToArchive");
         _startingDelta = startingDelta;
     }
 

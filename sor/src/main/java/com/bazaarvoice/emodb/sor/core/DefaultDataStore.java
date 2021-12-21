@@ -7,6 +7,7 @@ import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
+import com.bazaarvoice.emodb.sor.api.AuditsUnavailableException;
 import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
@@ -27,7 +28,6 @@ import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
 import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEventType;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
-import com.bazaarvoice.emodb.sor.api.AuditsUnavailableException;
 import com.bazaarvoice.emodb.sor.audit.AuditWriter;
 import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.bazaarvoice.emodb.sor.condition.Condition;
@@ -69,16 +69,17 @@ import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.ExecutorServiceManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.time.Clock;
-import java.time.temporal.ChronoUnit;
-import java.util.concurrent.TimeoutException;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.net.URI;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -92,13 +93,12 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.concurrent.TimeoutException;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
 public class DefaultDataStore implements DataStore, DataProvider, DataTools, TableBackingStore {
 
@@ -147,25 +147,25 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                             Optional<URI> stashRootDirectory, CompactionControlSource compactionControlSource,
                             Condition stashBlackListTableCondition, AuditWriter auditWriter,
                             MapStore<DataStoreMinSplitSize> minSplitSizeMap, MetricRegistry metricRegistry, Clock clock) {
-        _eventWriterRegistry = checkNotNull(eventWriterRegistry, "eventWriterRegistry");
-        _tableDao = checkNotNull(tableDao, "tableDao");
-        _dataReaderDao = checkNotNull(dataReaderDao, "dataReaderDao");
-        _dataWriterDao = checkNotNull(dataWriterDao, "dataWriterDao");
-        _slowQueryLog = checkNotNull(slowQueryLog, "slowQueryLog");
-        _compactionExecutor = checkNotNull(compactionExecutor, "compactionExecutor");
-        _historyStore = checkNotNull(historyStore, "historyStore");
-        _stashRootDirectory = checkNotNull(stashRootDirectory, "stashRootDirectory");
-        _stashBlackListTableCondition = checkNotNull(stashBlackListTableCondition, "stashBlackListTableCondition");
-        _auditWriter = checkNotNull(auditWriter, "auditWriter");
+        _eventWriterRegistry = requireNonNull(eventWriterRegistry, "eventWriterRegistry");
+        _tableDao = requireNonNull(tableDao, "tableDao");
+        _dataReaderDao = requireNonNull(dataReaderDao, "dataReaderDao");
+        _dataWriterDao = requireNonNull(dataWriterDao, "dataWriterDao");
+        _slowQueryLog = requireNonNull(slowQueryLog, "slowQueryLog");
+        _compactionExecutor = requireNonNull(compactionExecutor, "compactionExecutor");
+        _historyStore = requireNonNull(historyStore, "historyStore");
+        _stashRootDirectory = requireNonNull(stashRootDirectory, "stashRootDirectory");
+        _stashBlackListTableCondition = requireNonNull(stashBlackListTableCondition, "stashBlackListTableCondition");
+        _auditWriter = requireNonNull(auditWriter, "auditWriter");
         _resolveAnnotatedEventTimer = metricRegistry.timer(getMetricName("resolve_event"));
 
         _archiveDeltaSize = metricRegistry.counter(MetricRegistry.name("bv.emodb.sor", "DefaultCompactor", "archivedDeltaSize"));
         _discardedCompactions = metricRegistry.meter(MetricRegistry.name("bv.emodb.sor", "DefaultDataStore", "discarded_compactions"));
         _compactor = new DistributedCompactor(_archiveDeltaSize, _historyStore.isDeltaHistoryEnabled(), metricRegistry);
 
-        _compactionControlSource = checkNotNull(compactionControlSource, "compactionControlSource");
-        _minSplitSizeMap = checkNotNull(minSplitSizeMap, "minSplitSizeMap");
-        _clock = checkNotNull(clock, "clock");
+        _compactionControlSource = requireNonNull(compactionControlSource, "compactionControlSource");
+        _minSplitSizeMap = requireNonNull(minSplitSizeMap, "minSplitSizeMap");
+        _clock = requireNonNull(clock, "clock");
     }
 
     /**
@@ -220,23 +220,23 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     @Override
     public void createTable(String table, TableOptions options, Map<String, ?> template, Audit audit) {
         checkLegalTableName(table);
-        checkNotNull(options, "options");
+        requireNonNull(options, "options");
         checkLegalTableAttributes(template);
-        checkNotNull(audit, "audit");
+        requireNonNull(audit, "audit");
         _tableDao.create(table, options, template, audit);
     }
 
     @Override
     public void dropTable(String table, Audit audit) {
         checkLegalTableName(table);
-        checkNotNull(audit, "audit");
+        requireNonNull(audit, "audit");
         _tableDao.drop(table, audit);
     }
 
     @Override
     public void purgeTableUnsafe(String tableName, Audit audit) {
         checkLegalTableName(tableName);
-        checkNotNull(audit, "audit");
+        requireNonNull(audit, "audit");
         Table table = _tableDao.get(tableName);
         _tableDao.writeUnpublishedDatabusEvent(tableName, UnpublishedDatabusEventType.PURGE);
         _tableDao.audit(tableName, "purge", audit);
@@ -277,7 +277,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
             throws UnknownTableException {
         checkLegalTableName(table);
         checkLegalTableAttributes(template);
-        checkNotNull(audit, "audit");
+        requireNonNull(audit, "audit");
         _tableDao.setAttributes(table, template, audit);
     }
 
@@ -298,7 +298,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     @Override
     public long getTableApproximateSize(String tableName, int limit) {
         checkLegalTableName(tableName);
-        checkNotNull(limit);
+        requireNonNull(limit);
         checkArgument(limit > 0, "limit must be greater than 0");
 
         Table table = _tableDao.get(tableName);
@@ -313,8 +313,8 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     @Override
     public Map<String, Object> get(String tableName, String key, ReadConsistency consistency) {
         checkLegalTableName(tableName);
-        checkNotNull(key, "key");
-        checkNotNull(consistency, "consistency");
+        requireNonNull(key, "key");
+        requireNonNull(consistency, "consistency");
 
         Table table = _tableDao.get(tableName);
 
@@ -330,7 +330,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     @Override
     public AnnotatedGet prepareGetAnnotated(final ReadConsistency consistency) {
-        checkNotNull(consistency, "consistency");
+        requireNonNull(consistency, "consistency");
 
         return new AnnotatedGet() {
             private final List<Key> _keys = Lists.newArrayList();
@@ -339,7 +339,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
             public AnnotatedGet add(String tableName, String key)
                     throws UnknownTableException, UnknownPlacementException {
                 checkLegalTableName(tableName);
-                checkNotNull(key, "key");
+                requireNonNull(key, "key");
 
                 // The following call will throw UnknownTableException if the table doesn't currently exist.  This
                 // happens if the table was dropped prior to this call.
@@ -477,15 +477,15 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
         MutableIntrinsics intrinsics = resolved.getIntrinsics();
         result.putAll(intrinsics.getTemplate());
-        result.put(Intrinsic.ID, checkNotNull(intrinsics.getId()));
-        result.put(Intrinsic.TABLE, checkNotNull(intrinsics.getTable()));
+        result.put(Intrinsic.ID, requireNonNull(intrinsics.getId()));
+        result.put(Intrinsic.TABLE, requireNonNull(intrinsics.getTable()));
         if (consistency != ReadConsistency.WEAK) {
             // Version #s are consistent within a data center when reads are performed using LOCAL_QUORUM. this
             // means (a) you can't compare version #s from different data centers (unless you read w/EACH_QUORUM,
             // which we don't) and (b) version #s can't be trusted with anything weaker than LOCAL_QUORUM.
             result.put(Intrinsic.VERSION, intrinsics.getVersion());
         }
-        result.put(Intrinsic.SIGNATURE, checkNotNull(intrinsics.getSignature()));
+        result.put(Intrinsic.SIGNATURE, requireNonNull(intrinsics.getSignature()));
         result.put(Intrinsic.DELETED, resolved.isUndefined());
         // Note that Dates are formatted as strings not Date objects so the result is standard JSON
         String firstUpdateAt = intrinsics.getFirstUpdateAt();
@@ -507,7 +507,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     public Iterator<Change> getTimeline(String tableName, String key, boolean includeContentData, boolean includeAuditInformation,
                                         @Nullable UUID start, @Nullable UUID end, boolean reversed, long limit, ReadConsistency consistency) {
         checkLegalTableName(tableName);
-        checkNotNull(key, "key");
+        requireNonNull(key, "key");
         if (includeAuditInformation) {
             throw new AuditsUnavailableException();
         }
@@ -519,7 +519,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
             }
         }
         checkArgument(limit > 0, "Limit must be >0");
-        checkNotNull(consistency, "consistency");
+        requireNonNull(consistency, "consistency");
 
         Table table = _tableDao.get(tableName);
 
@@ -533,7 +533,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                                               long limit, boolean includeDeletes, ReadConsistency consistency) {
         checkLegalTableName(tableName);
         checkArgument(limit > 0, "Limit must be >0");
-        checkNotNull(consistency, "consistency");
+        requireNonNull(consistency, "consistency");
 
         LimitCounter remaining = new LimitCounter(limit);
         return remaining.limit(scan(tableName, fromKeyExclusive, remaining, includeDeletes, consistency));
@@ -550,7 +550,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                                                LimitCounter limit, boolean includeDeletes, ReadConsistency consistency) {
         checkLegalTableName(tableName);
         checkArgument(limit.remaining() > 0, "Limit must be >0");
-        checkNotNull(consistency, "consistency");
+        requireNonNull(consistency, "consistency");
 
         Table table = _tableDao.get(tableName);
         Iterator<Record> records = _dataReaderDao.scan(table, fromKeyExclusive, limit, consistency);
@@ -600,9 +600,9 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                                                   @Nullable String fromKeyExclusive,
                                                   long limit, boolean includeDeletes, ReadConsistency consistency) {
         checkLegalTableName(tableName);
-        checkNotNull(split, "split");
+        requireNonNull(split, "split");
         checkArgument(limit > 0, "Limit must be >0");
-        checkNotNull(consistency, "consistency");
+        requireNonNull(consistency, "consistency");
 
         Table table = _tableDao.get(tableName);
         LimitCounter remaining = new LimitCounter(limit);
@@ -617,8 +617,8 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     @Override
     public Iterator<Map<String, Object>> multiGet(List<Coordinate> coordinates, ReadConsistency consistency) {
-        checkNotNull(coordinates, "coordinates");
-        checkNotNull(consistency, "consistency");
+        requireNonNull(coordinates, "coordinates");
+        requireNonNull(consistency, "consistency");
 
         AnnotatedGet multiGet = prepareGetAnnotated(consistency);
         for (Coordinate coordinate : coordinates) {
@@ -681,9 +681,9 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     private void updateAll(Iterable<Update> updates, final boolean isFacade,
                            @NotNull final Set<String> tags) {
-        checkNotNull(updates, "updates");
+        requireNonNull(updates, "updates");
         checkLegalTags(tags);
-        checkNotNull(tags, "tags");
+        requireNonNull(tags, "tags");
         Iterator<Update> updatesIter = updates.iterator();
         if (!updatesIter.hasNext()) {
             return;
@@ -692,7 +692,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         _dataWriterDao.updateAll(Iterators.transform(updatesIter, new Function<Update, RecordUpdate>() {
             @Override
             public RecordUpdate apply(Update update) {
-                checkNotNull(update, "update");
+                requireNonNull(update, "update");
                 String tableName = update.getTable();
                 String key = update.getKey();
                 UUID changeId = update.getChangeId();
@@ -775,8 +775,8 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     @Override
     public void createFacade(String table, FacadeOptions facadeOptions, Audit audit) {
         checkLegalTableName(table);
-        checkNotNull(facadeOptions, "facadeDefinition");
-        checkNotNull(audit, "audit");
+        requireNonNull(facadeOptions, "facadeDefinition");
+        requireNonNull(audit, "audit");
         _tableDao.createFacade(table, facadeOptions, audit);
     }
 
@@ -794,17 +794,17 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     public void dropFacade(String table, String placement, Audit audit)
             throws UnknownTableException {
         checkLegalTableName(table);
-        checkNotNull(placement, "placement");
-        checkNotNull(audit, "audit");
+        requireNonNull(placement, "placement");
+        requireNonNull(audit, "audit");
         _tableDao.dropFacade(table, placement, audit);
     }
 
     @Override
     public void compact(String tableName, String key, @Nullable Duration ttlOverride, ReadConsistency readConsistency, WriteConsistency writeConsistency) {
         checkLegalTableName(tableName);
-        checkNotNull(key, "key");
-        checkNotNull(readConsistency, "readConsistency");
-        checkNotNull(writeConsistency, "writeConsistency");
+        requireNonNull(key, "key");
+        requireNonNull(readConsistency, "readConsistency");
+        requireNonNull(writeConsistency, "writeConsistency");
 
         Table table = _tableDao.get(tableName);
 
@@ -887,33 +887,33 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     @Override
     public ScanRangeSplits getScanRangeSplits(String placement, int desiredRecordsPerSplit, Optional<ScanRange> subrange) {
-        checkNotNull(placement, "placement");
+        requireNonNull(placement, "placement");
         return _dataReaderDao.getScanRangeSplits(placement, desiredRecordsPerSplit, subrange);
     }
 
     @Override
     public String getPlacementCluster(String placement) {
-        checkNotNull(placement, "placement");
+        requireNonNull(placement, "placement");
         return _dataReaderDao.getPlacementCluster(placement);
     }
 
     @Override
     public Iterator<MultiTableScanResult> multiTableScan(MultiTableScanOptions query, TableSet tables, LimitCounter limit, ReadConsistency consistency, @Nullable Instant cutoffTime) {
-        checkNotNull(query, "query");
-        checkNotNull(tables, "tables");
-        checkNotNull(limit, "limit");
-        checkNotNull(consistency, "consistency");
+        requireNonNull(query, "query");
+        requireNonNull(tables, "tables");
+        requireNonNull(limit, "limit");
+        requireNonNull(consistency, "consistency");
         return _dataReaderDao.multiTableScan(query, tables, limit, consistency, cutoffTime);
     }
 
     @Override
     public Iterator<MultiTableScanResult> stashMultiTableScan(String stashId, String placement, ScanRange scanRange, LimitCounter limit,
                                                               ReadConsistency consistency, @Nullable Instant cutoffTime) {
-        checkNotNull(stashId, "stashId");
-        checkNotNull(placement, "placement");
-        checkNotNull(scanRange, "scanRange");
-        checkNotNull(limit, "limit");
-        checkNotNull(consistency, "consistency");
+        requireNonNull(stashId, "stashId");
+        requireNonNull(placement, "placement");
+        requireNonNull(scanRange, "scanRange");
+        requireNonNull(limit, "limit");
+        requireNonNull(consistency, "consistency");
 
         // Since the range may wrap from high to low end of the token range we need to unwrap it
         List<ScanRange> unwrappedRanges = scanRange.unwrapped();
@@ -967,7 +967,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     }
 
     private void checkLegalTableAttributes(Map<String, ?> template) {
-        checkNotNull(template, "template");
+        requireNonNull(template, "template");
         for (String attributeName : template.keySet()) {
             checkArgument(Names.isLegalTableAttributeName(attributeName), "Table attribute names cannot start with '~'");
         }
@@ -1002,15 +1002,15 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     @Override
     public void createStashTokenRangeSnapshot(String stashId, Set<String> placements) {
-        checkNotNull(stashId, "stashId");
-        checkNotNull(placements, "placements");
+        requireNonNull(stashId, "stashId");
+        requireNonNull(placements, "placements");
         checkState(_stashTableDao != null, "Cannot create stash snapshot without a StashTableDAO implementation");
         _stashTableDao.createStashTokenRangeSnapshot(stashId, placements, _stashBlackListTableCondition);
     }
 
     @Override
     public void clearStashTokenRangeSnapshot(String stashId) {
-        checkNotNull(stashId, "stashId");
+        requireNonNull(stashId, "stashId");
         checkState(_stashTableDao != null, "Cannot clear stash snapshot without a StashTableDAO implementation");
         _stashTableDao.clearStashTokenRangeSnapshot(stashId);
     }

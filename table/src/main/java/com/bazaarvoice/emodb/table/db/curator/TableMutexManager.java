@@ -8,7 +8,7 @@ import org.apache.curator.utils.ZKPaths;
 
 import java.time.Duration;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class TableMutexManager {
 
@@ -24,7 +24,7 @@ public class TableMutexManager {
     }
 
     public void runWithLockForTable(Runnable runnable, Duration acquireTimeout, String table) {
-        checkNotNull(table, "table cannot be null");
+        requireNonNull(table, "table cannot be null");
         
         _mutexes[Math.abs(Hashing.murmur3_128().hashString(table, Charsets.UTF_8).asInt() % NUM_MUTEXES)]
                 .runWithLock(runnable, acquireTimeout);

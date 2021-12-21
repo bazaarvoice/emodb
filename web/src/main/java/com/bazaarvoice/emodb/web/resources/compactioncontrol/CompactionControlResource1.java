@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 @Produces (MediaType.APPLICATION_JSON)
 public class CompactionControlResource1 {
@@ -29,7 +29,7 @@ public class CompactionControlResource1 {
     private final CompactionControlSource _compactionControlSource;
 
     public CompactionControlResource1(CompactionControlSource compactionControlSource) {
-        _compactionControlSource = checkNotNull(compactionControlSource, "compactionControlSource");
+        _compactionControlSource = requireNonNull(compactionControlSource, "compactionControlSource");
     }
 
     @POST

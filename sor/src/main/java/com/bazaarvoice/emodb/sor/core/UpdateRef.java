@@ -1,11 +1,11 @@
 package com.bazaarvoice.emodb.sor.core;
 
-import com.google.common.base.Objects;
-
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.hash;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Reference to a System of Record update.
@@ -18,10 +18,10 @@ public final class UpdateRef {
     private final Set<String> _tags;
 
     public UpdateRef(String table, String key, UUID changeId, Set<String> tags) {
-        _table = checkNotNull(table, "table");
-        _key = checkNotNull(key, "key");
-        _changeId = checkNotNull(changeId, "changeId");
-        _tags = checkNotNull(tags, "tags");
+        _table = requireNonNull(table, "table");
+        _key = requireNonNull(key, "key");
+        _changeId = requireNonNull(changeId, "changeId");
+        _tags = requireNonNull(tags, "tags");
     }
 
     public String getTable() {
@@ -49,15 +49,15 @@ public final class UpdateRef {
             return false;
         }
         UpdateRef that = (UpdateRef) o;
-        return Objects.equal(_table, that._table) &&
-                Objects.equal(_key, that._key) &&
-                Objects.equal(_changeId, that._changeId) &&
-                Objects.equal(_tags, that._tags);
+        return Objects.equals(_table, that._table) &&
+                Objects.equals(_key, that._key) &&
+                Objects.equals(_changeId, that._changeId) &&
+                Objects.equals(_tags, that._tags);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_table, _key, _changeId, _tags);
+        return hash(_table, _key, _changeId, _tags);
     }
 
 }

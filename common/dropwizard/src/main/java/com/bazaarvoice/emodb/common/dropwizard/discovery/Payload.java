@@ -9,7 +9,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * SOA (Ostrich) payload object, typically embedded within a {@link ServiceEndPoint}.
@@ -25,8 +25,8 @@ public class Payload {
 
     public static Payload valueOf(String string) {
         Map<?, ?> map = JsonHelper.fromJson(string, Map.class);
-        URI serviceUri = URI.create((String) checkNotNull(map.get("serviceUrl"), "serviceUrl"));
-        URI adminUri = URI.create((String) checkNotNull(map.get("adminUrl"), "adminUrl"));
+        URI serviceUri = URI.create((String) requireNonNull(map.get("serviceUrl"), "serviceUrl"));
+        URI adminUri = URI.create((String) requireNonNull(map.get("adminUrl"), "adminUrl"));
         @SuppressWarnings("unchecked") Map<String, ?> extensions = Optional.ofNullable(
                 (Map<String, ?>) map.get("extensions")).orElse(Collections.emptyMap());
         return new Payload(serviceUri, adminUri, extensions);
@@ -37,9 +37,9 @@ public class Payload {
     }
 
     public Payload(URI serviceUrl, URI adminUrl, Map<String, ?> extensions) {
-        _serviceUrl = checkNotNull(serviceUrl, "serviceUrl");
-        _adminUrl = checkNotNull(adminUrl, "adminUrl");
-        _extensions = checkNotNull(extensions, "extensions");
+        _serviceUrl = requireNonNull(serviceUrl, "serviceUrl");
+        _adminUrl = requireNonNull(adminUrl, "adminUrl");
+        _extensions = requireNonNull(extensions, "extensions");
     }
 
     public URI getServiceUrl() {

@@ -3,7 +3,6 @@ package com.bazaarvoice.emodb.common.dropwizard.log;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Functions;
-import com.google.common.base.Objects;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -14,13 +13,15 @@ import io.dropwizard.util.Duration;
 import org.slf4j.Logger;
 import org.slf4j.helpers.MessageFormatter;
 
+import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.hash;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Limits the rate that errors are logged for situations where, if something goes wrong, it's likely to go wrong many
@@ -41,8 +42,8 @@ public class DefaultRateLimitedLogFactory implements RateLimitedLogFactory {
 
     @VisibleForTesting
     DefaultRateLimitedLogFactory(ScheduledExecutorService executor, Duration interval) {
-        _executor = checkNotNull(executor, "executor");
-        _interval = checkNotNull(interval, "interval");
+        _executor = requireNonNull(executor, "executor");
+        _interval = requireNonNull(interval, "interval");
 
         // After the last access we (1) hold the error up to 30 seconds before reporting it, then (2) wait to see if
         // any more instances of the error occur, after the (3) third 30-second interval of no more access we can be
@@ -68,7 +69,7 @@ public class DefaultRateLimitedLogFactory implements RateLimitedLogFactory {
 
     @Override
     public RateLimitedLog from(final Logger log) {
-        checkNotNull(log, "log");
+        requireNonNull(log, "log");
         return new RateLimitedLog() {
             @Override
             public void error(Throwable t, String message, Object... args) {
@@ -143,12 +144,12 @@ public class DefaultRateLimitedLogFactory implements RateLimitedLogFactory {
                 return false;
             }
             Message message = (Message) o;
-            return _log.equals(message._log) && Objects.equal(_message, message._message);
+            return _log.equals(message._log) && Objects.equals(_message, message._message);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hashCode(_log, _message);
+            return hash(_log, _message);
         }
     }
 }

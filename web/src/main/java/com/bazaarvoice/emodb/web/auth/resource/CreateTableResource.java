@@ -9,7 +9,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Resource implementation specifically for validating the creation of new tables.
@@ -24,8 +24,8 @@ public class CreateTableResource extends AuthResource {
     @JsonCreator
     public CreateTableResource(@JsonProperty("name") String name, @JsonProperty("placement") String placement,
                                @JsonProperty("attributes") Map<String, ?> attributes) {
-        _name = checkNotNull(name, "name");
-        _placement = checkNotNull(placement, "placement");
+        _name = requireNonNull(name, "name");
+        _placement = requireNonNull(placement, "placement");
         _attributes = Optional.ofNullable(attributes).orElse(Collections.EMPTY_MAP);
     }
 

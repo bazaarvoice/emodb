@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Wrapper around a Json Map with helper methods that facilitate type-safe access of map values.
@@ -13,7 +13,7 @@ class JsonMap {
     private final Map<String, Object> _json;
 
     JsonMap(Map<String, Object> json) {
-        _json = checkNotNull(json, "json");
+        _json = requireNonNull(json, "json");
     }
 
     Map<String, Object> getRawJson() {
@@ -36,7 +36,7 @@ class JsonMap {
         }
 
         Attribute(String key) {
-            _key = checkNotNull(key, "key");
+            _key = requireNonNull(key, "key");
         }
 
         String key() {

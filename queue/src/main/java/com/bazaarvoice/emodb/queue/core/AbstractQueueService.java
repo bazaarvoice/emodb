@@ -39,7 +39,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 abstract class AbstractQueueService implements BaseQueueService {
     private final BaseEventStore _eventStore;
@@ -72,7 +72,7 @@ abstract class AbstractQueueService implements BaseQueueService {
     }
 
     private void registerMoveQueueJobHandler(JobHandlerRegistry jobHandlerRegistry) {
-        checkNotNull(jobHandlerRegistry, "jobHandlerRegistry");
+        requireNonNull(jobHandlerRegistry, "jobHandlerRegistry");
 
         jobHandlerRegistry.addHandler(
                 _moveQueueJobType,
@@ -108,7 +108,7 @@ abstract class AbstractQueueService implements BaseQueueService {
 
     @Override
     public void sendAll(Map<String, ? extends Collection<?>> messagesByQueue) {
-        checkNotNull(messagesByQueue, "messagesByQueue");
+        requireNonNull(messagesByQueue, "messagesByQueue");
 
         ImmutableMultimap.Builder<String, ByteBuffer> builder = ImmutableMultimap.builder();
         for (Map.Entry<String, ? extends Collection<?>> entry : messagesByQueue.entrySet()) {
@@ -116,7 +116,7 @@ abstract class AbstractQueueService implements BaseQueueService {
             Collection<?> messages = entry.getValue();
 
             checkLegalQueueName(queue);
-            checkNotNull(messages, "messages");
+            requireNonNull(messages, "messages");
 
             List<ByteBuffer> events = Lists.newArrayListWithCapacity(messages.size());
             for (Object message : messages) {
@@ -185,7 +185,7 @@ abstract class AbstractQueueService implements BaseQueueService {
     @Override
     public void renew(String queue, Collection<String> messageIds, Duration claimTtl) {
         checkLegalQueueName(queue);
-        checkNotNull(messageIds, "messageIds");
+        requireNonNull(messageIds, "messageIds");
         checkArgument(claimTtl.toMillis() >= 0, "ClaimTtl must be >=0");
 
         _eventStore.renew(queue, messageIds, claimTtl, true);
@@ -194,7 +194,7 @@ abstract class AbstractQueueService implements BaseQueueService {
     @Override
     public void acknowledge(String queue, Collection<String> messageIds) {
         checkLegalQueueName(queue);
-        checkNotNull(messageIds, "messageIds");
+        requireNonNull(messageIds, "messageIds");
 
         _eventStore.delete(queue, messageIds, true);
     }
@@ -212,7 +212,7 @@ abstract class AbstractQueueService implements BaseQueueService {
 
     @Override
     public MoveQueueStatus getMoveStatus(String reference) {
-        checkNotNull(reference, "reference");
+        requireNonNull(reference, "reference");
 
         JobIdentifier<MoveQueueRequest, MoveQueueResult> jobId;
         try {

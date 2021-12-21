@@ -7,7 +7,7 @@ import com.google.common.hash.Hashing;
 import java.nio.ByteBuffer;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Wraps a 16-byte slab id, 2 byte event index, 2 byte checksum.  The checksum is to help find bugs where external
@@ -29,8 +29,8 @@ class AstyanaxEventId implements EventId {
     }
 
     static AstyanaxEventId create(String channel, ByteBuffer slabId, int eventIdx) {
-        checkNotNull(channel);
-        checkNotNull(slabId);
+        requireNonNull(channel);
+        requireNonNull(slabId);
         checkArgument(slabId.remaining() == 16);
         checkArgument(eventIdx >= 0 && eventIdx <= 0xffff);  // Must fit in 2 bytes
 
@@ -51,7 +51,7 @@ class AstyanaxEventId implements EventId {
     private AstyanaxEventId(byte[] buf, String channel) {
         checkArgument(buf.length == 20, "Invalid event ID.");
         _buf = buf;
-        _channel = checkNotNull(channel);
+        _channel = requireNonNull(channel);
     }
 
     @Override

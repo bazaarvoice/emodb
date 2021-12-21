@@ -12,7 +12,7 @@ import java.util.Collection;
 import java.util.Date;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Scan state notifier to send notifications to multiple notifiers.
@@ -24,7 +24,7 @@ public class MultiStashStateListener implements StashStateListener<Void> {
     private final Collection<StashStateListener> _delegates;
 
     public static StashStateListener combine(Collection<StashStateListener> listeners) {
-        checkNotNull(listeners, "notifiers");
+        requireNonNull(listeners, "notifiers");
         checkArgument(!listeners.isEmpty(), "At least one notifier is required");
         if (listeners.size() == 1) {
             return Iterables.getOnlyElement(listeners);

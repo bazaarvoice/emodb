@@ -8,7 +8,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Role manager implementation which synchronizes mutative role updates in the current data center to prevent possible
@@ -23,7 +23,7 @@ public class DataCenterSynchronizedRoleManager implements RoleManager {
     private final DataCenterSynchronizer _synchronizer;
 
     public DataCenterSynchronizedRoleManager(RoleManager delegate, CuratorFramework curator) {
-        _delegate = checkNotNull(delegate, "delegate");
+        _delegate = requireNonNull(delegate, "delegate");
         _synchronizer = new DataCenterSynchronizer(curator, LOCK_PATH);
     }
 

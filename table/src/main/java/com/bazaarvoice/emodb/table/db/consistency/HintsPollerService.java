@@ -17,7 +17,7 @@ import java.time.Duration;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Polls to check if there are any hinted handoffs in any of the nodes in the SoR cluster
@@ -41,10 +41,10 @@ public class HintsPollerService extends AbstractScheduledService {
     private ClusterHintsPoller _clusterHintsPoller;
 
     public HintsPollerService(String clusterName, ValueStore<Long> timestamp, Session cqlSession, ClusterHintsPoller clusterHintsPoller, MetricRegistry metricRegistry) {
-        _clusterName = checkNotNull(clusterName, "cluster");
-        _timestamp = checkNotNull(timestamp, "value");
-        _cqlSession = checkNotNull(cqlSession, "cqlSession");
-        _clusterHintsPoller = checkNotNull(clusterHintsPoller, "clusterHintsPoller");
+        _clusterName = requireNonNull(clusterName, "cluster");
+        _timestamp = requireNonNull(timestamp, "value");
+        _cqlSession = requireNonNull(cqlSession, "cqlSession");
+        _clusterHintsPoller = requireNonNull(clusterHintsPoller, "clusterHintsPoller");
         ServiceFailureListener.listenTo(this, metricRegistry);
     }
 

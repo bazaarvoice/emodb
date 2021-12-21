@@ -8,7 +8,7 @@ import com.netflix.astyanax.model.ColumnFamily;
 import java.nio.ByteBuffer;
 import java.util.UUID;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A Cassandra keyspace and the DataStore-related column families.
@@ -25,10 +25,10 @@ class DeltaPlacement implements Placement {
                    CassandraKeyspace keyspace,
                    ColumnFamily<ByteBuffer, DeltaKey> blockedDeltaColumnFamily,
                    ColumnFamily<ByteBuffer, UUID> deltaHistoryColumnFamily) {
-        _name = checkNotNull(name, "name");
-        _keyspace = checkNotNull(keyspace, "keyspace");
-        _blockedDeltaColumnFamily = checkNotNull(blockedDeltaColumnFamily, "blockedDeltaColumnFamily");
-        _deltaHistoryColumnFamily = checkNotNull(deltaHistoryColumnFamily, "deltaHistoryColumnFamily");
+        _name = requireNonNull(name, "name");
+        _keyspace = requireNonNull(keyspace, "keyspace");
+        _blockedDeltaColumnFamily = requireNonNull(blockedDeltaColumnFamily, "blockedDeltaColumnFamily");
+        _deltaHistoryColumnFamily = requireNonNull(deltaHistoryColumnFamily, "deltaHistoryColumnFamily");
 
         _blockedDeltaTableDDL = createBlockedDeltaTableDDL(blockedDeltaColumnFamily.getName());
         _deltaHistoryTableDDL = creatHistoryTableDDL(_deltaHistoryColumnFamily.getName());

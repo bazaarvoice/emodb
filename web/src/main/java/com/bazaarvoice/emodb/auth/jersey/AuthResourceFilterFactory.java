@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link ResourceFilterFactory} that places filters on the request for authentication and authorization based
@@ -56,8 +56,8 @@ public class AuthResourceFilterFactory implements ResourceFilterFactory {
     private final AuthenticationTokenGenerator<?> _tokenGenerator;
 
     public AuthResourceFilterFactory(SecurityManager securityManager, AuthenticationTokenGenerator<?> tokenGenerator) {
-        _securityManager = checkNotNull(securityManager, "securityManager");
-        _tokenGenerator = checkNotNull(tokenGenerator, "tokenGenerator");
+        _securityManager = requireNonNull(securityManager, "securityManager");
+        _tokenGenerator = requireNonNull(tokenGenerator, "tokenGenerator");
     }
 
     @Override

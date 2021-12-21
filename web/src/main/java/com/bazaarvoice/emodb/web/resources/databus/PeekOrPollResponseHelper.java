@@ -3,12 +3,9 @@ package com.bazaarvoice.emodb.web.resources.databus;
 import com.bazaarvoice.emodb.common.json.JsonHelper;
 import com.bazaarvoice.emodb.databus.api.EventViews;
 
-import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.StreamingOutput;
-import java.io.IOException;
-import java.io.OutputStream;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Helper class used by peek and poll operations.  This class ensures that the events returned are serialized
@@ -20,7 +17,7 @@ public class PeekOrPollResponseHelper {
     private final JsonHelper.JsonWriterWithViewHelper _json;
 
     public PeekOrPollResponseHelper(final Class<? extends EventViews.ContentOnly> view) {
-        checkNotNull(view, "view");
+        requireNonNull(view, "view");
         _json = JsonHelper.withView(view);
     }
 

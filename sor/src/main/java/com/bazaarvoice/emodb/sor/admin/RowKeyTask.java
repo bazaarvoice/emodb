@@ -16,7 +16,7 @@ import org.apache.cassandra.utils.ByteBufferUtil;
 import java.io.PrintWriter;
 import java.nio.ByteBuffer;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Converts EmoDB coordinates "table/key" to a Cassandra row key and vice versa.
@@ -36,7 +36,7 @@ public class RowKeyTask extends Task {
     @Inject
     public RowKeyTask(TaskRegistry taskRegistry, TableDAO tableDao) {
         super("sor-row-key");
-        _tableDao = checkNotNull(tableDao, "tableDao");
+        _tableDao = requireNonNull(tableDao, "tableDao");
         taskRegistry.addTask(this);
     }
 

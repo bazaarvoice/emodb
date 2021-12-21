@@ -16,8 +16,8 @@ import java.util.Map;
 import java.util.PriorityQueue;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 /** In-memory implementation of the {@link ClaimSet} interface. */
 public class DefaultClaimSet implements ClaimSet {
@@ -36,7 +36,7 @@ public class DefaultClaimSet implements ClaimSet {
 
     @Override
     public synchronized boolean isClaimed(byte[] claimId) {
-        checkNotNull(claimId, "claimId");
+        requireNonNull(claimId, "claimId");
 
         long now = System.currentTimeMillis();
         processExpirationQueues(now);
@@ -46,7 +46,7 @@ public class DefaultClaimSet implements ClaimSet {
 
     @Override
     public synchronized boolean acquire(byte[] claimId, Duration ttl) {
-        checkNotNull(claimId, "claimId");
+        requireNonNull(claimId, "claimId");
         long ttlMillis = ttl.toMillis();
         checkArgument(ttlMillis >= 0, "Ttl must be >=0");
 
@@ -70,7 +70,7 @@ public class DefaultClaimSet implements ClaimSet {
 
     @Override
     public synchronized void renewAll(Collection<byte[]> claimIds, Duration ttl, boolean extendOnly) {
-        checkNotNull(claimIds, "claimIds");
+        requireNonNull(claimIds, "claimIds");
         long ttlMillis = ttl.toMillis();
         checkArgument(ttlMillis >= 0, "Ttl must be >=0");
 

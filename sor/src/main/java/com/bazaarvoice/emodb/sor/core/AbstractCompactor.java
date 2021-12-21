@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public abstract class AbstractCompactor {
 
@@ -41,7 +41,7 @@ public abstract class AbstractCompactor {
 
 
     public AbstractCompactor(Counter archiveDeltaSizeInMemory, boolean keepDeltaHistory, MetricRegistry metricRegistry) {
-        _archiveDeltaSizeInMemory = checkNotNull(archiveDeltaSizeInMemory, "archiveDeltaSizeInMemory");
+        _archiveDeltaSizeInMemory = requireNonNull(archiveDeltaSizeInMemory, "archiveDeltaSizeInMemory");
         _keepDeltaHistory = keepDeltaHistory;
 
         _discardedDeltas = metricRegistry.meter(MetricRegistry.name("bv.emodb.sor", "DefaultCompactor", "discarded_deltas"));
@@ -50,7 +50,7 @@ public abstract class AbstractCompactor {
     }
 
     protected Map.Entry<DeltaClusteringKey, Compaction> findEffectiveCompaction(Iterator<Map.Entry<DeltaClusteringKey, Compaction>> compactionIter,
-                                                                Collection<DeltaClusteringKey> otherCompactionIds, long compactionConsistencyTimeStamp) {
+                                                                                Collection<DeltaClusteringKey> otherCompactionIds, long compactionConsistencyTimeStamp) {
         Compaction best = null;
         DeltaClusteringKey bestClusteringKey = null;
         Map.Entry<DeltaClusteringKey, Compaction> bestEntry = null;
@@ -138,7 +138,7 @@ public abstract class AbstractCompactor {
     }
 
     protected Iterator<Map.Entry<DeltaClusteringKey, DeltaTagPair>> deltaIterator(final Iterator<Map.Entry<DeltaClusteringKey, Change>> changeIter,
-                                                           final Map.Entry<DeltaClusteringKey, Compaction> effectiveCompaction) {
+                                                                                  final Map.Entry<DeltaClusteringKey, Compaction> effectiveCompaction) {
         return new AbstractIterator<Map.Entry<DeltaClusteringKey, DeltaTagPair>>() {
             @Override
             protected Map.Entry<DeltaClusteringKey, DeltaTagPair> computeNext() {
@@ -236,6 +236,7 @@ public abstract class AbstractCompactor {
     protected class DeltaTagPair {
         public final Delta delta;
         public final Set<String> tags;
+
         protected DeltaTagPair(Delta delta, Set<String> tags) {
             this.delta = delta;
             this.tags = tags;

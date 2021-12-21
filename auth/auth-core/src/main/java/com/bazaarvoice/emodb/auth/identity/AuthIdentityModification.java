@@ -6,7 +6,7 @@ import com.google.common.collect.Sets;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * AuthIdentityModification is the base class for storing partial updates to an {@link AuthIdentity} as part of a create
@@ -37,7 +37,7 @@ abstract public class AuthIdentityModification<T extends AuthIdentity> {
     }
 
     public AuthIdentityModification<T> addRoles(Set<String> roles) {
-        checkNotNull(roles, "roles");
+        requireNonNull(roles, "roles");
         checkArgument(Sets.intersection(roles, _rolesRemoved).isEmpty(), "Cannot add and remove the same role");
         _rolesAdded.addAll(roles);
         return this;
@@ -48,7 +48,7 @@ abstract public class AuthIdentityModification<T extends AuthIdentity> {
     }
 
     public AuthIdentityModification<T> removeRoles(Set<String> roles) {
-        checkNotNull(roles, "roles");
+        requireNonNull(roles, "roles");
         checkArgument(Sets.intersection(roles, _rolesAdded).isEmpty(), "Cannot add and remove the same role");
         _rolesRemoved.addAll(roles);
         return this;

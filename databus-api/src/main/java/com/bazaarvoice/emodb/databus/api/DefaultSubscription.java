@@ -4,10 +4,12 @@ import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 
 import java.time.Duration;
 import java.util.Date;
+import java.util.Objects;
+
+import static java.util.Objects.hash;
 
 public final class DefaultSubscription implements Subscription {
     private final String _name;
@@ -64,16 +66,16 @@ public final class DefaultSubscription implements Subscription {
 
         if (o instanceof Subscription) {
             Subscription toCompare = (Subscription) o;
-            return Objects.equal(this.getName(), toCompare.getName()) &&
-                    Objects.equal(this.getTableFilter(), toCompare.getTableFilter()) &&
-                    Objects.equal(this.getExpiresAt(), toCompare.getExpiresAt()) &&
-                    Objects.equal(this.getEventTtl(), toCompare.getEventTtl());
+            return Objects.equals(this.getName(), toCompare.getName()) &&
+                    Objects.equals(this.getTableFilter(), toCompare.getTableFilter()) &&
+                    Objects.equals(this.getExpiresAt(), toCompare.getExpiresAt()) &&
+                    Objects.equals(this.getEventTtl(), toCompare.getEventTtl());
         }
         return false;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_name, _tableFilter, _expiresAt, _eventTtl);
+        return hash(_name, _tableFilter, _expiresAt, _eventTtl);
     }
 }

@@ -16,7 +16,7 @@ import java.io.InputStream;
 import java.util.Iterator;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 @Path ("/megabus/1")
 @Produces (MediaType.APPLICATION_JSON)
@@ -25,7 +25,7 @@ public class MegabusResource1 {
     private final MegabusSource _megabusSource;
 
     public MegabusResource1(MegabusSource megabusSource) {
-        _megabusSource = checkNotNull(megabusSource, "megabusSource");
+        _megabusSource = requireNonNull(megabusSource, "megabusSource");
     }
 
     /**

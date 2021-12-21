@@ -9,7 +9,7 @@ import org.apache.shiro.authz.permission.PermissionResolver;
 import java.util.Map;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Simple in-memory implementation of a {@link PermissionManager}.
@@ -24,7 +24,7 @@ public class InMemoryPermissionManager implements PermissionManager {
 
     @Override
     public Set<Permission> getPermissions(String id) {
-        checkNotNull(id, "id");
+        requireNonNull(id, "id");
         return _permissionMap.get(id);
     }
 
@@ -47,7 +47,7 @@ public class InMemoryPermissionManager implements PermissionManager {
 
     @Override
     public void revokePermissions(String id) {
-        checkNotNull(id, "id");
+        requireNonNull(id, "id");
         _permissionMap.removeAll(id);
     }
 

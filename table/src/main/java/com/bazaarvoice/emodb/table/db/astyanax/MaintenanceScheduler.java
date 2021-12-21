@@ -14,7 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -26,8 +25,8 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Schedules and dispatches table maintenance tasks in the current data center.
@@ -61,9 +60,9 @@ public class MaintenanceScheduler extends AbstractIdleService implements Invalid
 
     public MaintenanceScheduler(MaintenanceDAO maintenanceDao, Optional<TableMutexManager> tableMutexManager, String selfDataCenter,
                                 CacheRegistry cacheRegistry, MoveTableTask task) {
-        _maintDao = checkNotNull(maintenanceDao, "maintenanceDao");
-        _tableMutexManager = checkNotNull(tableMutexManager, "tableMutexManager");
-        _selfDataCenter = checkNotNull(selfDataCenter, "selfDataCenter");
+        _maintDao = requireNonNull(maintenanceDao, "maintenanceDao");
+        _tableMutexManager = requireNonNull(tableMutexManager, "tableMutexManager");
+        _selfDataCenter = requireNonNull(selfDataCenter, "selfDataCenter");
         _tableCacheHandle = cacheRegistry.lookup("tables", true);
         cacheRegistry.addListener(this);
         task.setScheduler(this);

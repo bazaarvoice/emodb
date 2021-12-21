@@ -66,8 +66,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Implementation of RangeScanUploader which runs the scan synchronously in process.
@@ -131,7 +131,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
         _waitForAllTransfersCompleteCheckInterval = waitForAllTransfersCompleteCheckInterval;
         _waitForAllTransfersCompleteTimeout = waitForAllTransfersCompleteTimeout;
 
-        _compactionControlSource = checkNotNull(compactionControlSource, "compactionControlSource");
+        _compactionControlSource = requireNonNull(compactionControlSource, "compactionControlSource");
 
         // Initialize the ObjectMapper
         _mapper = new ObjectMapper();

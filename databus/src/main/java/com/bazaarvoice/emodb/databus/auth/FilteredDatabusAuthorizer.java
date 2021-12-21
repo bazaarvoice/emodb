@@ -5,7 +5,7 @@ import com.google.common.collect.Maps;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Implementation of DatabusAuthorizer that overrides authorization for specific owners.  All other owners
@@ -18,8 +18,8 @@ public class FilteredDatabusAuthorizer implements DatabusAuthorizer {
 
     private FilteredDatabusAuthorizer(Map<String, DatabusAuthorizer> ownerOverrides,
                                       DatabusAuthorizer authorizer) {
-        _ownerOverrides = checkNotNull(ownerOverrides, "ownerOverrides");
-        _authorizer = checkNotNull(authorizer, "authorizer");
+        _ownerOverrides = requireNonNull(ownerOverrides, "ownerOverrides");
+        _authorizer = requireNonNull(authorizer, "authorizer");
     }
 
     @Override

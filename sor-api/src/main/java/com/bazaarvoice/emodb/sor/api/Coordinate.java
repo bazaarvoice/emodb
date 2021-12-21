@@ -8,7 +8,7 @@ import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * An EmoDB coordinate consisting of the pair of a table name and a string identifier.
@@ -32,7 +32,7 @@ public final class Coordinate {
      * Parses a string in the format "&lt;table>/&lt;id>".  This is the inverse of {@link #toString()}.
      */
     public static Coordinate parse(String string) {
-        checkNotNull(string, "string");
+        requireNonNull(string, "string");
         int delim = string.indexOf('/');
         checkArgument(delim != -1, "Invalid coordinate format.");
         String table = string.substring(0, delim);
@@ -44,8 +44,8 @@ public final class Coordinate {
 
     @JsonCreator
     private Coordinate(@JsonProperty(Intrinsic.TABLE) String table, @JsonProperty(Intrinsic.ID) String id) {
-        _table = checkNotNull(table, "table");
-        _id = checkNotNull(id, "id");
+        _table = requireNonNull(table, "table");
+        _id = requireNonNull(id, "id");
     }
 
     public String getTable() {

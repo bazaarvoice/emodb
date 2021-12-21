@@ -1,30 +1,22 @@
 package test.blackbox.web;
 
 import com.bazaarvoice.emodb.blob.api.AuthBlobStore;
-import com.bazaarvoice.emodb.blob.client.BlobStoreClient;
 import com.bazaarvoice.emodb.blob.client.BlobStoreClientFactory;
 import com.bazaarvoice.emodb.blob.client.BlobStoreFixedHostDiscoverySource;
 import com.bazaarvoice.emodb.client.uri.EmoUriBuilder;
-import com.bazaarvoice.emodb.common.json.CustomJsonObjectMapperFactory;
 import com.bazaarvoice.emodb.databus.api.AuthDatabus;
-import com.bazaarvoice.emodb.databus.client.DatabusClient;
 import com.bazaarvoice.emodb.databus.client.DatabusClientFactory;
 import com.bazaarvoice.emodb.databus.client.DatabusFixedHostDiscoverySource;
 import com.bazaarvoice.emodb.queue.api.AuthDedupQueueService;
 import com.bazaarvoice.emodb.queue.api.AuthQueueService;
 import com.bazaarvoice.emodb.queue.client.DedupQueueClientFactory;
-import com.bazaarvoice.emodb.queue.client.QueueClient;
 import com.bazaarvoice.emodb.queue.client.QueueClientFactory;
 import com.bazaarvoice.emodb.queue.client.QueueFixedHostDiscoverySource;
 import com.bazaarvoice.emodb.sor.api.AuthDataStore;
-import com.bazaarvoice.emodb.sor.client.DataStoreClient;
 import com.bazaarvoice.emodb.sor.client.DataStoreClientFactory;
 import com.bazaarvoice.emodb.sor.client.DataStoreFixedHostDiscoverySource;
 import com.bazaarvoice.emodb.web.EmoConfiguration;
 import com.bazaarvoice.emodb.web.util.EmoServiceObjectMapperFactory;
-import com.bazaarvoice.ostrich.HostDiscovery;
-import com.bazaarvoice.ostrich.ServiceEndPointBuilder;
-import com.bazaarvoice.ostrich.discovery.FixedHostDiscovery;
 import com.bazaarvoice.ostrich.discovery.zookeeper.ZooKeeperHostDiscovery;
 import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
@@ -33,8 +25,6 @@ import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Closer;
 import com.google.common.net.HttpHeaders;
 import com.sun.jersey.api.client.Client;
@@ -61,6 +51,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Blackbox tests run against actual EmoDB / C* processes started by mvn using emodb-sdk.
@@ -77,11 +68,10 @@ public abstract class BaseRoleConnectHelper implements Closeable {
 
     BaseRoleConnectHelper(String configFileResource) {
         try {
-            _configFileResource = Preconditions.checkNotNull(configFileResource, "configFileResource");
-            _config = Preconditions.checkNotNull(getConfigurationFromResource(), "EmoConfiguration");
+            _configFileResource = requireNonNull(configFileResource, "configFileResource");
+            _config = requireNonNull(getConfigurationFromResource(), "EmoConfiguration");
 
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             Assert.fail(e.getMessage());
         }
     }
@@ -93,10 +83,10 @@ public abstract class BaseRoleConnectHelper implements Closeable {
         }
     }
 
-    protected EmoConfiguration getConfigurationFromResource()  throws Exception {
+    protected EmoConfiguration getConfigurationFromResource() throws Exception {
         URL url = BaseRoleConnectHelper.class.getResource(_configFileResource);
-        Preconditions.checkNotNull(url, _configFileResource);
-        File file = new File (url.toURI());
+        requireNonNull(url, _configFileResource);
+        File file = new File(url.toURI());
         Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
         ObjectMapper mapper = EmoServiceObjectMapperFactory.build(new YAMLFactory());
 
@@ -106,7 +96,7 @@ public abstract class BaseRoleConnectHelper implements Closeable {
 
     // BlobStore
 
-    protected AuthBlobStore getBlobStoreViaOstrich () throws Exception {
+    protected AuthBlobStore getBlobStoreViaOstrich() throws Exception {
 
         BlobStoreClientFactory clientFactory =
                 BlobStoreClientFactory.forClusterAndHttpConfiguration(
@@ -139,7 +129,7 @@ public abstract class BaseRoleConnectHelper implements Closeable {
 
     // DataStore
 
-    protected AuthDataStore getDataStoreViaOstrich () throws Exception {
+    protected AuthDataStore getDataStoreViaOstrich() throws Exception {
 
         DataStoreClientFactory clientFactory =
                 DataStoreClientFactory.forClusterAndHttpConfiguration(
@@ -158,7 +148,7 @@ public abstract class BaseRoleConnectHelper implements Closeable {
                 .buildProxy(new ExponentialBackoffRetry(5, 50, 1000, TimeUnit.MILLISECONDS));
     }
 
-    protected AuthDataStore getDataStoreViaFixedHost () throws Exception {
+    protected AuthDataStore getDataStoreViaFixedHost() throws Exception {
 
         DataStoreClientFactory clientFactory =
                 DataStoreClientFactory.forClusterAndHttpConfiguration(
@@ -173,7 +163,7 @@ public abstract class BaseRoleConnectHelper implements Closeable {
 
     // Databus
 
-    protected AuthDatabus getDatabusViaOstrich () throws Exception {
+    protected AuthDatabus getDatabusViaOstrich() throws Exception {
 
         DatabusClientFactory clientFactory =
                 DatabusClientFactory.forClusterAndHttpConfiguration(
@@ -207,7 +197,7 @@ public abstract class BaseRoleConnectHelper implements Closeable {
 
     // QueueService
 
-    protected AuthQueueService getQueueServiceViaOstrich () throws Exception {
+    protected AuthQueueService getQueueServiceViaOstrich() throws Exception {
 
         QueueClientFactory clientFactory =
                 QueueClientFactory.forClusterAndHttpConfiguration(
@@ -240,7 +230,7 @@ public abstract class BaseRoleConnectHelper implements Closeable {
 
     // DedupQueueService
 
-    protected AuthDedupQueueService getDedupQueueServiceViaOstrich () throws Exception {
+    protected AuthDedupQueueService getDedupQueueServiceViaOstrich() throws Exception {
 
         DedupQueueClientFactory clientFactory =
                 DedupQueueClientFactory.forClusterAndHttpConfiguration(
@@ -259,7 +249,7 @@ public abstract class BaseRoleConnectHelper implements Closeable {
                 .buildProxy(new ExponentialBackoffRetry(5, 50, 1000, TimeUnit.MILLISECONDS));
     }
 
-    protected Client getClient () {
+    protected Client getClient() {
         if (_client == null) {
             ExecutorService executorService = Executors.newSingleThreadExecutor();
             _client = new JerseyClientBuilder(_metricRegistry).using(_config.getHttpClientConfiguration()).using(executorService, new ObjectMapper()).build("dw");
@@ -275,7 +265,8 @@ public abstract class BaseRoleConnectHelper implements Closeable {
         httpPost(params, true, segments);
 
     }
-    protected void httpPost(Map<String,Object> params, boolean isAdminPort, String... segments) throws Exception {
+
+    protected void httpPost(Map<String, Object> params, boolean isAdminPort, String... segments) throws Exception {
 
         UriBuilder builder = (isAdminPort) ? EmoUriBuilder.fromUri(URI.create(getAdminBaseURI()))
                 : EmoUriBuilder.fromUri(URI.create(getServiceBaseURI()));
@@ -287,7 +278,7 @@ public abstract class BaseRoleConnectHelper implements Closeable {
         URI uri = builder.build();
 
         //curl -XPOST http://localhost:8581/tasks/invalidate
-        System.out.println (uri.toASCIIString());
+        System.out.println(uri.toASCIIString());
 
         Client client = getClient();
         client.resource(uri)
@@ -306,16 +297,16 @@ public abstract class BaseRoleConnectHelper implements Closeable {
         }
 
         URI uri = builder.build();
-        System.out.println (uri.toASCIIString());
+        System.out.println(uri.toASCIIString());
 
         return client.resource(uri)
                 .accept(MediaType.APPLICATION_JSON_TYPE)
                 .get(List.class);
     }
 
-    protected String getAdminBaseURI () {
+    protected String getAdminBaseURI() {
         int httpPort = 0;
-        for(ConnectorFactory connector: ((DefaultServerFactory)_config.getServerFactory()).getAdminConnectors()) {
+        for (ConnectorFactory connector : ((DefaultServerFactory) _config.getServerFactory()).getAdminConnectors()) {
             if (connector.getClass().isAssignableFrom(HttpConnectorFactory.class)) {
                 httpPort = ((HttpConnectorFactory) connector).getPort();
                 break;
@@ -325,9 +316,9 @@ public abstract class BaseRoleConnectHelper implements Closeable {
         return format("http://localhost:%d", httpPort);
     }
 
-    protected String getServiceBaseURI () {
+    protected String getServiceBaseURI() {
         int port = 0;
-        for(ConnectorFactory connector: ((DefaultServerFactory)_config.getServerFactory()).getApplicationConnectors()) {
+        for (ConnectorFactory connector : ((DefaultServerFactory) _config.getServerFactory()).getApplicationConnectors()) {
             if (connector.getClass().isAssignableFrom(HttpConnectorFactory.class)) {
                 port = ((HttpConnectorFactory) connector).getPort();
                 break;
@@ -337,9 +328,9 @@ public abstract class BaseRoleConnectHelper implements Closeable {
         return format("http://localhost:%d", port);
     }
 
-    protected int getServiceBasePort () {
+    protected int getServiceBasePort() {
         int port = 0;
-        for(ConnectorFactory connector: ((DefaultServerFactory)_config.getServerFactory()).getApplicationConnectors()) {
+        for (ConnectorFactory connector : ((DefaultServerFactory) _config.getServerFactory()).getApplicationConnectors()) {
             if (connector.getClass().isAssignableFrom(HttpConnectorFactory.class)) {
                 port = ((HttpConnectorFactory) connector).getPort();
                 break;

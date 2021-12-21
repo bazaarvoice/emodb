@@ -5,7 +5,7 @@ import com.bazaarvoice.emodb.plugin.PluginServerMetadata;
 import com.google.common.net.HostAndPort;
 import org.apache.curator.framework.CuratorFramework;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Simple POJO implementation of {@link PluginServerMetadata}.
@@ -21,12 +21,12 @@ public class DefaultPluginServerMetadata implements PluginServerMetadata {
 
     public DefaultPluginServerMetadata(EmoServiceMode serviceMode, String cluster, HostAndPort serviceHostAndPort, HostAndPort adminHostAndPort,
                                        String version, CuratorFramework curator) {
-        _serviceMode = checkNotNull(serviceMode, "serviceMode");
-        _cluster = checkNotNull(cluster, "cluster");
-        _serviceHostAndPort = checkNotNull(serviceHostAndPort, "serviceHostAndPort");
-        _adminHostAndPort = checkNotNull(adminHostAndPort, "adminHostAndPort");
-        _version = checkNotNull(version, "version");
-        _curator = checkNotNull(curator, "curator");
+        _serviceMode = requireNonNull(serviceMode, "serviceMode");
+        _cluster = requireNonNull(cluster, "cluster");
+        _serviceHostAndPort = requireNonNull(serviceHostAndPort, "serviceHostAndPort");
+        _adminHostAndPort = requireNonNull(adminHostAndPort, "adminHostAndPort");
+        _version = requireNonNull(version, "version");
+        _curator = requireNonNull(curator, "curator");
     }
 
     @Override

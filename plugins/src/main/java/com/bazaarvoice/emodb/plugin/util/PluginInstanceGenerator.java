@@ -13,7 +13,7 @@ import java.lang.reflect.Type;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Utility for generating and initializing a plugin.
@@ -60,8 +60,8 @@ public class PluginInstanceGenerator {
     public static <T extends Plugin> T generateInstance(String className, Class<T> instanceType, Map<String, Object> config,
                                                         Environment environment, PluginServerMetadata metadata) {
         try {
-            checkNotNull(className, "className");
-            checkNotNull(instanceType, "instanceType");
+            requireNonNull(className, "className");
+            requireNonNull(instanceType, "instanceType");
 
             // Verify the class exists
             Class<?> clazz = Class.forName(className);

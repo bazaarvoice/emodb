@@ -11,7 +11,7 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Useful helper class when using invalidation caches.  There is a potential race condition due to the way Shiro
@@ -40,7 +40,7 @@ abstract public class ValidatingCacheManager implements CacheManager {
     private final CacheManager _delegate;
 
     public ValidatingCacheManager(CacheManager delegate) {
-        _delegate = checkNotNull(delegate, "delegate");
+        _delegate = requireNonNull(delegate, "delegate");
     }
 
     /**
@@ -72,7 +72,7 @@ abstract public class ValidatingCacheManager implements CacheManager {
         private final CacheValidator<K, V> _cacheValidator;
 
         private ValidatingCache(String name, CacheValidator<K, V> cacheValidator) {
-            _name = checkNotNull(name, "name");
+            _name = requireNonNull(name, "name");
             _cache = _delegate.getCache(name);
             _cacheValidator = cacheValidator;
             _log.debug("Created validating cache for {} of <{}, {}>", name, cacheValidator.getKeyType(), cacheValidator.getValueType());
@@ -183,8 +183,8 @@ abstract public class ValidatingCacheManager implements CacheManager {
         private final Class<CVV> _valueType;
 
         public CacheValidator(Class<CVK> keyType, Class<CVV> valueType) {
-            _keyType = checkNotNull(keyType, "keyType");
-            _valueType = checkNotNull(valueType, "valueType");
+            _keyType = requireNonNull(keyType, "keyType");
+            _valueType = requireNonNull(valueType, "valueType");
         }
 
         public Class<CVK> getKeyType() {

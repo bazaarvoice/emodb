@@ -17,7 +17,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Implementation of {@link org.apache.shiro.cache.CacheManager} which uses a Guava Cache for storage.
@@ -33,7 +33,7 @@ public class GuavaCacheManager extends AbstractCacheManager implements Invalidat
     private final CacheRegistry _cacheRegistry; // already backed by ConcurrentMap
 
     public GuavaCacheManager(CacheRegistry cacheRegistry, String cacheBuilderSpec) {
-        _spec = CacheBuilderSpec.parse(checkNotNull(cacheBuilderSpec));
+        _spec = CacheBuilderSpec.parse(requireNonNull(cacheBuilderSpec));
         _cacheRegistry = cacheRegistry;
     }
 

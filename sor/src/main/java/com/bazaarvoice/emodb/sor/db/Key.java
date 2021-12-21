@@ -2,15 +2,15 @@ package com.bazaarvoice.emodb.sor.db;
 
 import com.bazaarvoice.emodb.table.db.Table;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class Key {
     private final Table _table;
     private final String _key;
 
     public Key(Table table, String key) {
-        _table = checkNotNull(table, "table");
-        _key = checkNotNull(key, "key");
+        _table = requireNonNull(table, "table");
+        _key = requireNonNull(key, "key");
     }
 
     public Table getTable() {

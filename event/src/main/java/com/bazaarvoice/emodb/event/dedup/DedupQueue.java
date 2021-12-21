@@ -35,8 +35,8 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 /** In-memory state for a single {@link DefaultDedupEventStore} sorted queue. */
 public class DedupQueue extends AbstractIdleService {
@@ -60,13 +60,13 @@ public class DedupQueue extends AbstractIdleService {
     public DedupQueue(String name, String readChannel, String writeChannel,
                       QueueDAO queueDAO, EventStore eventStore, Supplier<Boolean> dedupEnabled,
                       ScheduledExecutorService executor, SortedQueueFactory sortedQueueFactory, MetricRegistry metricRegistry) {
-        _name = checkNotNull(name, "name");
-        _readChannel = checkNotNull(readChannel, "readChannel");
-        _writeChannel = checkNotNull(writeChannel, "writeChannel");
-        _queueDAO = checkNotNull(queueDAO, "queueDAO");
-        _eventStore = checkNotNull(eventStore, "eventStore");
-        _dedupEnabled = checkNotNull(dedupEnabled, "dedupEnabled");
-        _executor = checkNotNull(executor, "executor");
+        _name = requireNonNull(name, "name");
+        _readChannel = requireNonNull(readChannel, "readChannel");
+        _writeChannel = requireNonNull(writeChannel, "writeChannel");
+        _queueDAO = requireNonNull(queueDAO, "queueDAO");
+        _eventStore = requireNonNull(eventStore, "eventStore");
+        _dedupEnabled = requireNonNull(dedupEnabled, "dedupEnabled");
+        _executor = requireNonNull(executor, "executor");
         _sortedQueueFactory = sortedQueueFactory;
         ServiceFailureListener.listenTo(this, metricRegistry);
     }

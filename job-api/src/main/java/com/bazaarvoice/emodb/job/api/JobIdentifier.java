@@ -13,7 +13,7 @@ import java.io.Writer;
 import java.util.UUID;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Identifier for a job.  Creates a string ID which contains the job type name encoded within.  This allows for
@@ -32,13 +32,13 @@ public class JobIdentifier<Q, R> {
     }
 
     public static <Q, R> JobIdentifier<Q, R> createNew(JobType<Q, R> jobType) {
-        checkNotNull(jobType, "jobType");
+        requireNonNull(jobType, "jobType");
         return new JobIdentifier<>(toId(jobType.getName(), UUID.randomUUID()), jobType);
     }
 
     public static <Q, R> JobIdentifier<Q, R> fromString(String id, JobType<Q, R> jobType) {
-        checkNotNull(id, "id");
-        checkNotNull(jobType, "jobType");
+        requireNonNull(id, "id");
+        requireNonNull(jobType, "jobType");
         checkArgument(jobType.getName().equals(getJobTypeNameFromId(id)), "Inconsistent type");
 
         return new JobIdentifier<>(id, jobType);

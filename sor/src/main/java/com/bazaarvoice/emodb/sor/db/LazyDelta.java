@@ -9,7 +9,7 @@ import com.bazaarvoice.emodb.sor.delta.impl.AbstractDelta;
 import javax.annotation.Nullable;
 import java.io.IOException;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Delta implementation which takes an JSON token stream amd lazily deserializes it if needed.  There are numerous
@@ -27,7 +27,7 @@ public class LazyDelta extends AbstractDelta {
     private final boolean _constant;
 
     public LazyDelta(JsonTokener tokener, boolean constant) {
-        _tokener = checkNotNull(tokener, "tokener");
+        _tokener = requireNonNull(tokener, "tokener");
         _constant = constant;
     }
 

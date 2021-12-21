@@ -8,7 +8,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.hash;
+import static java.util.Objects.requireNonNull;
 
 /**
  * POJO representation of a role.  Note that permissions are not included in this object since the attributes of a role
@@ -28,7 +29,7 @@ public class Role {
                 @Nullable @JsonProperty("name") String name,
                 @Nullable @JsonProperty("description") String description) {
         _group = group;
-        _id = checkNotNull(id, "id");
+        _id = requireNonNull(id, "id");
         _name = name;
         _description = description;
     }
@@ -84,6 +85,6 @@ public class Role {
 
     @Override
     public int hashCode() {
-        return Objects.hash(_group, _id);
+        return hash(_group, _id);
     }
 }

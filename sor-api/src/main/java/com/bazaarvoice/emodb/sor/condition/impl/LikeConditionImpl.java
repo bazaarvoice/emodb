@@ -16,7 +16,7 @@ import java.io.Writer;
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 abstract public class LikeConditionImpl extends AbstractCondition implements LikeCondition {
 
@@ -28,7 +28,7 @@ abstract public class LikeConditionImpl extends AbstractCondition implements Lik
     }
 
     public static LikeConditionImpl create(final String condition) {
-        checkNotNull(condition, "Like expression cannot be null");
+        requireNonNull(condition, "Like expression cannot be null");
 
         // Optimize for the most common case where an expression contains a single wildcard.
         int firstWildcard = -1;

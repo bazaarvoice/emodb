@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Stores all data center information in a single SoR object.  Use a single object so that reading the set of all
@@ -38,8 +38,8 @@ public class EmoDataCenterDAO implements DataCenterDAO {
 
     @Inject
     public EmoDataCenterDAO(DataStore dataStore, @ServerCluster String cluster) {
-        _dataStore = checkNotNull(dataStore, "dataStore");
-        _cluster = checkNotNull(cluster, "cluster");
+        _dataStore = requireNonNull(dataStore, "dataStore");
+        _cluster = requireNonNull(cluster, "cluster");
     }
 
     @Override
