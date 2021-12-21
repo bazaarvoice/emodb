@@ -278,7 +278,6 @@ public class DataStoreResource1 {
     @RequiresPermissions ("sor|purge|{table}")
     @Timed (name = "bv.emodb.sor.DataStoreResource1.purgeTable", absolute = true)
     public Map<String, Object> getPurgeStatus(@PathParam ("table") String table, @QueryParam ("id") String jobID) {
-        System.out.println(jobID);
         PurgeStatus purgeStatus = _dataStoreAsync.getPurgeStatus(table, jobID);
 
         return ImmutableMap.of("status", purgeStatus.getStatus());

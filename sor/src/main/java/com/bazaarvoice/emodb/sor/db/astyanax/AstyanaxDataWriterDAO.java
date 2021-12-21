@@ -59,7 +59,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 
@@ -386,8 +385,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
             args.write(new TBinaryProtocol(transport));
             return (int) countingOut.getCount();
         } catch (TException | IOException e) {
-            Throwables.propagateIfPossible(checkNotNull(e));
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 
