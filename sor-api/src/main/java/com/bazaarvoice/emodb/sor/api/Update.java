@@ -4,7 +4,6 @@ import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.uuid.TimeUUIDs;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 import com.google.common.base.Strings;
 
 import javax.annotation.Nullable;
@@ -12,6 +11,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 
 public final class Update {
@@ -87,7 +87,7 @@ public final class Update {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_table, _key, _changeId, _delta, _audit, _consistency);
+        return hash(_table, _key, _changeId, _delta, _audit, _consistency);
     }
 
     @Override

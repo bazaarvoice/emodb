@@ -5,11 +5,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 
 import javax.annotation.Nullable;
 import java.util.Date;
+import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 
@@ -141,11 +141,11 @@ public class ScanRangeStatus {
                 _blockedByBatchId.equals(that._blockedByBatchId) &&
                 _concurrencyId.equals(that._concurrencyId) &&
                 _placement.equals(that._placement) &&
-                Objects.equal(_scanStartTime, that._scanStartTime) &&
-                Objects.equal(_scanQueuedTime, that._scanQueuedTime) &&
-                Objects.equal(_scanCompleteTime, that._scanCompleteTime) &&
+                Objects.equals(_scanStartTime, that._scanStartTime) &&
+                Objects.equals(_scanQueuedTime, that._scanQueuedTime) &&
+                Objects.equals(_scanCompleteTime, that._scanCompleteTime) &&
                 _scanRange.equals(that._scanRange) &&
-                Objects.equal(_resplitRange, that._resplitRange);
+                Objects.equals(_resplitRange, that._resplitRange);
     }
 
     @Override

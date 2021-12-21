@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
+import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -84,6 +85,6 @@ public class Role {
 
     @Override
     public int hashCode() {
-        return Objects.hash(_group, _id);
+        return hash(_group, _id);
     }
 }

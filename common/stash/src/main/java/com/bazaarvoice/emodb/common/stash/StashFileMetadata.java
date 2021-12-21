@@ -2,7 +2,8 @@ package com.bazaarvoice.emodb.common.stash;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
+
+import static java.util.Objects.hash;
 
 /**
  * POJO for metadata about a single file in Stash.
@@ -55,6 +56,6 @@ public class StashFileMetadata {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_bucket, _key);
+        return hash(_bucket, _key);
     }
 }

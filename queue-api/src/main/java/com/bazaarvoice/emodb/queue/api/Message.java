@@ -1,9 +1,9 @@
 package com.bazaarvoice.emodb.queue.api;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 
@@ -34,7 +34,7 @@ public final class Message {
         }
         Message message = (Message) o;
         return _id.equals(message.getId()) &&
-                Objects.equal(_payload, message.getPayload());
+                Objects.equals(_payload, message.getPayload());
     }
 
     @Override

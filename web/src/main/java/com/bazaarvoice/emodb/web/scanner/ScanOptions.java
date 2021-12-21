@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Sets;
@@ -13,9 +12,11 @@ import com.google.common.collect.Sets;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -196,15 +197,15 @@ public class ScanOptions {
 
         ScanOptions that = (ScanOptions) o;
 
-        return Objects.equal(_placements, that.getPlacements()) &&
+        return Objects.equals(_placements, that.getPlacements()) &&
                 _scanByAZ == that._scanByAZ &&
                 _compactionEnabled == that._compactionEnabled &&
                 _maxConcurrentSubRangeScans == that._maxConcurrentSubRangeScans &&
-                Objects.equal(_destinations, that.getDestinations());
+                Objects.equals(_destinations, that.getDestinations());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_placements);
+        return hash(_placements);
     }
 }

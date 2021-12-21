@@ -1,10 +1,10 @@
 package com.bazaarvoice.emodb.table.db.astyanax;
 
-import com.google.common.base.Objects;
-
 import java.time.Instant;
+import java.util.Objects;
 import java.util.Optional;
 
+import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -92,11 +92,11 @@ class MaintenanceOp implements Comparable<MaintenanceOp> {
         return _name.equals(that._name) &&
                 _when.equals(that._when) &&
                 _type == that._type &&
-                Objects.equal(_dataCenter, that._dataCenter);
+                Objects.equals(_dataCenter, that._dataCenter);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_name, _when, _type, _dataCenter);
+        return hash(_name, _when, _type, _dataCenter);
     }
 }

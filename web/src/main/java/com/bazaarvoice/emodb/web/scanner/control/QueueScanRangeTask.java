@@ -5,7 +5,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
+
+import java.util.Objects;
 
 /**
  * Implementation of ScanRangeTask used by {@link QueueScanWorkflow}.  This implementation includes the
@@ -74,10 +75,10 @@ public class QueueScanRangeTask implements ScanRangeTask {
 
         QueueScanRangeTask that = (QueueScanRangeTask) o;
 
-        return Objects.equal(_messageId, that.getMessageId()) &&
+        return Objects.equals(_messageId, that.getMessageId()) &&
                 _id == that._id &&
-                Objects.equal(_scanId, that.getScanId()) &&
-                Objects.equal(_range, that.getRange());
+                Objects.equals(_scanId, that.getScanId()) &&
+                Objects.equals(_range, that.getRange());
     }
 
     @Override

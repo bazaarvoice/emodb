@@ -4,7 +4,6 @@ import com.bazaarvoice.emodb.common.cassandra.nio.BufferUtils;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.UnsignedBytes;
@@ -20,6 +19,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -202,7 +202,7 @@ public class ScanRange implements Comparable<ScanRange> {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_from, _to);
+        return hash(_from, _to);
     }
 
     @Override

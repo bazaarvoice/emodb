@@ -24,7 +24,6 @@ import com.bazaarvoice.emodb.table.db.consistency.HintsConsistencyTimeProvider;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.annotation.Timed;
-import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
@@ -60,6 +59,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -430,7 +430,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
 
         @Override
         public int hashCode() {
-            return Objects.hashCode(_placement, _consistency);
+            return hash(_placement, _consistency);
         }
     }
 

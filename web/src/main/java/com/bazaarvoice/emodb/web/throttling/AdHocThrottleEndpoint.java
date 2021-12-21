@@ -1,8 +1,7 @@
 package com.bazaarvoice.emodb.web.throttling;
 
-import com.google.common.base.Objects;
-
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -50,7 +49,7 @@ public class AdHocThrottleEndpoint {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_method, _path);
+        return hash(_method, _path);
     }
 
     /**
