@@ -1,8 +1,8 @@
 package com.bazaarvoice.emodb.web.scanner.writer;
 
-import com.google.common.base.Optional;
 import java.io.IOException;
 import java.util.Map;
+import java.util.Optional;
 
 public interface ScanDestinationWriter {
 

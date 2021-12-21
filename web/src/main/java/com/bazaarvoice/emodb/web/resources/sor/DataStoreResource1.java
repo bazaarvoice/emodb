@@ -40,7 +40,6 @@ import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottler;
 import com.bazaarvoice.emodb.web.throttling.ThrottleConcurrentRequests;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
@@ -91,6 +90,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -270,7 +270,7 @@ public class DataStoreResource1 {
         Audit audit = getRequired(auditParam, "audit");
 
         String jobID = _dataStoreAsync.purgeTableAsync(table, audit);
-        return ImmutableMap.<String, Object>of("id", jobID);
+        return ImmutableMap.of("id", jobID);
     }
 
     @POST
@@ -278,10 +278,10 @@ public class DataStoreResource1 {
     @RequiresPermissions ("sor|purge|{table}")
     @Timed (name = "bv.emodb.sor.DataStoreResource1.purgeTable", absolute = true)
     public Map<String, Object> getPurgeStatus(@PathParam ("table") String table, @QueryParam ("id") String jobID) {
-        System.out.println(jobID.toString());
+        System.out.println(jobID);
         PurgeStatus purgeStatus = _dataStoreAsync.getPurgeStatus(table, jobID);
 
-        return ImmutableMap.<String, Object>of("status", purgeStatus.getStatus());
+        return ImmutableMap.of("status", purgeStatus.getStatus());
     }
 
     @GET
@@ -553,7 +553,7 @@ public class DataStoreResource1 {
                                    @QueryParam ("tag") List<String> tags,
                                    @QueryParam ("debug") BooleanParam debug,
                                    @Authenticated Subject subject) {
-        Set<String> tagsSet = (tags == null) ? ImmutableSet.<String>of() : Sets.newHashSet(tags);
+        Set<String> tagsSet = (tags == null) ? ImmutableSet.of() : Sets.newHashSet(tags);
         return doUpdate(table, key, changeIdParam, Deltas.literal(json), auditParam, consistency, debug, false, subject, tagsSet);
     }
 
@@ -582,7 +582,7 @@ public class DataStoreResource1 {
                                                 @QueryParam ("tag") List<String> tags,
                                                 @QueryParam ("debug") BooleanParam debug,
                                                 @Authenticated Subject subject) {
-        Set<String> tagsSet = (tags == null) ? ImmutableSet.<String>of() : Sets.newHashSet(tags);
+        Set<String> tagsSet = (tags == null) ? ImmutableSet.of() : Sets.newHashSet(tags);
         return doUpdate(table, key, changeIdParam, Deltas.literal(json), auditParam, consistency, debug, true, subject, tagsSet);
     }
 
@@ -612,7 +612,7 @@ public class DataStoreResource1 {
                                   @QueryParam ("debug") BooleanParam debug,
                                   @Authenticated Subject subject) {
         checkArgument(!Strings.isNullOrEmpty(deltaString), "Missing required JSON delta request entity.");
-        Set<String> tagsSet = (tags == null) ? ImmutableSet.<String>of() : Sets.newHashSet(tags);
+        Set<String> tagsSet = (tags == null) ? ImmutableSet.of() : Sets.newHashSet(tags);
         return doUpdate(table, key, changeIdParam, new DeltaParam(deltaString).get(), auditParam, consistency, debug,
                 false, subject, tagsSet);
     }
@@ -643,7 +643,7 @@ public class DataStoreResource1 {
                                         @QueryParam ("debug") BooleanParam debug,
                                         @Authenticated Subject subject) {
         checkArgument(!Strings.isNullOrEmpty(deltaString), "Missing required JSON delta request entity.");
-        Set<String> tagsSet = (tags == null) ? ImmutableSet.<String>of() : Sets.newHashSet(tags);
+        Set<String> tagsSet = (tags == null) ? ImmutableSet.of() : Sets.newHashSet(tags);
         return doUpdate(table, key, changeIdParam, new DeltaParam(deltaString).get(), auditParam, consistency, debug,
                 true, subject, tagsSet);
     }
@@ -667,7 +667,7 @@ public class DataStoreResource1 {
                                   @QueryParam ("tag") List<String> tags,
                                   @QueryParam ("debug") BooleanParam debug,
                                   @Authenticated Subject subject) {
-        Set<String> tagsSet = (tags == null) ? ImmutableSet.<String>of() : Sets.newHashSet(tags);
+        Set<String> tagsSet = (tags == null) ? ImmutableSet.of() : Sets.newHashSet(tags);
         return doUpdate(table, key, changeIdParam, Deltas.delete(), auditParam, consistency, debug, false, subject, tagsSet);
     }
 
@@ -690,7 +690,7 @@ public class DataStoreResource1 {
                                                @QueryParam ("tag") List<String> tags,
                                                @QueryParam ("debug") BooleanParam debug,
                                                @Authenticated Subject subject) {
-        Set<String> tagsSet = (tags == null) ? ImmutableSet.<String>of() : Sets.newHashSet(tags);
+        Set<String> tagsSet = (tags == null) ? ImmutableSet.of() : Sets.newHashSet(tags);
         return doUpdate(table, key, changeIdParam, Deltas.delete(), auditParam, consistency, debug, true, subject, tagsSet);
     }
 
@@ -750,7 +750,7 @@ public class DataStoreResource1 {
     public SuccessResponse updateAll(InputStream in,
                                      @QueryParam ("tag") List<String> tags,
                                      @Authenticated Subject subject) {
-        Set<String> tagsSet = (tags == null) ? ImmutableSet.<String>of() : Sets.newHashSet(tags);
+        Set<String> tagsSet = (tags == null) ? ImmutableSet.of() : Sets.newHashSet(tags);
         Iterable<Update> updates = asSubjectSafeUpdateIterable(new JsonStreamingArrayParser<>(in, Update.class), subject, false);
         _dataStore.updateAll(updates, tagsSet);
         return SuccessResponse.instance();
@@ -771,7 +771,7 @@ public class DataStoreResource1 {
     )
     public SuccessResponse updateAllForFacade(InputStream in, @QueryParam ("tag") List<String> tags,
                                               @Authenticated Subject subject) {
-        Set<String> tagsSet = (tags == null) ? ImmutableSet.<String>of() : Sets.newHashSet(tags);
+        Set<String> tagsSet = (tags == null) ? ImmutableSet.of() : Sets.newHashSet(tags);
         Iterable<Update> updates = asSubjectSafeUpdateIterable(new JsonStreamingArrayParser<>(in, Update.class), subject, true);
         _dataStore.updateAllForFacade(updates, tagsSet);
         return SuccessResponse.instance();
@@ -799,7 +799,7 @@ public class DataStoreResource1 {
                                               @QueryParam ("facade") BooleanParam facade,
                                               @Authenticated Subject subject,
                                               Reader in) {
-        return doSimpleUpdateStream(Optional.<String>absent(), changeIdParam, auditParam, consistencyParam, in, facade,
+        return doSimpleUpdateStream(Optional.empty(), changeIdParam, auditParam, consistencyParam, in, facade,
                 subject);
     }
 

@@ -34,7 +34,6 @@ import com.codahale.metrics.Timer;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.common.collect.AbstractIterator;
@@ -92,6 +91,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
@@ -1166,7 +1166,7 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyRead
                     }
                 }
 
-                return Iterators.peekingIterator(Collections.<Row<ByteBuffer, DeltaKey>>emptyIterator());
+                return Iterators.peekingIterator(Collections.emptyIterator());
             }
         });
     }

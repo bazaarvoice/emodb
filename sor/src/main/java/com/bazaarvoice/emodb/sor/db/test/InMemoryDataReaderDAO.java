@@ -25,7 +25,6 @@ import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableSet;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.FluentIterable;
@@ -47,6 +46,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.UUID;
@@ -172,7 +172,7 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO {
     @Override
     public ScanRangeSplits getScanRangeSplits(String placement, int desiredRecordsPerSplit, Optional<ScanRange> subrange) {
         return ScanRangeSplits.builder()
-                .addScanRange("dummy_group", "dummy_host", subrange.or(ScanRange.all()))
+                .addScanRange("dummy_group", "dummy_host", subrange.orElse(ScanRange.all()))
                 .build();
     }
 
@@ -349,12 +349,12 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO {
 
     private NavigableMap<String, Map<UUID, Change>> safeGet(Map<String, NavigableMap<String, Map<UUID, Change>>> map, String key) {
         NavigableMap<String, Map<UUID, Change>> map2 = map.get(key);
-        return (map2 != null) ? map2 : ImmutableSortedMap.<String, Map<UUID, Change>>of();
+        return (map2 != null) ? map2 : ImmutableSortedMap.of();
     }
 
     private Map<UUID, Change> safeGet(Map<String, NavigableMap<String, Map<UUID, Change>>> map, String key1, String key2) {
         Map<UUID, Change> map2 = safeGet(map, key1).get(key2);
-        return (map2 != null) ? map2 : Collections.<UUID, Change>emptyMap();
+        return (map2 != null) ? map2 : Collections.emptyMap();
     }
 
     private void safePut(Map<String, NavigableMap<String, Map<UUID, Change>>> map,

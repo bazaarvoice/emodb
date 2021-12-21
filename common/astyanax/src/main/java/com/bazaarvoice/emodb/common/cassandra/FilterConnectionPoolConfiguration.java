@@ -1,7 +1,9 @@
 package com.bazaarvoice.emodb.common.cassandra;
 
-import com.google.common.base.Optional;
 import io.dropwizard.util.Size;
+
+import java.util.Optional;
+import java.util.stream.Stream;
 
 /**
  * Implementation of ConnectionPoolConfiguration that defers to another instance with the ability to override
@@ -11,23 +13,23 @@ public class FilterConnectionPoolConfiguration implements ConnectionPoolConfigur
 
     private final ConnectionPoolConfiguration _config;
 
-    private Optional<Integer> _initialConnectionsPerHost = Optional.absent();
-    private Optional<Integer> _maxConnectionsPerHost = Optional.absent();
-    private Optional<Integer> _coreConnectionsPerHost = Optional.absent();
-    private Optional<Integer> _socketTimeout = Optional.absent();
-    private Optional<Integer> _connectTimeout = Optional.absent();
-    private Optional<Integer> _maxFailoverCount = Optional.absent();
-    private Optional<Integer> _connectionLimiterWindowSize = Optional.absent();
-    private Optional<Integer> _connectionLimiterMaxPendingCount = Optional.absent();
-    private Optional<Integer> _maxPendingConnectionsPerHost = Optional.absent();
-    private Optional<Integer> _maxBlockedThreadsPerHost = Optional.absent();
-    private Optional<Integer> _maxTimeoutCount = Optional.absent();
-    private Optional<Integer> _timeoutWindow = Optional.absent();
-    private Optional<Integer> _retrySuspendWindow = Optional.absent();
-    private Optional<Integer> _retryDelaySlice = Optional.absent();
-    private Optional<Integer> _retryMaxDelaySlice = Optional.absent();
-    private Optional<Integer> _maxTimeoutWhenExhausted = Optional.absent();
-    private Optional<Size> _maxThriftFrameSize = Optional.absent();
+    private Optional<Integer> _initialConnectionsPerHost = Optional.empty();
+    private Optional<Integer> _maxConnectionsPerHost = Optional.empty();
+    private Optional<Integer> _coreConnectionsPerHost = Optional.empty();
+    private Optional<Integer> _socketTimeout = Optional.empty();
+    private Optional<Integer> _connectTimeout = Optional.empty();
+    private Optional<Integer> _maxFailoverCount = Optional.empty();
+    private Optional<Integer> _connectionLimiterWindowSize = Optional.empty();
+    private Optional<Integer> _connectionLimiterMaxPendingCount = Optional.empty();
+    private Optional<Integer> _maxPendingConnectionsPerHost = Optional.empty();
+    private Optional<Integer> _maxBlockedThreadsPerHost = Optional.empty();
+    private Optional<Integer> _maxTimeoutCount = Optional.empty();
+    private Optional<Integer> _timeoutWindow = Optional.empty();
+    private Optional<Integer> _retrySuspendWindow = Optional.empty();
+    private Optional<Integer> _retryDelaySlice = Optional.empty();
+    private Optional<Integer> _retryMaxDelaySlice = Optional.empty();
+    private Optional<Integer> _maxTimeoutWhenExhausted = Optional.empty();
+    private Optional<Size> _maxThriftFrameSize = Optional.empty();
 
     public FilterConnectionPoolConfiguration(ConnectionPoolConfiguration config) {
         _config = config;
@@ -35,7 +37,10 @@ public class FilterConnectionPoolConfiguration implements ConnectionPoolConfigur
 
     @Override
     public Optional<Integer> getInitialConnectionsPerHost() {
-        return _initialConnectionsPerHost.or(_config.getInitialConnectionsPerHost());
+        return Stream.of(_initialConnectionsPerHost, _config.getInitialConnectionsPerHost())
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
     }
 
     public void setInitialConnectionsPerHost(int initialConnectionsPerHost) {
@@ -44,7 +49,10 @@ public class FilterConnectionPoolConfiguration implements ConnectionPoolConfigur
 
     @Override
     public Optional<Integer> getMaxConnectionsPerHost() {
-        return _maxConnectionsPerHost.or(_config.getMaxConnectionsPerHost());
+        return Stream.of(_maxConnectionsPerHost, _config.getMaxConnectionsPerHost())
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
     }
 
     public void setMaxConnectionsPerHost(int maxConnectionsPerHost) {
@@ -53,7 +61,10 @@ public class FilterConnectionPoolConfiguration implements ConnectionPoolConfigur
 
     @Override
     public Optional<Integer> getCoreConnectionsPerHost() {
-        return _coreConnectionsPerHost.or(_config.getCoreConnectionsPerHost());
+        return Stream.of(_coreConnectionsPerHost, _config.getCoreConnectionsPerHost())
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
     }
 
     public void setCoreConnectionsPerHost(int coreConnectionsPerHost) {
@@ -62,7 +73,10 @@ public class FilterConnectionPoolConfiguration implements ConnectionPoolConfigur
 
     @Override
     public Optional<Integer> getSocketTimeout() {
-        return _socketTimeout.or(_config.getSocketTimeout());
+        return Stream.of(_socketTimeout, _config.getSocketTimeout())
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
     }
 
     public void setSocketTimeout(int socketTimeout) {
@@ -71,7 +85,10 @@ public class FilterConnectionPoolConfiguration implements ConnectionPoolConfigur
 
     @Override
     public Optional<Integer> getConnectTimeout() {
-        return _connectTimeout.or(_config.getConnectTimeout());
+        return Stream.of(_connectTimeout, _config.getConnectTimeout())
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
     }
 
     public void setConnectTimeout(int connectTimeout) {
@@ -80,7 +97,10 @@ public class FilterConnectionPoolConfiguration implements ConnectionPoolConfigur
 
     @Override
     public Optional<Integer> getMaxFailoverCount() {
-        return _maxFailoverCount.or(_config.getMaxFailoverCount());
+        return Stream.of(_maxFailoverCount, _config.getMaxFailoverCount())
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
     }
 
     public void setMaxFailoverCount(int maxFailoverCount) {
@@ -89,7 +109,10 @@ public class FilterConnectionPoolConfiguration implements ConnectionPoolConfigur
 
     @Override
     public Optional<Integer> getConnectionLimiterWindowSize() {
-        return _connectionLimiterWindowSize.or(_config.getConnectionLimiterWindowSize());
+        return Stream.of(_connectionLimiterWindowSize, _config.getConnectionLimiterWindowSize())
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
     }
 
     public void setConnectionLimiterWindowSize(int connectionLimiterWindowSize) {
@@ -98,7 +121,10 @@ public class FilterConnectionPoolConfiguration implements ConnectionPoolConfigur
 
     @Override
     public Optional<Integer> getConnectionLimiterMaxPendingCount() {
-        return _connectionLimiterMaxPendingCount.or(_config.getConnectionLimiterMaxPendingCount());
+        return Stream.of(_connectionLimiterMaxPendingCount, _config.getConnectionLimiterMaxPendingCount())
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
     }
 
     public void setConnectionLimiterMaxPendingCount(int connectionLimiterMaxPendingCount) {
@@ -107,7 +133,10 @@ public class FilterConnectionPoolConfiguration implements ConnectionPoolConfigur
 
     @Override
     public Optional<Integer> getMaxPendingConnectionsPerHost() {
-        return _maxPendingConnectionsPerHost.or(_config.getMaxPendingConnectionsPerHost());
+        return Stream.of(_maxPendingConnectionsPerHost, _config.getMaxPendingConnectionsPerHost())
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
     }
 
     public void setMaxPendingConnectionsPerHost(int maxPendingConnectionsPerHost) {
@@ -116,7 +145,10 @@ public class FilterConnectionPoolConfiguration implements ConnectionPoolConfigur
 
     @Override
     public Optional<Integer> getMaxBlockedThreadsPerHost() {
-        return _maxBlockedThreadsPerHost.or(_config.getMaxBlockedThreadsPerHost());
+        return Stream.of(_maxBlockedThreadsPerHost, _config.getMaxBlockedThreadsPerHost())
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
     }
 
     public void setMaxBlockedThreadsPerHost(int maxBlockedThreadsPerHost) {
@@ -125,7 +157,10 @@ public class FilterConnectionPoolConfiguration implements ConnectionPoolConfigur
 
     @Override
     public Optional<Integer> getMaxTimeoutCount() {
-        return _maxTimeoutCount.or(_config.getMaxTimeoutCount());
+        return Stream.of(_maxTimeoutCount, _config.getMaxTimeoutCount())
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
     }
 
     public void setMaxTimeoutCount(int maxTimeoutCount) {
@@ -134,7 +169,10 @@ public class FilterConnectionPoolConfiguration implements ConnectionPoolConfigur
 
     @Override
     public Optional<Integer> getTimeoutWindow() {
-        return _timeoutWindow.or(_config.getTimeoutWindow());
+        return Stream.of(_timeoutWindow, _config.getTimeoutWindow())
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
     }
 
     public void setTimeoutWindow(int timeoutWindow) {
@@ -143,7 +181,10 @@ public class FilterConnectionPoolConfiguration implements ConnectionPoolConfigur
 
     @Override
     public Optional<Integer> getRetrySuspendWindow() {
-        return _retrySuspendWindow.or(_config.getRetrySuspendWindow());
+        return Stream.of(_retrySuspendWindow, _config.getRetrySuspendWindow())
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
     }
 
     public void setRetrySuspendWindow(int retrySuspendWindow) {
@@ -152,7 +193,10 @@ public class FilterConnectionPoolConfiguration implements ConnectionPoolConfigur
 
     @Override
     public Optional<Integer> getRetryDelaySlice() {
-        return _retryDelaySlice.or(_config.getRetryDelaySlice());
+        return Stream.of(_retryDelaySlice, _config.getRetryDelaySlice())
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
     }
 
     public void setRetryDelaySlice(int retryDelaySlice) {
@@ -161,7 +205,10 @@ public class FilterConnectionPoolConfiguration implements ConnectionPoolConfigur
 
     @Override
     public Optional<Integer> getRetryMaxDelaySlice() {
-        return _retryMaxDelaySlice.or(_config.getRetryMaxDelaySlice());
+        return Stream.of(_retryMaxDelaySlice, _config.getRetryMaxDelaySlice())
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
     }
 
     public void setRetryMaxDelaySlice(int retryMaxDelaySlice) {
@@ -170,7 +217,10 @@ public class FilterConnectionPoolConfiguration implements ConnectionPoolConfigur
 
     @Override
     public Optional<Integer> getMaxTimeoutWhenExhausted() {
-        return _maxTimeoutWhenExhausted.or(_config.getMaxTimeoutWhenExhausted());
+        return Stream.of(_maxTimeoutWhenExhausted, _config.getMaxTimeoutWhenExhausted())
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
     }
 
     public void setMaxTimeoutWhenExhausted(int maxTimeoutWhenExhausted) {
@@ -179,7 +229,10 @@ public class FilterConnectionPoolConfiguration implements ConnectionPoolConfigur
 
     @Override
     public Optional<Size> getMaxThriftFrameSize() {
-        return _maxThriftFrameSize.or(_config.getMaxThriftFrameSize());
+        return Stream.of(_maxThriftFrameSize, _config.getMaxThriftFrameSize())
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
     }
 
     public void setMaxThriftFrameSize(Size maxThriftFrameSize) {

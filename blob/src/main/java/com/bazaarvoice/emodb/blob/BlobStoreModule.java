@@ -80,7 +80,6 @@ import com.bazaarvoice.emodb.table.db.generic.CachingTableDAORegistry;
 import com.bazaarvoice.emodb.table.db.generic.MutexTableDAO;
 import com.bazaarvoice.emodb.table.db.generic.MutexTableDAODelegate;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -102,6 +101,7 @@ import javax.annotation.Nullable;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
@@ -160,8 +160,9 @@ public class BlobStoreModule extends PrivateModule {
         requireBinding(Key.get(String.class, SystemTablePlacement.class));
 
         // No bootstrap tables are required.  System tables are stored as regular SoR tables.
-        bind(new TypeLiteral<Map<String, Long>>() {}).annotatedWith(BootstrapTables.class)
-                .toInstance(ImmutableMap.<String, Long>of());
+        bind(new TypeLiteral<Map<String, Long>>() {
+        }).annotatedWith(BootstrapTables.class)
+                .toInstance(ImmutableMap.of());
 
         bind(StorageProvider.class).to(AstyanaxStorageProvider.class).asEagerSingleton();
         bind(MetadataProvider.class).to(AstyanaxStorageProvider.class).asEagerSingleton();
@@ -231,7 +232,7 @@ public class BlobStoreModule extends PrivateModule {
         if (dataCenterConfiguration.isSystemDataCenter()) {
             return Optional.of(new TableMutexManager(curator, "/lock/table-partitions"));
         }
-        return Optional.absent();
+        return Optional.empty();
     }
 
     @Provides @Singleton @CurrentDataCenter
@@ -262,7 +263,7 @@ public class BlobStoreModule extends PrivateModule {
     @Provides @Singleton @PlacementsUnderMove
     Map<String, String> providePlacementsUnderMove(BlobStoreConfiguration configuration,
                                                    @ValidTablePlacements Set<String> validPlacements) {
-        return configuration.getPlacementsUnderMove() == null ? ImmutableMap.<String, String>of()
+        return configuration.getPlacementsUnderMove() == null ? ImmutableMap.of()
                 : validateMoveMap(ImmutableMap.copyOf(configuration.getPlacementsUnderMove()), validPlacements);
     }
 
@@ -372,7 +373,7 @@ public class BlobStoreModule extends PrivateModule {
     @Provides @Singleton @BlobReadConsistency
     ConsistencyLevel provideBlobReadConsistency(BlobStoreConfiguration configuration) {
         // By default use local quorum
-        return Optional.fromNullable(configuration.getReadConsistency()).or(ConsistencyLevel.CL_LOCAL_QUORUM);
+        return Optional.ofNullable(configuration.getReadConsistency()).orElse(ConsistencyLevel.CL_LOCAL_QUORUM);
     }
 
     @Provides @Singleton @Nullable

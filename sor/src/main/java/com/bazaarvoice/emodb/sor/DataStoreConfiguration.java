@@ -4,7 +4,6 @@ import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.bazaarvoice.emodb.sor.audit.AuditWriterConfiguration;
 import com.bazaarvoice.emodb.sor.log.SlowQueryLogConfiguration;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 
 import javax.annotation.Nullable;
@@ -12,6 +11,7 @@ import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -56,7 +56,7 @@ public class DataStoreConfiguration {
     @Valid
     @NotNull
     @JsonProperty("stashRoot")
-    private Optional<String> _stashRoot = Optional.absent();
+    private Optional<String> _stashRoot = Optional.empty();
 
     @Valid
     @NotNull
@@ -74,7 +74,7 @@ public class DataStoreConfiguration {
     @Valid
     @NotNull
     @JsonProperty("stashBlackListTableCondition")
-    private Optional<String> _stashBlackListTableCondition = Optional.absent();
+    private Optional<String> _stashBlackListTableCondition = Optional.empty();
 
     @Valid
     @JsonProperty("auditWriter")

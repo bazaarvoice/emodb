@@ -12,13 +12,13 @@ import com.bazaarvoice.emodb.table.db.TableChangesEnabled;
 import com.bazaarvoice.emodb.table.db.curator.TableMutexManager;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAORegistry;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.Service;
 import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
 
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 /**
