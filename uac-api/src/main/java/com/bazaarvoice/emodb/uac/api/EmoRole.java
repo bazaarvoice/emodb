@@ -78,10 +78,19 @@ public class EmoRole {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof EmoRole)) {
+            return false;
+        }
+
         EmoRole emoRole = (EmoRole) o;
-        return Objects.equals(_id, emoRole._id) && Objects.equals(_name, emoRole._name) && Objects.equals(_description, emoRole._description) && Objects.equals(_permissions, emoRole._permissions);
+
+        return _id.equals(emoRole.getId()) &&
+                Objects.equals(_name, emoRole.getName()) &&
+                Objects.equals(_description, emoRole.getDescription()) &&
+                _permissions.equals(emoRole.getPermissions());
     }
 
     @Override

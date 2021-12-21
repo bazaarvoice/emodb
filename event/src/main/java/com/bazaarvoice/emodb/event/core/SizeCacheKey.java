@@ -2,6 +2,8 @@ package com.bazaarvoice.emodb.event.core;
 
 import com.google.common.base.MoreObjects;
 
+import java.util.Objects;
+
 import static java.util.Objects.hash;
 
 /**
@@ -25,10 +27,14 @@ public class SizeCacheKey {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof SizeCacheKey)) {
+            return false;
+        }
         SizeCacheKey that = (SizeCacheKey) o;
-        return channelName.equals(that.channelName);
+        return Objects.equals(channelName, that.channelName);
     }
 
     @Override

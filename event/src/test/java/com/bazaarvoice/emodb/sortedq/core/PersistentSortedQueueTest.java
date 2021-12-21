@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
@@ -640,7 +641,7 @@ public class PersistentSortedQueueTest {
 
                     ByteBuffer expected = expectedIter.peek();
 
-                    if (!expected.equals(actual)) {
+                    if (!Objects.equals(actual, expected)) {
                         if (allowedPhantoms.contains(actual)) {
                             continue;
                         }
