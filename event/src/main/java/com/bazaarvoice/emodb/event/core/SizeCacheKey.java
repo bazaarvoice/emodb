@@ -1,7 +1,8 @@
 package com.bazaarvoice.emodb.event.core;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
+
+import static java.util.Objects.hash;
 
 /**
  * Creates a size cache key, such that it compares only on the channel name, but also contains limitAsked
@@ -19,19 +20,15 @@ public class SizeCacheKey {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(channelName);
+        return hash(channelName);
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (!(o instanceof SizeCacheKey)) {
-            return false;
-        }
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
         SizeCacheKey that = (SizeCacheKey) o;
-        return Objects.equal(channelName, that.channelName);
+        return channelName.equals(that.channelName);
     }
 
     @Override

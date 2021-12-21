@@ -8,7 +8,6 @@ import com.bazaarvoice.emodb.databus.model.OwnedSubscription;
 import com.bazaarvoice.emodb.web.auth.resource.NamedResource;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Objects;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -21,6 +20,7 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -218,7 +218,7 @@ public class OwnerDatabusAuthorizer implements DatabusAuthorizer {
         private OwnerTableCacheKey(String ownerId, String table) {
             _ownerId = ownerId;
             _table = table;
-            _hashCode = Objects.hashCode(ownerId, table);
+            _hashCode = hash(ownerId, table);
         }
 
         @Override

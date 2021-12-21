@@ -6,7 +6,6 @@ import com.bazaarvoice.emodb.sortedq.api.Consumer;
 import com.bazaarvoice.emodb.sortedq.api.SortedQueue;
 import com.bazaarvoice.emodb.sortedq.db.QueueDAO;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Objects;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.AbstractIterator;
@@ -641,7 +640,7 @@ public class PersistentSortedQueueTest {
 
                     ByteBuffer expected = expectedIter.peek();
 
-                    if (!Objects.equal(actual, expected)) {
+                    if (!expected.equals(actual)) {
                         if (allowedPhantoms.contains(actual)) {
                             continue;
                         }

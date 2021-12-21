@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 
 public class PartitionConditionImpl extends AbstractCondition implements PartitionCondition {
@@ -175,6 +176,6 @@ public class PartitionConditionImpl extends AbstractCondition implements Partiti
 
     @Override
     public int hashCode() {
-        return Objects.hash(_numPartitions, _condition);
+        return hash(_numPartitions, _condition);
     }
 }

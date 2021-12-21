@@ -1,11 +1,12 @@
 package com.bazaarvoice.emodb.web.throttling;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
 
 import java.time.Instant;
+import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -64,12 +65,12 @@ public class AdHocThrottle {
 
         AdHocThrottle that = (AdHocThrottle) o;
 
-        return _limit == that._limit && Objects.equal(_expiration, that._expiration);
+        return _limit == that._limit && Objects.equals(_expiration, that._expiration);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_limit, _expiration);
+        return hash(_limit, _expiration);
     }
 
     public String toString() {

@@ -1,7 +1,8 @@
 package com.bazaarvoice.emodb.web.scanner.writer;
 
-import com.google.common.base.Objects;
 import com.google.common.collect.ComparisonChain;
+
+import static java.util.Objects.hash;
 
 /**
  * POJO key for identifying a unique ScanWriter file transfer.
@@ -40,7 +41,7 @@ public class TransferKey implements Comparable<TransferKey> {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_tableUuid, _shardId);
+        return hash(_tableUuid, _shardId);
     }
 
     @Override

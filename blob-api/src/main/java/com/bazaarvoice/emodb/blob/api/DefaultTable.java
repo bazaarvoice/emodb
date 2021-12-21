@@ -3,11 +3,12 @@ package com.bazaarvoice.emodb.blob.api;
 import com.bazaarvoice.emodb.sor.api.TableAvailability;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.Objects;
 
+import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 
 public final class DefaultTable implements Table {
@@ -58,12 +59,12 @@ public final class DefaultTable implements Table {
         return _name.equals(that._name) &&
                 _options.equals(that._options) &&
                 _attributes.equals(that._attributes) &&
-                Objects.equal(_availability, _availability);
+                Objects.equals(_availability, _availability);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_name, _options, _attributes, _availability);
+        return hash(_name, _options, _attributes, _availability);
     }
 
     @Override

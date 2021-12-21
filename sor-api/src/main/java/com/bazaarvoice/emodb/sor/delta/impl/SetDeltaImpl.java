@@ -3,7 +3,6 @@ package com.bazaarvoice.emodb.sor.delta.impl;
 import com.bazaarvoice.emodb.sor.delta.DeltaVisitor;
 import com.bazaarvoice.emodb.sor.delta.Literal;
 import com.bazaarvoice.emodb.sor.delta.SetDelta;
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 
@@ -12,6 +11,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Set;
 
+import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 
 public class SetDeltaImpl extends AbstractDelta implements SetDelta {
@@ -125,6 +125,6 @@ public class SetDeltaImpl extends AbstractDelta implements SetDelta {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(9532, _removeRest, _addedValues, _removedValues, _deleteIfEmpty);
+        return hash(9532, _removeRest, _addedValues, _removedValues, _deleteIfEmpty);
     }
 }

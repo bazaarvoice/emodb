@@ -21,7 +21,6 @@ import com.bazaarvoice.emodb.sor.condition.State;
 import com.bazaarvoice.emodb.sor.delta.eval.DeltaEvaluator;
 import com.bazaarvoice.emodb.sor.delta.eval.Intrinsics;
 import com.google.common.base.Charsets;
-import com.google.common.base.Objects;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
 import com.google.common.primitives.Doubles;
@@ -31,6 +30,7 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
@@ -54,7 +54,7 @@ public class ConditionEvaluator implements ConditionVisitor<Object, Boolean> {
 
     @Override
     public Boolean visit(EqualCondition condition, @Nullable Object json) {
-        return Objects.equal(condition.getValue(), json);
+        return Objects.equals(condition.getValue(), json);
     }
 
     @Override
