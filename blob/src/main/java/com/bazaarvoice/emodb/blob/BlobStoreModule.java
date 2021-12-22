@@ -160,8 +160,7 @@ public class BlobStoreModule extends PrivateModule {
         requireBinding(Key.get(String.class, SystemTablePlacement.class));
 
         // No bootstrap tables are required.  System tables are stored as regular SoR tables.
-        bind(new TypeLiteral<Map<String, Long>>() {
-        }).annotatedWith(BootstrapTables.class)
+        bind(new TypeLiteral<Map<String, Long>>() {}).annotatedWith(BootstrapTables.class)
                 .toInstance(ImmutableMap.of());
 
         bind(StorageProvider.class).to(AstyanaxStorageProvider.class).asEagerSingleton();
