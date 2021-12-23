@@ -1,12 +1,12 @@
 package com.bazaarvoice.emodb.web.scanner.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Scanner-specific service configurations.
@@ -28,8 +28,8 @@ public class ScannerConfiguration {
     // If using EmoDB queues, the API key to use
     @Valid
     @NotNull
-    @JsonProperty ("scannerApiKey")
-    private Optional<String> _scannerApiKey = Optional.absent();
+    @JsonProperty("scannerApiKey")
+    private Optional<String> _scannerApiKey = Optional.empty();
 
     // Maximum number of scan threads that can run concurrently on a single server.  Default is 8.
     @Valid
@@ -64,17 +64,17 @@ public class ScannerConfiguration {
     // Optional URI for the S3 proxy host
     @Valid
     @NotNull
-    @JsonProperty ("s3Proxy")
-    private Optional<String> _s3Proxy = Optional.absent();
+    @JsonProperty("s3Proxy")
+    private Optional<String> _s3Proxy = Optional.empty();
 
     // If using S3, optionally assume the provided role
     @Valid
     @NotNull
-    @JsonProperty ("s3AssumeRole")
-    private Optional<String> _s3AssumeRole = Optional.absent();
+    @JsonProperty("s3AssumeRole")
+    private Optional<String> _s3AssumeRole = Optional.empty();
     @Valid
     @NotNull
-    @JsonProperty ("notifications")
+    @JsonProperty("notifications")
     private ScannerNotificationConfig _notifications = new ScannerNotificationConfig();
 
     @Valid
@@ -84,13 +84,13 @@ public class ScannerConfiguration {
 
     @Valid
     @NotNull
-    @JsonProperty ("pendingScanRangeQueueName")
-    private Optional<String> _pendingScanRangeQueueName = Optional.absent();
+    @JsonProperty("pendingScanRangeQueueName")
+    private Optional<String> _pendingScanRangeQueueName = Optional.empty();
 
     @Valid
     @NotNull
-    @JsonProperty ("completeScanRangeQueueName")
-    private Optional<String> _completeScanRangeQueueName = Optional.absent();
+    @JsonProperty("completeScanRangeQueueName")
+    private Optional<String> _completeScanRangeQueueName = Optional.empty();
 
     public boolean isUseSQSQueues() {
         return _useSQSQueues;

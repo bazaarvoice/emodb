@@ -8,13 +8,13 @@ import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
 import com.bazaarvoice.emodb.table.db.StashBlackListTableCondition;
 import com.bazaarvoice.emodb.table.db.TableSet;
-import com.google.common.base.Optional;
 
 import javax.annotation.Nullable;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 public interface DataTools {

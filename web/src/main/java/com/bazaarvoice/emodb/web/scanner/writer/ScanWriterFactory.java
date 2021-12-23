@@ -1,8 +1,7 @@
 package com.bazaarvoice.emodb.web.scanner.writer;
 
-import com.google.common.base.Optional;
-
 import java.net.URI;
+import java.util.Optional;
 
 /**
  * Interface used to create the available {@link ScanWriter} implementations.

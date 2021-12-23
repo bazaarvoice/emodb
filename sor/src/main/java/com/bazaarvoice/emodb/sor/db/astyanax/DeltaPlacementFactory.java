@@ -11,7 +11,6 @@ import com.bazaarvoice.emodb.table.db.astyanax.KeyspaceMap;
 import com.bazaarvoice.emodb.table.db.astyanax.Placement;
 import com.bazaarvoice.emodb.table.db.astyanax.PlacementUtil;
 import com.bazaarvoice.emodb.table.db.astyanax.ValidTablePlacements;
-import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
@@ -24,6 +23,7 @@ import org.apache.cassandra.dht.ByteOrderedPartitioner;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -111,6 +111,6 @@ public class DeltaPlacementFactory extends AbstractPlacementFactory implements P
     public Optional<String> getLocalCluster(String placement) {
         String keyspaceName = PlacementUtil.parsePlacement(placement)[0];
         CassandraKeyspace keyspace = _keyspaceMap.get(keyspaceName);
-        return keyspace != null ? Optional.of(keyspace.getClusterName()) : Optional.<String>absent();
+        return keyspace != null ? Optional.of(keyspace.getClusterName()) : Optional.empty();
     }
 }

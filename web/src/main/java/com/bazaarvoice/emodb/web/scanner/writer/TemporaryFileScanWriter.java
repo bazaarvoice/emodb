@@ -4,7 +4,6 @@ import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.FluentIterable;
@@ -26,6 +25,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -59,7 +59,7 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
         super(type, taskId, baseUri, compression, metricRegistry);
         requireNonNull(maxOpenShards, "maxOpenShards");
 
-        _maxOpenShards = maxOpenShards.or(DEFAULT_MAX_OPEN_SHARDS);
+        _maxOpenShards = maxOpenShards.orElse(DEFAULT_MAX_OPEN_SHARDS);
         checkArgument(_maxOpenShards > 0, "maxOpenShards <= 0");
 
         _openTransfers = metricRegistry.counter(MetricRegistry.name("bv.emodb.scan", "ScanUploader", "open-transfers"));
@@ -295,7 +295,7 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
     public WaitForAllTransfersCompleteResult waitForAllTransfersComplete(Duration duration) throws IOException, InterruptedException {
         boolean complete = blockUntilOpenShardsAtMost(0, null, Instant.now().plus(duration));
         if (complete) {
-            return new WaitForAllTransfersCompleteResult(ImmutableMap.<TransferKey, TransferStatus>of());
+            return new WaitForAllTransfersCompleteResult(ImmutableMap.of());
         }
 
         return new WaitForAllTransfersCompleteResult(getStatusForActiveTransfers());
@@ -322,7 +322,7 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
     private class ShardFiles {
         private final TransferKey _key;
         private final List<ShardFile> _parts = Lists.newArrayList();
-        private Optional<Integer> _finalPartCount = Optional.absent();
+        private Optional<Integer> _finalPartCount = Optional.empty();
         private volatile boolean _canceled;
 
         private ShardFiles(TransferKey key) {
@@ -369,7 +369,7 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
         @Nullable
         synchronized public Optional<File> shardFileComplete(boolean isEmpty, File file)
                 throws IOException {
-            boolean allPartsAvailable = _finalPartCount.or(-1) == _parts.size();
+            boolean allPartsAvailable = _finalPartCount.orElse(-1) == _parts.size();
             boolean allComplete = true;
 
             for (ShardFile shardFile : _parts) {
@@ -389,7 +389,7 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
                 switch (files.size()) {
                     case 0:
                         // All files were empty
-                        return Optional.absent();
+                        return Optional.empty();
                     case 1:
                         // There is only a single file; return it
                         return Optional.of(files.get(0));
@@ -469,16 +469,20 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
         }
     }
 
-    /** Simple predicate to filter out ShardFiles that are empty. */
-    private static Predicate<ShardFile> _shardFileNotEmpty = new Predicate<ShardFile>() {
+    /**
+     * Simple predicate to filter out ShardFiles that are empty.
+     */
+    private static final Predicate<ShardFile> _shardFileNotEmpty = new Predicate<ShardFile>() {
         @Override
         public boolean apply(ShardFile shardFile) {
             return !shardFile.isEmpty();
         }
     };
 
-    /** Simple function to return the local temporary File associated with a ShardFile. */
-    private static Function<ShardFile, File> _getShardFileFile = new Function<ShardFile, File>() {
+    /**
+     * Simple function to return the local temporary File associated with a ShardFile.
+     */
+    private static final Function<ShardFile, File> _getShardFileFile = new Function<ShardFile, File>() {
         @Override
         public File apply(ShardFile shardFile) {
             return shardFile.getFile();

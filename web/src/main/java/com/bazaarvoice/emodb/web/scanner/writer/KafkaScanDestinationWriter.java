@@ -5,9 +5,15 @@ import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -15,11 +21,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import org.apache.kafka.clients.producer.Producer;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * This class writes documents to Kafka asynchronously, then cleans up the futures using the future service. Access to
@@ -28,7 +29,7 @@ import org.slf4j.LoggerFactory;
  */
 public class KafkaScanDestinationWriter implements ScanDestinationWriter {
 
-    private static Logger _log = LoggerFactory.getLogger(KafkaScanDestinationWriter.class);
+    private static final Logger _log = LoggerFactory.getLogger(KafkaScanDestinationWriter.class);
 
     private static final int BLOCKING_QUEUE_CAPACITY = 10000;
 

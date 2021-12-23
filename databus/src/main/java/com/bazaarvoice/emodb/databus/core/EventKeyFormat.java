@@ -9,9 +9,13 @@ import java.util.List;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-/** Multiple EventStore event IDs can be combined into a single Databus event key when they refer to the same object. */
+/**
+ * Multiple EventStore event IDs can be combined into a single Databus event key when they refer to the same object.
+ */
 class EventKeyFormat {
-    /** Event IDs are lowercase hex.  Enforce this so we know they don't conflict with the separator characters. */
+    /**
+     * Event IDs are lowercase hex.  Enforce this so we know they don't conflict with the separator characters.
+     */
     private static final CharMatcher VALID_EVENT_ID =
             CharMatcher.inRange('0', '9').or(CharMatcher.inRange('a', 'f')).precomputed();
 
@@ -84,7 +88,7 @@ class EventKeyFormat {
             }
         }
         // Add the final event ID
-        eventIds.add(checkValid(combine(prevId, eventKey.substring(startIdx, eventKey.length()))));
+        eventIds.add(checkValid(combine(prevId, eventKey.substring(startIdx))));
     }
 
     private static int getCommonPrefixLength(String s1, String s2) {

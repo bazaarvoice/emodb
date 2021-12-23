@@ -16,7 +16,6 @@ import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableDAO;
 import com.bazaarvoice.emodb.table.db.TableSet;
 import com.bazaarvoice.emodb.table.db.curator.TableMutexManager;
-import com.google.common.base.Optional;
 import com.google.inject.Inject;
 
 import javax.annotation.Nullable;
@@ -25,6 +24,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 

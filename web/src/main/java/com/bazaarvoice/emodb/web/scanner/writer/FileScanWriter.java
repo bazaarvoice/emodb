@@ -2,7 +2,6 @@ package com.bazaarvoice.emodb.web.scanner.writer;
 
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.Futures;
@@ -14,13 +13,14 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * ScanWriter implementation for writing files to the local file system.
  */
 public class FileScanWriter extends TemporaryFileScanWriter {
 
-    private Map<TransferKey, File> _activeFiles = Maps.newConcurrentMap();
+    private final Map<TransferKey, File> _activeFiles = Maps.newConcurrentMap();
 
     @Inject
     public FileScanWriter(@Assisted int taskId, @Assisted URI baseUri, @Assisted Optional<Integer> maxOpenShards,
