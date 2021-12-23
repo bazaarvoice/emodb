@@ -57,7 +57,6 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.AbstractIterator;
@@ -86,6 +85,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -671,7 +671,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     @Override
     public void updateAll(Iterable<Update> updates) {
-        updateAll(updates, false, ImmutableSet.<String>of());
+        updateAll(updates, false, ImmutableSet.of());
     }
 
     @Override
@@ -783,7 +783,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     @Override
     public void updateAllForFacade(Iterable<Update> updates) {
-        updateAll(updates, true, ImmutableSet.<String>of());
+        updateAll(updates, true, ImmutableSet.of());
     }
 
     @Override

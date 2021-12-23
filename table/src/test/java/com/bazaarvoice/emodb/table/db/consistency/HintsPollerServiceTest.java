@@ -4,11 +4,11 @@ import com.bazaarvoice.emodb.common.zookeeper.store.ValueStore;
 import com.bazaarvoice.emodb.common.zookeeper.store.ValueStoreListener;
 import com.codahale.metrics.MetricRegistry;
 import com.datastax.driver.core.Session;
-import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
 import org.testng.annotations.Test;
 
 import java.net.InetAddress;
+import java.util.Optional;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -81,8 +81,8 @@ public class HintsPollerServiceTest {
         ClusterHintsPoller clusterHintsPoller = mock(ClusterHintsPoller.class);
 
         when(clusterHintsPoller.getOldestHintsInfo(_session)).thenReturn(new HintsPollerResult()
-                .setHintsResult(InetAddress.getByName("127.0.0.1"), Optional.absent())
-                .setHintsResult(InetAddress.getByName("127.0.0.2"), Optional.absent()));
+                .setHintsResult(InetAddress.getByName("127.0.0.1"), Optional.empty())
+                .setHintsResult(InetAddress.getByName("127.0.0.2"), Optional.empty()));
 
         ValueStore<Long> timestamp = new TestValueStore<>();
         // Since no hints were found, we should expect the hints poll time to get updated to some time later than this timestamp
@@ -100,8 +100,8 @@ public class HintsPollerServiceTest {
         ClusterHintsPoller clusterHintsPoller = mock(ClusterHintsPoller.class);
 
         when(clusterHintsPoller.getOldestHintsInfo(_session)).thenReturn(new HintsPollerResult()
-                .setHintsResult(InetAddress.getByName("127.0.0.1"), Optional.absent())
-                .setHintsResult(InetAddress.getByName("127.0.0.3"), Optional.absent()));
+                .setHintsResult(InetAddress.getByName("127.0.0.1"), Optional.empty())
+                .setHintsResult(InetAddress.getByName("127.0.0.3"), Optional.empty()));
 
         ValueStore<Long> timestamp = new TestValueStore<>();
 

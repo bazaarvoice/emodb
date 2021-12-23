@@ -5,7 +5,6 @@ import com.bazaarvoice.emodb.plugin.stash.StashStateListener;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.compactioncontrol.DelegateCompactionControl;
 import com.bazaarvoice.emodb.sor.core.DataTools;
-import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
 import com.bazaarvoice.emodb.web.scanner.control.ScanPlan;
 import com.bazaarvoice.emodb.web.scanner.control.ScanWorkflow;
@@ -13,7 +12,6 @@ import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRangeStatus;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatus;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusDAO;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
@@ -27,6 +25,7 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -142,7 +141,7 @@ public class ScanUploader {
 
         for (String placement : options.getPlacements()) {
             String cluster = _dataTools.getPlacementCluster(placement);
-            ScanRangeSplits scanRangeSplits = _dataTools.getScanRangeSplits(placement, options.getRangeScanSplitSize(), Optional.<ScanRange>absent());
+            ScanRangeSplits scanRangeSplits = _dataTools.getScanRangeSplits(placement, options.getRangeScanSplitSize(), Optional.empty());
 
             if (!options.isScanByAZ()) {
                 // Optionally we can reduce load across the ring by limiting scans AZ at a time.  However, the caller

@@ -6,7 +6,6 @@ import com.codahale.metrics.MetricRegistry;
 import com.datastax.driver.core.Session;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import org.slf4j.Logger;
@@ -14,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -38,7 +38,7 @@ public class HintsPollerService extends AbstractScheduledService {
     @VisibleForTesting
     protected Set<InetAddress> _hosts = Sets.newHashSet();
 
-    private ClusterHintsPoller _clusterHintsPoller;
+    private final ClusterHintsPoller _clusterHintsPoller;
 
     public HintsPollerService(String clusterName, ValueStore<Long> timestamp, Session cqlSession, ClusterHintsPoller clusterHintsPoller, MetricRegistry metricRegistry) {
         _clusterName = requireNonNull(clusterName, "cluster");

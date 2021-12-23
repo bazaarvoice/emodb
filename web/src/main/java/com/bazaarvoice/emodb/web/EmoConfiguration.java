@@ -15,7 +15,6 @@ import com.bazaarvoice.emodb.web.auth.AuthorizationConfiguration;
 import com.bazaarvoice.emodb.web.scanner.config.ScannerConfiguration;
 import com.bazaarvoice.megabus.MegabusConfiguration;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import io.dropwizard.Configuration;
 import io.dropwizard.client.JerseyClientConfiguration;
@@ -23,6 +22,7 @@ import io.dropwizard.client.JerseyClientConfiguration;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import java.util.List;
+import java.util.Optional;
 
 public class EmoConfiguration extends Configuration {
 
@@ -91,18 +91,18 @@ public class EmoConfiguration extends Configuration {
 
     @Valid
     @NotNull
-    @JsonProperty ("scanner")
-    private Optional<ScannerConfiguration> _scanner = Optional.absent();
+    @JsonProperty("scanner")
+    private Optional<ScannerConfiguration> _scanner = Optional.empty();
 
     @Valid
     @NotNull
     @JsonProperty("kafka")
-    private Optional<KafkaConfiguration> _kafkaConfiguration = Optional.absent();
+    private Optional<KafkaConfiguration> _kafkaConfiguration = Optional.empty();
 
     @Valid
     @NotNull
     @JsonProperty("megabus")
-    private Optional<MegabusConfiguration> _megabusConfiguration = Optional.absent();
+    private Optional<MegabusConfiguration> _megabusConfiguration = Optional.empty();
 
     @Valid
     @NotNull

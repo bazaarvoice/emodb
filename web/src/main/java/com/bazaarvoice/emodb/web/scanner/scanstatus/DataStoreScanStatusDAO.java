@@ -13,7 +13,6 @@ import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.delta.MapDeltaBuilder;
 import com.bazaarvoice.emodb.web.scanner.ScanOptions;
 import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -26,6 +25,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * ScanStatusDAO implementation that persists to an EmoDB table.
@@ -56,7 +56,7 @@ public class DataStoreScanStatusDAO implements ScanStatusDAO {
                 _dataStore.createTable(
                         _tableName,
                         new TableOptionsBuilder().setPlacement(_tablePlacement).build(),
-                        ImmutableMap.<String, Object>of(),
+                        ImmutableMap.of(),
                         new AuditBuilder().setLocalHost().setComment("Create scan status table").build());
 
                 _tableChecked = true;
@@ -146,7 +146,7 @@ public class DataStoreScanStatusDAO implements ScanStatusDAO {
         }
 
         boolean canceled = (Boolean) map.get("canceled");
-        boolean tableSnapshotCreated = Optional.fromNullable((Boolean) map.get("tableSnapshotCreated")).or(false);
+        boolean tableSnapshotCreated = Optional.ofNullable((Boolean) map.get("tableSnapshotCreated")).orElse(false);
         ScanOptions options = JsonHelper.convert(map.get("options"), ScanOptions.class);
         Long completeTs = (Long) map.get("completeTime");
         Date completeTime = completeTs != null ? new Date(completeTs) : null;
@@ -165,8 +165,8 @@ public class DataStoreScanStatusDAO implements ScanStatusDAO {
             String placement = (String) rangeJson.get("placement");
             ScanRange range = JsonHelper.convert(rangeJson.get("range"), ScanRange.class);
             int batchId = (Integer) rangeJson.get("batch");
-            Optional<Integer> blockedByBatchId = Optional.fromNullable((Integer) rangeJson.get("blockedByBatch"));
-            Optional<Integer> concurrencyId = Optional.fromNullable(((Integer) rangeJson.get("concurrencyGroup")));
+            Optional<Integer> blockedByBatchId = Optional.ofNullable((Integer) rangeJson.get("blockedByBatch"));
+            Optional<Integer> concurrencyId = Optional.ofNullable(((Integer) rangeJson.get("concurrencyGroup")));
             ScanRangeStatus scanRangeStatus = new ScanRangeStatus(taskId, placement, range, batchId, blockedByBatchId, concurrencyId);
 
             Long time = (Long) rangeJson.get("queuedTime");

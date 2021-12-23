@@ -1,9 +1,9 @@
 package com.bazaarvoice.emodb.cachemgr.api;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Optional;
 
 import java.util.EventObject;
+import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
@@ -13,7 +13,7 @@ public class InvalidationEvent extends EventObject {
     private final Optional<Iterable<String>> _keys;
 
     public InvalidationEvent(Object source, String cache, InvalidationScope scope) {
-        this(source, cache, scope, Optional.<Iterable<String>>absent());
+        this(source, cache, scope, Optional.empty());
     }
 
     public InvalidationEvent(Object source, String cache, InvalidationScope scope, Iterable<String> keys) {
@@ -40,7 +40,7 @@ public class InvalidationEvent extends EventObject {
     }
 
     public Iterable<String> getKeys() {
-        return _keys.orNull();
+        return _keys.orElse(null);
     }
 
     @Override
