@@ -12,7 +12,7 @@ import io.dropwizard.logging.FileAppenderFactory;
 import io.dropwizard.logging.SyslogAppenderFactory;
 import org.slf4j.LoggerFactory;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Factory for {@link LogbackSlowQueryLog} that configures Logback appenders based on a {@link SlowQueryLogConfiguration}.
@@ -25,7 +25,7 @@ public class LogbackSlowQueryLogProvider implements Provider<SlowQueryLog> {
 
     @Inject
     public LogbackSlowQueryLogProvider(SlowQueryLogConfiguration config, MetricRegistry metricRegistry) {
-        _config = checkNotNull(config, "config");
+        _config = requireNonNull(config, "config");
         _metricRegistry = metricRegistry;
     }
 

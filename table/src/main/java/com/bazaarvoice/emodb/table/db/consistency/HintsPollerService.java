@@ -6,7 +6,6 @@ import com.codahale.metrics.MetricRegistry;
 import com.datastax.driver.core.Session;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import org.slf4j.Logger;
@@ -14,10 +13,11 @@ import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Polls to check if there are any hinted handoffs in any of the nodes in the SoR cluster
@@ -38,13 +38,13 @@ public class HintsPollerService extends AbstractScheduledService {
     @VisibleForTesting
     protected Set<InetAddress> _hosts = Sets.newHashSet();
 
-    private ClusterHintsPoller _clusterHintsPoller;
+    private final ClusterHintsPoller _clusterHintsPoller;
 
     public HintsPollerService(String clusterName, ValueStore<Long> timestamp, Session cqlSession, ClusterHintsPoller clusterHintsPoller, MetricRegistry metricRegistry) {
-        _clusterName = checkNotNull(clusterName, "cluster");
-        _timestamp = checkNotNull(timestamp, "value");
-        _cqlSession = checkNotNull(cqlSession, "cqlSession");
-        _clusterHintsPoller = checkNotNull(clusterHintsPoller, "clusterHintsPoller");
+        _clusterName = requireNonNull(clusterName, "cluster");
+        _timestamp = requireNonNull(timestamp, "value");
+        _cqlSession = requireNonNull(cqlSession, "cqlSession");
+        _clusterHintsPoller = requireNonNull(clusterHintsPoller, "clusterHintsPoller");
         ServiceFailureListener.listenTo(this, metricRegistry);
     }
 

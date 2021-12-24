@@ -14,7 +14,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * All changes for a point-in-time, including a content delta, delta history, audit information, compaction information.
@@ -38,7 +38,7 @@ public final class Change {
            @JsonProperty("compaction") @Nullable Compaction compaction,
            @JsonProperty("history") @Nullable History history,
            @JsonProperty("tags") @Nullable Set<String> tags) {
-        _id = checkNotNull(id, "changeId");
+        _id = requireNonNull(id, "changeId");
         _delta = delta;
         _compaction = compaction;
         _history = history;

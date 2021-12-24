@@ -1,7 +1,8 @@
 package com.bazaarvoice.emodb.common.cassandra;
 
-import com.google.common.base.Optional;
 import io.dropwizard.util.Size;
+
+import java.util.Optional;
 
 /**
  * Configuration for a Cassandra keyspace.  The configuration can optionally be used to create a private connection
@@ -16,23 +17,23 @@ public class KeyspaceConfiguration implements ConnectionPoolConfiguration {
      * connection pool separate from the cluster.  Leaving all values absent results in this keyspace using a
      * connection pool shared with any other keyspaces in the cluster not using a custom pool.
      */
-    private Optional<Integer> _initialConnectionsPerHost = Optional.absent();
-    private Optional<Integer> _maxConnectionsPerHost = Optional.absent();
-    private Optional<Integer> _coreConnectionsPerHost = Optional.absent();
-    private Optional<Integer> _socketTimeout = Optional.absent();
-    private Optional<Integer> _connectTimeout = Optional.absent();
-    private Optional<Integer> _maxFailoverCount = Optional.absent();
-    private Optional<Integer> _connectionLimiterWindowSize = Optional.absent();
-    private Optional<Integer> _connectionLimiterMaxPendingCount = Optional.absent();
-    private Optional<Integer> _maxPendingConnectionsPerHost = Optional.absent();
-    private Optional<Integer> _maxBlockedThreadsPerHost = Optional.absent();
-    private Optional<Integer> _maxTimeoutCount = Optional.absent();
-    private Optional<Integer> _timeoutWindow = Optional.absent();
-    private Optional<Integer> _retrySuspendWindow = Optional.absent();
-    private Optional<Integer> _retryDelaySlice = Optional.absent();
-    private Optional<Integer> _retryMaxDelaySlice = Optional.absent();
-    private Optional<Integer> _maxTimeoutWhenExhausted = Optional.absent();
-    private Optional<Size> _maxThriftFrameSize = Optional.absent();
+    private Optional<Integer> _initialConnectionsPerHost = Optional.empty();
+    private Optional<Integer> _maxConnectionsPerHost = Optional.empty();
+    private Optional<Integer> _coreConnectionsPerHost = Optional.empty();
+    private Optional<Integer> _socketTimeout = Optional.empty();
+    private Optional<Integer> _connectTimeout = Optional.empty();
+    private Optional<Integer> _maxFailoverCount = Optional.empty();
+    private Optional<Integer> _connectionLimiterWindowSize = Optional.empty();
+    private Optional<Integer> _connectionLimiterMaxPendingCount = Optional.empty();
+    private Optional<Integer> _maxPendingConnectionsPerHost = Optional.empty();
+    private Optional<Integer> _maxBlockedThreadsPerHost = Optional.empty();
+    private Optional<Integer> _maxTimeoutCount = Optional.empty();
+    private Optional<Integer> _timeoutWindow = Optional.empty();
+    private Optional<Integer> _retrySuspendWindow = Optional.empty();
+    private Optional<Integer> _retryDelaySlice = Optional.empty();
+    private Optional<Integer> _retryMaxDelaySlice = Optional.empty();
+    private Optional<Integer> _maxTimeoutWhenExhausted = Optional.empty();
+    private Optional<Size> _maxThriftFrameSize = Optional.empty();
 
     public String getKeyspaceMetric() {
         return _keyspaceMetric;

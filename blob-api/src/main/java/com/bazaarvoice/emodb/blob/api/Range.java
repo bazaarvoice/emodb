@@ -1,8 +1,7 @@
 package com.bazaarvoice.emodb.blob.api;
 
-import com.google.common.base.Objects;
-
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.hash;
 
 public final class Range {
     private final long _offset;
@@ -44,7 +43,7 @@ public final class Range {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_offset, _length);
+        return hash(_offset, _length);
     }
 
     @Override

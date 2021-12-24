@@ -13,7 +13,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Metadata that is stored along with every write to help trace the source
@@ -33,7 +33,7 @@ public final class Audit {
 
     @JsonCreator
     public Audit(Map<String, ?> fields) {
-        _fields = checkNotNull(fields, "fields");
+        _fields = requireNonNull(fields, "fields");
     }
 
     @Nullable

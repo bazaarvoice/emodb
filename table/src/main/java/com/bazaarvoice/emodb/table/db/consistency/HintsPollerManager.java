@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Starts a Hints Poller service for each cluster, subject ZooKeeper leader election.
@@ -49,13 +49,13 @@ public class HintsPollerManager implements Managed {
                               LeaderServiceTask dropwizardTask,
                               final MetricRegistry metricRegistry) {
         _lifeCycle = lifeCycle;
-        _timestampCache = checkNotNull(timestampCache, "timestampCache");
-        _curator = checkNotNull(curator, "curator");
-        _self = checkNotNull(self, "self");
-        _cqlSessionForHintsPollerMap = checkNotNull(cqlSessionForHintsPollerMap, "cqlSessionForHintsPollerMap");
-        _clusterHintsPoller = checkNotNull(clusterHintsPoller, "clusterHintsPoller");
-        _dropwizardTask = checkNotNull(dropwizardTask, "dropwizardTask");
-        _metricRegistry = checkNotNull(metricRegistry, "metricRegistry");
+        _timestampCache = requireNonNull(timestampCache, "timestampCache");
+        _curator = requireNonNull(curator, "curator");
+        _self = requireNonNull(self, "self");
+        _cqlSessionForHintsPollerMap = requireNonNull(cqlSessionForHintsPollerMap, "cqlSessionForHintsPollerMap");
+        _clusterHintsPoller = requireNonNull(clusterHintsPoller, "clusterHintsPoller");
+        _dropwizardTask = requireNonNull(dropwizardTask, "dropwizardTask");
+        _metricRegistry = requireNonNull(metricRegistry, "metricRegistry");
 
         _lifeCycle.manage(this);
     }

@@ -16,7 +16,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Reports the number of QueueService or Databus claims.  This is useful for tracking client activity, determining
@@ -35,7 +35,7 @@ public class ClaimCountTask extends Task {
     @Inject
     public ClaimCountTask(TaskRegistry tasks, @MetricsGroupName String metricsGroup, EventStore eventStore) {
         super("claims-" + metricsGroup.substring(metricsGroup.lastIndexOf('.') + 1));
-        _eventStore = checkNotNull(eventStore, "eventStore");
+        _eventStore = requireNonNull(eventStore, "eventStore");
         tasks.addTask(this);
     }
 

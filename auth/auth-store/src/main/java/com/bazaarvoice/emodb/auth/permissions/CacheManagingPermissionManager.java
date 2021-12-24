@@ -7,7 +7,7 @@ import org.apache.shiro.authz.permission.PermissionResolver;
 import java.util.Map;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link com.bazaarvoice.emodb.auth.permissions.PermissionManager} which can explicitly provide some permissions and defer all others to another instance.
@@ -18,13 +18,13 @@ public class CacheManagingPermissionManager implements PermissionManager {
     private final InvalidatableCacheManager _cacheManager;
 
     public CacheManagingPermissionManager(PermissionManager manager, InvalidatableCacheManager cacheManager) {
-        _manager = checkNotNull(manager, "manager");
-        _cacheManager = checkNotNull(cacheManager);
+        _manager = requireNonNull(manager, "manager");
+        _cacheManager = requireNonNull(cacheManager);
     }
 
     @Override
     public Set<Permission> getPermissions(String id) {
-        checkNotNull(id, "id");
+        requireNonNull(id, "id");
         return _manager.getPermissions(id);
     }
 

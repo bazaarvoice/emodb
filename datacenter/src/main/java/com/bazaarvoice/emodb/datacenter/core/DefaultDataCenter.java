@@ -5,7 +5,7 @@ import com.bazaarvoice.emodb.datacenter.api.DataCenter;
 import java.net.URI;
 import java.util.Collection;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class DefaultDataCenter implements DataCenter {
     private final String _name;
@@ -17,12 +17,12 @@ public class DefaultDataCenter implements DataCenter {
 
     public DefaultDataCenter(String name, URI serviceUri, URI adminUri, boolean system,
                              String cassandraName, Collection<String> cassandraKeyspaces) {
-        _name = checkNotNull(name, "name");
-        _serviceUri = checkNotNull(serviceUri, "serviceUri");
-        _adminUri = checkNotNull(adminUri, "adminUri");
+        _name = requireNonNull(name, "name");
+        _serviceUri = requireNonNull(serviceUri, "serviceUri");
+        _adminUri = requireNonNull(adminUri, "adminUri");
         _system = system;
-        _cassandraName = checkNotNull(cassandraName, "cassandraName");
-        _cassandraKeyspaces = checkNotNull(cassandraKeyspaces, "cassandraKeyspaces");
+        _cassandraName = requireNonNull(cassandraName, "cassandraName");
+        _cassandraKeyspaces = requireNonNull(cassandraKeyspaces, "cassandraKeyspaces");
     }
 
     @Override

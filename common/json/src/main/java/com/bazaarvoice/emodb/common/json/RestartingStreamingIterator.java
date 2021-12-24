@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.util.Iterator;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Wraps a {@link JsonStreamingArrayParser} and detects early EOF and re-starts the streaming just after the last
@@ -33,7 +33,7 @@ public class RestartingStreamingIterator<T, K> extends AbstractIterator<T> imple
     }
 
     private RestartingStreamingIterator(@Nullable K fromToken, long limit, StreamingIteratorSupplier<T, K> iterSupplier) {
-        _iterSupplier = checkNotNull(iterSupplier, "restartFn");
+        _iterSupplier = requireNonNull(iterSupplier, "restartFn");
         _restartFromToken = fromToken;
         _remaining = limit;
         _iter = _iterSupplier.get(_restartFromToken, _remaining);

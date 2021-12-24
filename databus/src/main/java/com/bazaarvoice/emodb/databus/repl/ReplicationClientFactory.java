@@ -4,7 +4,6 @@ import com.bazaarvoice.emodb.common.dropwizard.discovery.Payload;
 import com.bazaarvoice.ostrich.MultiThreadedServiceFactory;
 import com.bazaarvoice.ostrich.ServiceEndPoint;
 import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
-import com.google.common.base.Objects;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
@@ -14,6 +13,7 @@ import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.UniformInterfaceException;
 
 import java.net.URI;
+import java.util.Objects;
 
 /**
  * SOA factory for Jersey clients for downloading databus events from a remote data center.
@@ -36,7 +36,7 @@ public class ReplicationClientFactory implements MultiThreadedServiceFactory<Rep
      * Note that this method may return a new instance so the caller must use the returned value.
      */
     public ReplicationClientFactory usingApiKey(String apiKey) {
-        if (Objects.equal(_apiKey, apiKey)) {
+        if (Objects.equals(_apiKey, apiKey)) {
             return this;
         }
         return new ReplicationClientFactory(_jerseyClient, apiKey);

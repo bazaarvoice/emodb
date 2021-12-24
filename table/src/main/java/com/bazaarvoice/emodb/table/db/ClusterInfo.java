@@ -2,14 +2,14 @@ package com.bazaarvoice.emodb.table.db;
 
 import java.util.Optional;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class ClusterInfo {
     private final String _cluster;
     private final String _clusterMetric;
 
     public ClusterInfo(String cluster, String clusterMetric) {
-        _cluster = checkNotNull(cluster, "cluster");
+        _cluster = requireNonNull(cluster, "cluster");
         _clusterMetric = Optional.ofNullable(clusterMetric).orElse(cluster);
     }
 

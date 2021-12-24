@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Manager for maintaining the state of stash requests.  Mostly acts as an entry point to a {@link StashRequestDAO} with
@@ -30,16 +30,16 @@ public class StashRequestManager {
 
     @Inject
     public StashRequestManager(StashRequestDAO stashRequestDAO, List<ScheduledDailyScanUpload> scheduledScans, Clock clock) {
-        _stashRequestDAO = checkNotNull(stashRequestDAO, "stashRequestDAO");
+        _stashRequestDAO = requireNonNull(stashRequestDAO, "stashRequestDAO");
         _scheduledScans = Maps.uniqueIndex(
-                checkNotNull(scheduledScans, "scheduledScans"),
+                requireNonNull(scheduledScans, "scheduledScans"),
                 ScheduledDailyScanUpload::getId);
-        _clock = checkNotNull(clock, "clock");
+        _clock = requireNonNull(clock, "clock");
     }
 
     public void requestStashOnOrAfter(String id, @Nullable Instant time, String requestedBy) {
-        checkNotNull(id, "id");
-        checkNotNull(requestedBy, "requestedBy");
+        requireNonNull(id, "id");
+        requireNonNull(requestedBy, "requestedBy");
 
         ScheduledDailyScanUpload scheduledScan = getAndValidateScan(id);
         Instant now = _clock.instant();
@@ -53,8 +53,8 @@ public class StashRequestManager {
     }
 
     public void undoRequestForStashOnOrAfter(String id, @Nullable Instant time, String requestedBy) {
-        checkNotNull(id, "id");
-        checkNotNull(requestedBy, "requestedBy");
+        requireNonNull(id, "id");
+        requireNonNull(requestedBy, "requestedBy");
 
         ScheduledDailyScanUpload scheduledScan = getAndValidateScan(id);
         Instant now = _clock.instant();
@@ -68,7 +68,7 @@ public class StashRequestManager {
     }
 
     public Set<StashRequest> getRequestsForStash(String id, @Nullable Instant time) {
-        checkNotNull(id, "id");
+        requireNonNull(id, "id");
 
         ScheduledDailyScanUpload scheduledScan = _scheduledScans.get(id);
         if (scheduledScan == null || !scheduledScan.isRequestRequired()) {

@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /*
  * This delegate implementation
@@ -30,8 +30,8 @@ public class DelegateCompactionControlSource implements CompactionControlSource 
     @Inject
     public DelegateCompactionControlSource(@AllCompactionControlSources Provider<List<CompactionControlSource>> compactionControlSourceListProvider,
                                            @LocalCompactionControl CompactionControlSource localCompactionSource) {
-        _compactionControlSourceListProvider = checkNotNull(compactionControlSourceListProvider, "compactionControlSourceListProvider");
-        _localCompactionControl = checkNotNull(localCompactionSource, "localCompactionSource");
+        _compactionControlSourceListProvider = requireNonNull(compactionControlSourceListProvider, "compactionControlSourceListProvider");
+        _localCompactionControl = requireNonNull(localCompactionSource, "localCompactionSource");
     }
 
     @Override

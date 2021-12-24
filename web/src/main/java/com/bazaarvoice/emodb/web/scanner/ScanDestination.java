@@ -8,8 +8,8 @@ import javax.ws.rs.core.UriBuilder;
 import java.net.URI;
 import java.util.Objects;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 /**
  * POJO for the destination for a scan and upload operation.  Can be either configured with a destination URI
@@ -24,7 +24,7 @@ public class ScanDestination {
     private final URI _uri;
 
     public static ScanDestination to(URI uri) {
-        checkNotNull(uri, "uri");
+        requireNonNull(uri, "uri");
         return new ScanDestination(uri);
     }
 

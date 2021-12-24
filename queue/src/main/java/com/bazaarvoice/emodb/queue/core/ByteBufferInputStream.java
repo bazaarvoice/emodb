@@ -3,8 +3,8 @@ package com.bazaarvoice.emodb.queue.core;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkPositionIndexes;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Wraps a {@link java.nio.ByteBuffer} in an {@link java.io.InputStream}.
@@ -34,7 +34,7 @@ public class ByteBufferInputStream extends InputStream {
 
     @Override
     public int read(byte[] b, int off, int len) {
-        checkNotNull(b);
+        requireNonNull(b);
         checkPositionIndexes(off, off + len, b.length);
         if (len == 0) {
             return 0;

@@ -1,11 +1,11 @@
 package com.bazaarvoice.emodb.cachemgr.api;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Optional;
 
 import java.util.EventObject;
+import java.util.Optional;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class InvalidationEvent extends EventObject {
     private final String _cache;
@@ -13,7 +13,7 @@ public class InvalidationEvent extends EventObject {
     private final Optional<Iterable<String>> _keys;
 
     public InvalidationEvent(Object source, String cache, InvalidationScope scope) {
-        this(source, cache, scope, Optional.<Iterable<String>>absent());
+        this(source, cache, scope, Optional.empty());
     }
 
     public InvalidationEvent(Object source, String cache, InvalidationScope scope, Iterable<String> keys) {
@@ -22,9 +22,9 @@ public class InvalidationEvent extends EventObject {
 
     private InvalidationEvent(Object source, String cache, InvalidationScope scope, Optional<Iterable<String>> keys) {
         super(source);
-        _cache = checkNotNull(cache, "cache");
-        _scope = checkNotNull(scope, "scope");
-        _keys = checkNotNull(keys, "keys");
+        _cache = requireNonNull(cache, "cache");
+        _scope = requireNonNull(scope, "scope");
+        _keys = requireNonNull(keys, "keys");
     }
 
     public String getCache() {
@@ -40,7 +40,7 @@ public class InvalidationEvent extends EventObject {
     }
 
     public Iterable<String> getKeys() {
-        return _keys.orNull();
+        return _keys.orElse(null);
     }
 
     @Override

@@ -19,7 +19,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -65,7 +64,7 @@ public class DataStoreUpdateThrottleManager implements DataStoreUpdateThrottler 
     }
 
     public void updateAPIKeyRateLimit(String id, DataStoreUpdateThrottle throttle) {
-        checkNotNull(id, "id");
+        requireNonNull(id, "id");
         try {
             _currentRateLimits.set(toZKPath(id), throttle);
         } catch (Exception e) {
@@ -95,7 +94,7 @@ public class DataStoreUpdateThrottleManager implements DataStoreUpdateThrottler 
 
     @Override
     public void beforeUpdate(String id) {
-        checkNotNull(id, "Rate limiting of SOR updates should only be applied to API requests with an API key");
+        requireNonNull(id, "Rate limiting of SOR updates should only be applied to API requests with an API key");
 
         double millisWaited = 0;
         double maybeSecondsWaited;

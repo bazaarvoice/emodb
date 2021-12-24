@@ -4,7 +4,7 @@ import com.bazaarvoice.emodb.databus.model.OwnedSubscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link DatabusAuthorizer} for system processes, such as the canary and databus replay.
@@ -30,7 +30,7 @@ public class SystemProcessDatabusAuthorizer implements DatabusAuthorizer {
     };
 
     public SystemProcessDatabusAuthorizer(String systemOwnerId) {
-        _systemOwnerId = checkNotNull(systemOwnerId, "systemOwnerId");
+        _systemOwnerId = requireNonNull(systemOwnerId, "systemOwnerId");
     }
 
     @Override

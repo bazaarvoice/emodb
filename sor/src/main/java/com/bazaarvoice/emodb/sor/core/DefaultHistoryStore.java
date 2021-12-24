@@ -14,7 +14,7 @@ import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class DefaultHistoryStore implements HistoryStore {
 
@@ -25,11 +25,11 @@ public class DefaultHistoryStore implements HistoryStore {
 
     @Inject
     public DefaultHistoryStore(TableDAO tableDAO, DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao,
-                               @DeltaHistoryTtl Duration historyTtl){
-        _tableDao = checkNotNull(tableDAO, "tableDAO");
-        _dataReaderDao = checkNotNull(dataReaderDao, "dataReaderDao");
-        _dataWriterDao = checkNotNull(dataWriterDao, "dataWriterDao");
-        _historyTtl = checkNotNull(historyTtl, "historyTtl");
+                               @DeltaHistoryTtl Duration historyTtl) {
+        _tableDao = requireNonNull(tableDAO, "tableDAO");
+        _dataReaderDao = requireNonNull(dataReaderDao, "dataReaderDao");
+        _dataWriterDao = requireNonNull(dataWriterDao, "dataWriterDao");
+        _historyTtl = requireNonNull(historyTtl, "historyTtl");
     }
 
     @Override

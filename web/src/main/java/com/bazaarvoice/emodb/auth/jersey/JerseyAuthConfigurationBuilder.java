@@ -5,7 +5,7 @@ import com.google.common.collect.ImmutableList;
 import com.sun.jersey.spi.container.ResourceFilterFactory;
 import org.apache.shiro.mgt.SecurityManager;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * This class can be used to  get the Jersey ResourceFactoryFilters and Providers required to authenticate and/or
@@ -20,7 +20,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
     }
 
     public static JerseyAuthConfiguration build(SecurityManager securityManager) {
-        checkNotNull(securityManager, "securityManager");
+        requireNonNull(securityManager, "securityManager");
         ApiKeyAuthenticationTokenGenerator tokenGenerator = new ApiKeyAuthenticationTokenGenerator();
 
         return new JerseyAuthConfiguration(

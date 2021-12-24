@@ -4,7 +4,6 @@ import com.bazaarvoice.emodb.common.cassandra.nio.BufferUtils;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.UnsignedBytes;
@@ -20,7 +19,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.hash;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Defines an upper and lower bound for performing a scan of the underlying Cassandra table data column family.
@@ -37,16 +37,16 @@ public class ScanRange implements Comparable<ScanRange> {
     @JsonCreator
     private ScanRange(@JsonProperty ("from") String from, @JsonProperty ("to") String to) {
         try {
-            _from = ByteBuffer.wrap(Hex.decodeHex(checkNotNull(from, "from").toCharArray())).asReadOnlyBuffer();
-            _to = ByteBuffer.wrap(Hex.decodeHex(checkNotNull(to, "to").toCharArray())).asReadOnlyBuffer();
+            _from = ByteBuffer.wrap(Hex.decodeHex(requireNonNull(from, "from").toCharArray())).asReadOnlyBuffer();
+            _to = ByteBuffer.wrap(Hex.decodeHex(requireNonNull(to, "to").toCharArray())).asReadOnlyBuffer();
         } catch (DecoderException e) {
             throw new IllegalArgumentException(e);
         }
     }
 
     private ScanRange(ByteBuffer from, ByteBuffer to) {
-        _from = checkNotNull(from, "from");
-        _to = checkNotNull(to, "to");
+        _from = requireNonNull(from, "from");
+        _to = requireNonNull(to, "to");
     }
 
     public static ScanRange create(ByteBufferRange range) {
@@ -202,7 +202,7 @@ public class ScanRange implements Comparable<ScanRange> {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_from, _to);
+        return hash(_from, _to);
     }
 
     @Override

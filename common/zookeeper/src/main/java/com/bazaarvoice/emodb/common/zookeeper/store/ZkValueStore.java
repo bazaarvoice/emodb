@@ -13,8 +13,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Stores a single value in ZooKeeper, watches for changes made by other servers in the same cluster, and caches
@@ -36,9 +36,9 @@ public class ZkValueStore<T> implements ValueStore<T>, Managed {
     }
 
     public ZkValueStore(CuratorFramework curator, String zkPath, ZkValueSerializer<T> serializer, T defaultValue) {
-        _curator = checkNotNull(curator, "curator");
-        _zkPath = checkNotNull(zkPath, "zkPath");
-        _serializer = checkNotNull(serializer, "serializer");
+        _curator = requireNonNull(curator, "curator");
+        _zkPath = requireNonNull(zkPath, "zkPath");
+        _serializer = requireNonNull(serializer, "serializer");
         _nodeCache = new NodeCache(curator, zkPath);
         _defaultValue = defaultValue;
         // Create node on instantiation

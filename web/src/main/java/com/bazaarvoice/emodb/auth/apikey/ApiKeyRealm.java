@@ -10,7 +10,6 @@ import com.bazaarvoice.emodb.auth.shiro.PrincipalWithRoles;
 import com.bazaarvoice.emodb.auth.shiro.RolePermissionSet;
 import com.bazaarvoice.emodb.auth.shiro.SimpleRolePermissionSet;
 import com.bazaarvoice.emodb.auth.shiro.ValidatingCacheManager;
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
@@ -33,9 +32,10 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class ApiKeyRealm extends AuthorizingRealm {
 
@@ -68,11 +68,11 @@ public class ApiKeyRealm extends AuthorizingRealm {
         super(null, AnonymousCredentialsMatcher.anonymousOrMatchUsing(new SimpleCredentialsMatcher()));
 
 
-        _authIdentityReader = checkNotNull(authIdentityReader, "authIdentityReader");
-        _permissionReader = checkNotNull(permissionReader, "permissionReader");
+        _authIdentityReader = requireNonNull(authIdentityReader, "authIdentityReader");
+        _permissionReader = requireNonNull(permissionReader, "permissionReader");
         _anonymousId = anonymousId;
 
-        setName(checkNotNull(name, "name"));
+        setName(requireNonNull(name, "name"));
         setAuthenticationTokenClass(ApiKeyAuthenticationToken.class);
         setPermissionResolver(permissionReader.getPermissionResolver());
         setRolePermissionResolver(createRolePermissionResolver());
@@ -117,7 +117,7 @@ public class ApiKeyRealm extends AuthorizingRealm {
                             }
 
                             AuthenticationInfo authenticationInfo = getUncachedAuthenticationInfoForKey(id);
-                            return Objects.equal(authenticationInfo, value);
+                            return Objects.equals(authenticationInfo, value);
                         }
                     };
                 }
@@ -289,7 +289,7 @@ public class ApiKeyRealm extends AuthorizingRealm {
     }
 
     protected Cache<String, RolePermissionSet> getAvailableRolesCache() {
-        if(getCacheManager() == null) {
+        if (getCacheManager() == null) {
             return null;
         }
 
@@ -317,7 +317,7 @@ public class ApiKeyRealm extends AuthorizingRealm {
     }
 
     private RolePermissionResolver createRolePermissionResolver() {
-        return new RolePermissionResolver () {
+        return new RolePermissionResolver() {
             @Override
             public Collection<Permission> resolvePermissionsInRole(String role) {
                 return getRolePermissions(role);

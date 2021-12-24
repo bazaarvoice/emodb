@@ -8,7 +8,7 @@ import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Request object for creating new roles.  Parameters include the key for the new role (group and ID),
@@ -36,7 +36,7 @@ public class CreateEmoRoleRequest extends UserAccessControlRequest {
     }
 
     public CreateEmoRoleRequest setRoleKey(EmoRoleKey roleKey) {
-        _roleKey = checkNotNull(roleKey, "roleKey");
+        _roleKey = requireNonNull(roleKey, "roleKey");
         return this;
     }
 

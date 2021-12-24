@@ -2,7 +2,7 @@ package com.bazaarvoice.emodb.common.dropwizard.discovery;
 
 import com.google.common.base.Strings;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * This class encapsulates how service names are built -- generally clients and services that wish to construct
@@ -16,7 +16,7 @@ public class ServiceNames {
     }
 
     public static String forNamespaceAndBaseServiceName(String namespace, String baseServiceName) {
-        checkNotNull(baseServiceName);
+        requireNonNull(baseServiceName);
         return Strings.isNullOrEmpty(namespace) ? baseServiceName : namespace + "-" + baseServiceName;
     }
 

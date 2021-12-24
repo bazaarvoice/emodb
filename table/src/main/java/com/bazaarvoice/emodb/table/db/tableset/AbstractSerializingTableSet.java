@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.table.db.tableset;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Base class for TableSets which use a TableSerializer to load tables and convert them to an intermediate format
@@ -11,7 +11,7 @@ abstract public class AbstractSerializingTableSet implements SerializingTableSet
     private final TableSerializer _tableSerializer;
 
     protected AbstractSerializingTableSet(TableSerializer tableSerializer) {
-        _tableSerializer = checkNotNull(tableSerializer, "tableSerializer");
+        _tableSerializer = requireNonNull(tableSerializer, "tableSerializer");
     }
 
     @Override

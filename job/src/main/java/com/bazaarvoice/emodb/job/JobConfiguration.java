@@ -2,7 +2,7 @@ package com.bazaarvoice.emodb.job;
 
 import java.time.Duration;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class JobConfiguration {
 
@@ -34,7 +34,7 @@ public class JobConfiguration {
     }
 
     public void setQueueRefreshTime(Duration queueRefreshTime) {
-        _queueRefreshTime = checkNotNull(queueRefreshTime, "queueRefreshTime");
+        _queueRefreshTime = requireNonNull(queueRefreshTime, "queueRefreshTime");
     }
 
     public int getQueuePeekLimit() {
@@ -50,6 +50,6 @@ public class JobConfiguration {
     }
 
     public void setNotOwnerRetryDelay(Duration notOwnerRetryDelay) {
-        _notOwnerRetryDelay = checkNotNull(notOwnerRetryDelay);
+        _notOwnerRetryDelay = requireNonNull(notOwnerRetryDelay);
     }
 }

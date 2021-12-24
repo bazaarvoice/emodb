@@ -6,7 +6,7 @@ import com.sun.jersey.spi.container.ResourceFilterFactory;
 import io.dropwizard.setup.Environment;
 import org.apache.shiro.mgt.SecurityManager;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * This class can be used to configure security and any Jersey resources within a DropWizard framework so that requests
@@ -37,7 +37,7 @@ public class DropwizardAuthConfigurator {
     }
 
     public void configure(Environment environment) {
-        checkNotNull(environment, "environment");
+        requireNonNull(environment, "environment");
         JerseyAuthConfiguration config = JerseyAuthConfigurationBuilder.build(_securityManager);
 
         for (ResourceFilterFactory resourceFilterFactory : config.getResourceFilterFactories()) {

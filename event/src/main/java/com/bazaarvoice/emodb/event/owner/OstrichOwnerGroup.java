@@ -8,7 +8,6 @@ import com.bazaarvoice.ostrich.ServiceEndPoint;
 import com.bazaarvoice.ostrich.partition.ConsistentHashPartitionFilter;
 import com.bazaarvoice.ostrich.partition.PartitionFilter;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;
@@ -30,9 +29,10 @@ import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A group of services that should only run when the current server is considered the owner of the specified object.
@@ -63,12 +63,12 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
                              HostAndPort self,
                              LeaderServiceTask dropwizardTask,
                              MetricRegistry metricRegistry) {
-        _group = checkNotNull(group, "group");
-        _factory = checkNotNull(factory, "factory");
-        _curator = checkNotNull(curator, "curator");
-        _hostDiscovery = checkNotNull(hostDiscovery, "hostDiscovery");
-        _selfId = checkNotNull(self, "self").toString();
-        _dropwizardTask = checkNotNull(dropwizardTask, "dropwizardTask");
+        _group = requireNonNull(group, "group");
+        _factory = requireNonNull(factory, "factory");
+        _curator = requireNonNull(curator, "curator");
+        _hostDiscovery = requireNonNull(hostDiscovery, "hostDiscovery");
+        _selfId = requireNonNull(self, "self").toString();
+        _dropwizardTask = requireNonNull(dropwizardTask, "dropwizardTask");
         _expireWhenInactive = (expireWhenInactive != null);
         _metricRegistry = metricRegistry;
 
@@ -80,7 +80,7 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
         cacheBuilder.removalListener(new RemovalListener<String, Optional<LeaderService>>() {
             @Override
             public void onRemoval(RemovalNotification<String, Optional<LeaderService>> notification) {
-                stopService(checkNotNull(notification.getKey()), checkNotNull(notification.getValue()));
+                stopService(requireNonNull(notification.getKey()), requireNonNull(notification.getValue()));
             }
         });
         _leaderMap = cacheBuilder.build(new CacheLoader<String, Optional<LeaderService>>() {
@@ -117,13 +117,15 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
     @Override
     public T startIfOwner(String name, Duration waitDuration) {
         long timeoutAt = System.currentTimeMillis() + waitDuration.toMillis();
-        LeaderService leaderService = _leaderMap.getUnchecked(name).orNull();
+        LeaderService leaderService = _leaderMap.getUnchecked(name).orElse(null);
         if (leaderService == null || !awaitRunning(leaderService, timeoutAt)) {
             return null;
         }
         Service service;
         for (; ; ) {
-            Optional<Service> opt = leaderService.getCurrentDelegateService();
+            Optional<Service> opt = leaderService.getCurrentDelegateService()
+                    .transform(java.util.Optional::of)
+                    .or(java.util.Optional.empty());
             if (opt.isPresent()) {
                 service = opt.get();
                 break;
@@ -153,7 +155,9 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
             if (!ref.isPresent()) {
                 continue;
             }
-            Optional<Service> service = ref.get().getCurrentDelegateService();
+            Optional<Service> service = ref.get().getCurrentDelegateService()
+                    .transform(java.util.Optional::of)
+                    .or(java.util.Optional.empty());
             if (!service.isPresent()) {
                 continue;
             }
@@ -208,7 +212,7 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
 
     private Optional<LeaderService> startService(final String name) {
         if (!isOwner(name)) {
-            return Optional.absent();
+            return Optional.empty();
         }
 
         _log.info("Starting owned service {}: {}", _group, name);

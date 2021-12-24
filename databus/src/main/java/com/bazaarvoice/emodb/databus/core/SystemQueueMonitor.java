@@ -15,7 +15,7 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A service that polls system queue sizes periodically and reports them to Datadog via Yammer Metrics, subject
@@ -36,9 +36,9 @@ public class SystemQueueMonitor extends AbstractScheduledService {
     public SystemQueueMonitor(DatabusEventStore eventStore, DataCenters dataCenters,
                               Collection<ClusterInfo> clusterInfo, int masterFanoutPartitions,
                               int dataCenterFanoutPartitions, MetricRegistry metricRegistry) {
-        _eventStore = checkNotNull(eventStore, "eventStore");
-        _dataCenters = checkNotNull(dataCenters, "dataCenters");
-        _clusterInfo = checkNotNull(clusterInfo, "clusterInfo");
+        _eventStore = requireNonNull(eventStore, "eventStore");
+        _dataCenters = requireNonNull(dataCenters, "dataCenters");
+        _clusterInfo = requireNonNull(clusterInfo, "clusterInfo");
         _masterFanoutPartitions = masterFanoutPartitions;
         _dataCenterFanoutPartitions = dataCenterFanoutPartitions;
         _gauges = new MetricsGroup(metricRegistry);

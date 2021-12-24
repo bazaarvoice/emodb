@@ -4,7 +4,7 @@ import java.time.Instant;
 
 import static com.bazaarvoice.emodb.table.db.astyanax.JsonMap.Attribute;
 import static com.bazaarvoice.emodb.table.db.astyanax.JsonMap.TimestampAttribute;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Life cycle states of {@link Storage} objects.
@@ -149,15 +149,15 @@ enum StorageState {
     }
 
     Attribute<?> getMarkerAttribute() {
-        return checkNotNull(_transitionMarker, name());
+        return requireNonNull(_transitionMarker, name());
     }
 
     boolean hasTransitioned(Storage storage) {
-        return checkNotNull(_transitionMarker, name()).containsKey(storage.getRawJson());
+        return requireNonNull(_transitionMarker, name()).containsKey(storage.getRawJson());
     }
 
     Instant getTransitionedAt(Storage storage) {
-        return checkNotNull(_transitionTimestamp, name()).get(storage.getRawJson());
+        return requireNonNull(_transitionTimestamp, name()).get(storage.getRawJson());
     }
 
     static StorageState getState(Storage storage) {

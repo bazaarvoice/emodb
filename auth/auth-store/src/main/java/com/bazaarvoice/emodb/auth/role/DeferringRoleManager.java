@@ -13,7 +13,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * RoleManager implementation which allows the caller to provide a static, immutable set of roles and a delegate
@@ -31,7 +31,7 @@ public class DeferringRoleManager implements RoleManager {
 
     @Override
     public Role getRole(RoleIdentifier id) {
-        checkNotNull(id, "id");
+        requireNonNull(id, "id");
         Role role = _rolesById.get(id);
         if (role == null) {
             role = _delegate.getRole(id);
@@ -60,13 +60,13 @@ public class DeferringRoleManager implements RoleManager {
      */
     @Override
     public Set<String> getPermissionsForRole(RoleIdentifier id) {
-        checkNotNull(id, "id");
+        requireNonNull(id, "id");
         return _delegate.getPermissionsForRole(id);
     }
 
     @Override
     public Role createRole(RoleIdentifier id, RoleModification modification) {
-        checkNotNull(id, "id");
+        requireNonNull(id, "id");
         if (_rolesById.containsKey(id)) {
             throw new RoleExistsException(id.getGroup(), id.getId());
         }
@@ -75,14 +75,14 @@ public class DeferringRoleManager implements RoleManager {
 
     @Override
     public void updateRole(RoleIdentifier id, RoleModification modification) {
-        checkNotNull(id, "id");
+        requireNonNull(id, "id");
         checkArgument(!_rolesById.containsKey(id), "Cannot update role %s", id);
         _delegate.updateRole(id, modification);
     }
 
     @Override
     public void deleteRole(RoleIdentifier id) {
-        checkNotNull(id, "id");
+        requireNonNull(id, "id");
         checkArgument(!_rolesById.containsKey(id), "Cannot delete role %s", id);
         _delegate.deleteRole(id);
     }

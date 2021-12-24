@@ -5,7 +5,7 @@ import com.google.common.base.Ticker;
 import java.time.Clock;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Implementation of {@link Ticker} using the current time as returned by {@link Clock#millis()}
@@ -60,7 +60,7 @@ public final class ClockTicker {
         private final Clock _clock;
 
         private ClockTickerImpl(Clock clock) {
-            _clock = checkNotNull(clock, "clock");
+            _clock = requireNonNull(clock, "clock");
         }
 
         @Override

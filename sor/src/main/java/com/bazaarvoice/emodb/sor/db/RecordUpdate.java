@@ -8,7 +8,7 @@ import com.bazaarvoice.emodb.table.db.Table;
 import java.util.Set;
 import java.util.UUID;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public final class RecordUpdate {
     private final Table _table;
@@ -20,13 +20,13 @@ public final class RecordUpdate {
     private final Set<String> _tags;
 
     public RecordUpdate(Table table, String key, UUID changeId, Delta delta, Audit audit, Set<String> tags, WriteConsistency consistency) {
-        _table = checkNotNull(table, "table");
-        _key = checkNotNull(key, "key");
-        _changeId = checkNotNull(changeId, "changeId");
-        _delta = checkNotNull(delta, "delta");
-        _audit = checkNotNull(audit, "audit");
-        _consistency = checkNotNull(consistency, "consistency");
-        _tags = checkNotNull(tags, "tags");
+        _table = requireNonNull(table, "table");
+        _key = requireNonNull(key, "key");
+        _changeId = requireNonNull(changeId, "changeId");
+        _delta = requireNonNull(delta, "delta");
+        _audit = requireNonNull(audit, "audit");
+        _consistency = requireNonNull(consistency, "consistency");
+        _tags = requireNonNull(tags, "tags");
     }
 
     public Table getTable() {

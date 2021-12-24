@@ -16,7 +16,7 @@ import java.io.PrintWriter;
 import java.time.Duration;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Dropwizard task to update the full consistency control values for each cluster.
@@ -40,10 +40,10 @@ abstract class ConsistencyControlTask<T> extends Task {
                                   ZkValueSerializer<T> serializer,
                                   Supplier<T> defaultSupplier) {
         super(name);
-        _description = checkNotNull(description, "description");
-        _valueMap = checkNotNull(valueMap, "valueMap");
-        _curator = checkNotNull(curator, "curator");
-        _serializer = checkNotNull(serializer, "serializer");
+        _description = requireNonNull(description, "description");
+        _valueMap = requireNonNull(valueMap, "valueMap");
+        _curator = requireNonNull(curator, "curator");
+        _serializer = requireNonNull(serializer, "serializer");
         _defaultSupplier = defaultSupplier;
         taskRegistry.addTask(this);
     }

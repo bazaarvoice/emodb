@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Simple in-memory implementation of an {@link AuthIdentityManager}.
@@ -65,7 +65,7 @@ public class InMemoryAuthIdentityManager<T extends AuthIdentity> implements Auth
 
     @Override
     public T getIdentity(String id) {
-        checkNotNull(id, "id");
+        requireNonNull(id, "id");
         return _identityMap.get(id);
     }
 
@@ -93,7 +93,7 @@ public class InMemoryAuthIdentityManager<T extends AuthIdentity> implements Auth
 
     @Override
     synchronized public void deleteIdentity(String id) {
-        checkNotNull(id, "id");
+        requireNonNull(id, "id");
         _identityMap.remove(id);
         deleteAuthenticationReferenceToId(id);
     }

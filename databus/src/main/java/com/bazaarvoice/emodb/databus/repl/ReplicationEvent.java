@@ -9,7 +9,7 @@ import javax.annotation.Nullable;
 import java.util.Set;
 import java.util.UUID;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class ReplicationEvent {
     private final String _id;
@@ -26,10 +26,10 @@ public class ReplicationEvent {
     public ReplicationEvent(@JsonProperty("id") String id, @JsonProperty("table") String table,
                             @JsonProperty("key") String key, @JsonProperty("changeId") UUID changeId,
                             @Nullable @JsonProperty("tags") Set<String> tags) {
-        _id = checkNotNull(id, "id");
-        _table = checkNotNull(table, "table");
-        _key = checkNotNull(key, "key");
-        _changeId = checkNotNull(changeId, "changeId");
+        _id = requireNonNull(id, "id");
+        _table = requireNonNull(table, "table");
+        _key = requireNonNull(key, "key");
+        _changeId = requireNonNull(changeId, "changeId");
         _tags = (tags == null) ? ImmutableSet.<String>of() : tags;
     }
 

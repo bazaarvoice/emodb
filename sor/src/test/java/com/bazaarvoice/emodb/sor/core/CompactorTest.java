@@ -42,7 +42,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -445,13 +445,13 @@ public class CompactorTest {
             @Override
             public void compact(Table table, String key, UUID compactionKey, Compaction compaction,
                                 UUID changeId, Delta delta, Collection<DeltaClusteringKey> changesToDelete, List<History> historyList, WriteConsistency consistency) {
-                checkNotNull(table, "table");
-                checkNotNull(key, "key");
-                checkNotNull(compactionKey, "compactionKey");
-                checkNotNull(compaction, "compaction");
-                checkNotNull(changeId, "changeId");
-                checkNotNull(delta, "delta");
-                checkNotNull(changesToDelete, "changesToDelete");
+                requireNonNull(table, "table");
+                requireNonNull(key, "key");
+                requireNonNull(compactionKey, "compactionKey");
+                requireNonNull(compaction, "compaction");
+                requireNonNull(changeId, "changeId");
+                requireNonNull(delta, "delta");
+                requireNonNull(changesToDelete, "changesToDelete");
 
                 Map<UUID, Change> changes = super.safePut(super._contentChanges, table.getName(), key);
 

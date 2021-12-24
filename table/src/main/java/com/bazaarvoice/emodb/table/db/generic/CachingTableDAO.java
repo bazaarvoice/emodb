@@ -18,7 +18,6 @@ import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableDAO;
 import com.bazaarvoice.emodb.table.db.TableSet;
 import com.codahale.metrics.annotation.Timed;
-import com.google.common.base.Optional;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -26,16 +25,17 @@ import com.google.inject.Inject;
 
 import javax.annotation.Nullable;
 import java.time.Clock;
-import java.time.Instant;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Wraps a {@link TableDAO} with a cache that makes it fast and efficient to lookup table metadata.  The downside
@@ -57,8 +57,8 @@ public class CachingTableDAO implements TableDAO {
     public CachingTableDAO(@CachingTableDAODelegate TableDAO delegate,
                            @CachingTableDAORegistry CacheRegistry cacheRegistry,
                            Clock clock) {
-        _delegate = checkNotNull(delegate, "delegate");
-        _clock = checkNotNull(clock, "clock");
+        _delegate = requireNonNull(delegate, "delegate");
+        _clock = requireNonNull(clock, "clock");
 
         // The table cache maps table names to AstyanaxTable objects.
         _tableCache = CacheBuilder.newBuilder()
@@ -86,7 +86,7 @@ public class CachingTableDAO implements TableDAO {
 
     @Override
     public void writeUnpublishedDatabusEvent(String name, UnpublishedDatabusEventType attribute){
-        checkNotNull(name, "table");
+        requireNonNull(name, "table");
 
         _delegate.writeUnpublishedDatabusEvent(name, attribute);
     }
@@ -100,7 +100,7 @@ public class CachingTableDAO implements TableDAO {
     @Override
     public void create(String name, TableOptions options, Map<String, ?> attributes, Audit audit)
             throws TableExistsException {
-        checkNotNull(name, "table");
+        requireNonNull(name, "table");
 
         _delegate.create(name, options, attributes, audit);
     }
@@ -108,7 +108,7 @@ public class CachingTableDAO implements TableDAO {
     @Override
     public void createFacade(String name, FacadeOptions options, Audit audit)
             throws FacadeExistsException {
-        checkNotNull(name, "table");
+        requireNonNull(name, "table");
 
         _delegate.createFacade(name, options, audit);
     }
@@ -123,7 +123,7 @@ public class CachingTableDAO implements TableDAO {
     @Override
     public void drop(String name, Audit audit)
             throws UnknownTableException {
-        checkNotNull(name, "table");
+        requireNonNull(name, "table");
 
         _delegate.drop(name, audit);
     }
@@ -131,7 +131,7 @@ public class CachingTableDAO implements TableDAO {
     @Override
     public void dropFacade(String name, String placement, Audit audit)
             throws UnknownFacadeException {
-        checkNotNull(name, "table");
+        requireNonNull(name, "table");
 
         _delegate.dropFacade(name, placement, audit);
     }
@@ -139,7 +139,7 @@ public class CachingTableDAO implements TableDAO {
     @Override
     public void move(String name, String destPlacement, Optional<Integer> numShards, Audit audit, MoveType moveType)
             throws UnknownTableException {
-        checkNotNull(name, "table");
+        requireNonNull(name, "table");
 
         _delegate.move(name, destPlacement, numShards, audit, moveType);
     }
@@ -147,7 +147,7 @@ public class CachingTableDAO implements TableDAO {
     @Override
     public void moveFacade(String name, String sourcePlacement, String destPlacement, Optional<Integer> numShards, Audit audit, MoveType moveType)
             throws UnknownTableException {
-        checkNotNull(name, "table");
+        requireNonNull(name, "table");
 
         _delegate.moveFacade(name, sourcePlacement, destPlacement, numShards, audit, moveType);
     }
@@ -156,7 +156,7 @@ public class CachingTableDAO implements TableDAO {
     @Override
     public void setAttributes(String name, Map<String, ?> attributes, Audit audit)
             throws UnknownTableException {
-        checkNotNull(name, "table");
+        requireNonNull(name, "table");
 
         _delegate.setAttributes(name, attributes, audit);
     }

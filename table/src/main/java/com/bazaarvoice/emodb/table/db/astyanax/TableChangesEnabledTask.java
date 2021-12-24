@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.PrintWriter;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Dropwizard task for administratively disabling all operations that modify table metadata.  The enabled setting is
@@ -55,7 +55,7 @@ public class TableChangesEnabledTask extends Task {
     public TableChangesEnabledTask(TaskRegistry tasks, LifeCycleRegistry lifeCycle, @Maintenance final String scope,
                                    @TableChangesEnabled ValueStore<Boolean> enabled) {
         super(scope + "-table-changes");
-        _enabled = checkNotNull(enabled, "enabled");
+        _enabled = requireNonNull(enabled, "enabled");
         tasks.addTask(this);
 
         // Default is enabled, so at startup warn if disabled since otherwise essential functionality won't work.

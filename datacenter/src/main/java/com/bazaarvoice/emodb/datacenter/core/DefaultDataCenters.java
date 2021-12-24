@@ -20,7 +20,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class DefaultDataCenters implements DataCenters {
     private static final Logger _log = LoggerFactory.getLogger(DefaultDataCenters.class);
@@ -37,10 +37,10 @@ public class DefaultDataCenters implements DataCenters {
                               @SelfDataCenter String selfDataCenter,
                               @SystemDataCenter String systemDataCenter,
                               @IgnoredDataCenters Set<String> ignoredDataCenters) {
-        _dataCenterDao = checkNotNull(dataCenterDao, "dataCenterDao");
-        _selfDataCenter = checkNotNull(selfDataCenter, "selfDataCenter");
-        _systemDataCenter = checkNotNull(systemDataCenter, "systemDataCenter");
-        _ignoredDataCenters = checkNotNull(ignoredDataCenters, "ignoredDataCenters");
+        _dataCenterDao = requireNonNull(dataCenterDao, "dataCenterDao");
+        _selfDataCenter = requireNonNull(selfDataCenter, "selfDataCenter");
+        _systemDataCenter = requireNonNull(systemDataCenter, "systemDataCenter");
+        _ignoredDataCenters = requireNonNull(ignoredDataCenters, "ignoredDataCenters");
 
         _loggedIgnored = _ignoredDataCenters.isEmpty() ? ImmutableSet.of() : Sets.newHashSet();
 

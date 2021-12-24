@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class ConditionalDeltaBuilderImpl implements ConditionalDeltaBuilder {
 
@@ -20,14 +20,14 @@ public class ConditionalDeltaBuilderImpl implements ConditionalDeltaBuilder {
 
     @Override
     public ConditionalDeltaBuilder add(Condition condition, Delta delta) {
-        _clauses.add(Maps.immutableEntry(checkNotNull(condition, "condition"), checkNotNull(delta, "delta")));
+        _clauses.add(Maps.immutableEntry(requireNonNull(condition, "condition"), requireNonNull(delta, "delta")));
         return this;
     }
 
     @Override
     public ConditionalDeltaBuilder otherwise(Delta delta) {
         checkArgument(_otherwise == null, "Multiple otherwise deltas.");
-        _otherwise = checkNotNull(delta);
+        _otherwise = requireNonNull(delta);
         return this;
     }
 

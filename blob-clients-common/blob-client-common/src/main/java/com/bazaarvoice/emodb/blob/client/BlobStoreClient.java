@@ -56,8 +56,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Blob store client implementation that routes API calls to the EmoDB service.  The actual HTTP communication
@@ -98,7 +98,7 @@ public class BlobStoreClient implements AuthBlobStore {
 
     public BlobStoreClient(URI endPoint, EmoClient client,
                            @Nullable ScheduledExecutorService connectionManagementService) {
-        _client = checkNotNull(client, "client");
+        _client = requireNonNull(client, "client");
         _blobStore = EmoUriBuilder.fromUri(endPoint);
 
         if (connectionManagementService != null) {
@@ -131,10 +131,10 @@ public class BlobStoreClient implements AuthBlobStore {
     @Override
     public void createTable(String apiKey, String table, TableOptions options, Map<String, String> attributes, Audit audit)
             throws TableExistsException {
-        checkNotNull(table, "table");
-        checkNotNull(options, "options");
-        checkNotNull(attributes, "attributes");
-        checkNotNull(audit, "audit");
+        requireNonNull(table, "table");
+        requireNonNull(options, "options");
+        requireNonNull(attributes, "attributes");
+        requireNonNull(audit, "audit");
         URI uri = _blobStore.clone()
                 .segment("_table", table)
                 .queryParam("options", RisonHelper.asORison(options))
@@ -152,8 +152,8 @@ public class BlobStoreClient implements AuthBlobStore {
 
     @Override
     public void dropTable(String apiKey, String table, Audit audit) throws UnknownTableException {
-        checkNotNull(table, "table");
-        checkNotNull(audit, "audit");
+        requireNonNull(table, "table");
+        requireNonNull(audit, "audit");
         URI uri = _blobStore.clone()
                 .segment("_table", table)
                 .queryParam("audit", RisonHelper.asORison(audit))
@@ -170,8 +170,8 @@ public class BlobStoreClient implements AuthBlobStore {
 
     @Override
     public void purgeTableUnsafe(String apiKey, String table, Audit audit) {
-        checkNotNull(table, "table");
-        checkNotNull(audit, "audit");
+        requireNonNull(table, "table");
+        requireNonNull(audit, "audit");
         URI uri = _blobStore.clone()
                 .segment("_table", table, "purge")
                 .queryParam("audit", RisonHelper.asORison(audit))
@@ -188,7 +188,7 @@ public class BlobStoreClient implements AuthBlobStore {
 
     @Override
     public boolean getTableExists(String apiKey, String table) {
-        checkNotNull(table, "table");
+        requireNonNull(table, "table");
         URI uri = _blobStore.clone()
                 .segment("_table", table)
                 .build();
@@ -208,13 +208,13 @@ public class BlobStoreClient implements AuthBlobStore {
 
     @Override
     public boolean isTableAvailable(String apiKey, String table) {
-        checkNotNull(table, "table");
+        requireNonNull(table, "table");
         return getTableMetadata(apiKey, table).getAvailability() != null;
     }
 
     @Override
     public Table getTableMetadata(String apiKey, String table) {
-        checkNotNull(table, "table");
+        requireNonNull(table, "table");
         try {
             URI uri = _blobStore.clone()
                     .segment("_table", table, "metadata")
@@ -230,7 +230,7 @@ public class BlobStoreClient implements AuthBlobStore {
 
     @Override
     public Map<String, String> getTableAttributes(String apiKey, String table) throws UnknownTableException {
-        checkNotNull(table, "table");
+        requireNonNull(table, "table");
         try {
             URI uri = _blobStore.clone()
                     .segment("_table", table)
@@ -246,9 +246,9 @@ public class BlobStoreClient implements AuthBlobStore {
 
     @Override
     public void setTableAttributes(String apiKey, String table, Map<String, String> attributes, Audit audit) {
-        checkNotNull(table, "table");
-        checkNotNull(attributes, "attributes");
-        checkNotNull(audit, "audit");
+        requireNonNull(table, "table");
+        requireNonNull(attributes, "attributes");
+        requireNonNull(audit, "audit");
         URI uri = _blobStore.clone()
                 .segment("_table", table, "attributes")
                 .queryParam("audit", RisonHelper.asORison(audit))
@@ -265,7 +265,7 @@ public class BlobStoreClient implements AuthBlobStore {
 
     @Override
     public TableOptions getTableOptions(String apiKey, String table) throws UnknownTableException {
-        checkNotNull(table, "table");
+        requireNonNull(table, "table");
         try {
             URI uri = _blobStore.clone()
                     .segment("_table", table, "options")
@@ -281,7 +281,7 @@ public class BlobStoreClient implements AuthBlobStore {
 
     @Override
     public long getTableApproximateSize(String apiKey, String table) {
-        checkNotNull(table, "table");
+        requireNonNull(table, "table");
         try {
             URI uri = _blobStore.clone()
                     .segment("_table", table, "size")
@@ -297,8 +297,8 @@ public class BlobStoreClient implements AuthBlobStore {
 
     @Override
     public BlobMetadata getMetadata(String apiKey, String table, String blobId) throws BlobNotFoundException {
-        checkNotNull(table, "table");
-        checkNotNull(blobId, "blobId");
+        requireNonNull(table, "table");
+        requireNonNull(blobId, "blobId");
         try {
             EmoResponse response = _client.resource(toUri(table, blobId))
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
@@ -319,7 +319,7 @@ public class BlobStoreClient implements AuthBlobStore {
 
     @Override
     public Iterator<BlobMetadata> scanMetadata(String apiKey, String table, @Nullable String fromBlobIdExclusive, long limit) {
-        checkNotNull(table, "table");
+        requireNonNull(table, "table");
         checkArgument(limit > 0, "Limit must be >0");
         try {
             URI uri = _blobStore.clone()
@@ -373,9 +373,9 @@ public class BlobStoreClient implements AuthBlobStore {
 
     private BlobResponse get(BlobRequest blobRequest)
             throws BlobNotFoundException, RangeNotSatisfiableException {
-        checkNotNull(blobRequest, "blobRequest");
-        String table = checkNotNull(blobRequest.getTable(), "table");
-        String blobId = checkNotNull(blobRequest.getBlobId(), "blobId");
+        requireNonNull(blobRequest, "blobRequest");
+        String table = requireNonNull(blobRequest.getTable(), "table");
+        String blobId = requireNonNull(blobRequest.getBlobId(), "blobId");
         RangeSpecification rangeSpec = blobRequest.getRangeSpecification();
         String apiKey = blobRequest.getApiKey();
 
@@ -488,10 +488,10 @@ public class BlobStoreClient implements AuthBlobStore {
     public void put(String apiKey, String table, String blobId, Supplier<? extends InputStream> in,
                     Map<String, String> attributes)
             throws IOException {
-        checkNotNull(table, "table");
-        checkNotNull(blobId, "blobId");
-        checkNotNull(in, "in");
-        checkNotNull(attributes, "attributes");
+        requireNonNull(table, "table");
+        requireNonNull(blobId, "blobId");
+        requireNonNull(in, "in");
+        requireNonNull(attributes, "attributes");
         try {
             // Encode the ttl as a URL query parameter
             URI uri = _blobStore.clone()
@@ -513,8 +513,8 @@ public class BlobStoreClient implements AuthBlobStore {
 
     @Override
     public void delete(String apiKey, String table, String blobId) {
-        checkNotNull(table, "table");
-        checkNotNull(blobId, "blobId");
+        requireNonNull(table, "table");
+        requireNonNull(blobId, "blobId");
         try {
             _client.resource(toUri(table, blobId))
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)

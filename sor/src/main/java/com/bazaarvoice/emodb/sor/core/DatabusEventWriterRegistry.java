@@ -1,7 +1,7 @@
 package com.bazaarvoice.emodb.sor.core;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * This is used to send events to the databus prior to writing to the system of record.
@@ -25,7 +25,7 @@ public class DatabusEventWriterRegistry {
     }
 
     public void registerDatabusEventWriter(DatabusEventWriter databusWriter) {
-        checkNotNull(databusWriter);
+        requireNonNull(databusWriter);
         checkArgument(!_hasRegistered, "Databus Event Writer already registered");
         _databusWriter = databusWriter;
         _hasRegistered = true;

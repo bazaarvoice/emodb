@@ -12,7 +12,7 @@ import io.dropwizard.servlets.tasks.Task;
 import java.io.PrintWriter;
 import java.util.Collection;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Dropwizard provider of the cache invalidation task.
@@ -37,7 +37,7 @@ public class DropwizardInvalidationTask extends Task {
 
     @Override
     public void execute(ImmutableMultimap<String, String> parameters, PrintWriter out) {
-        String name = checkNotNull(Iterables.getFirst(parameters.get("cache"), null), "cache");
+        String name = requireNonNull(Iterables.getFirst(parameters.get("cache"), null), "cache");
         String scopeString = Iterables.getFirst(parameters.get("scope"), "LOCAL");
         InvalidationScope scope = InvalidationScope.valueOf(scopeString.toUpperCase());
         Collection<String> keys = parameters.get("key");

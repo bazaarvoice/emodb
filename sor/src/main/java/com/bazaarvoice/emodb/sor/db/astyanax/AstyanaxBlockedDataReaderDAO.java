@@ -34,7 +34,6 @@ import com.codahale.metrics.Timer;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.common.collect.AbstractIterator;
@@ -92,11 +91,12 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 
 /**
@@ -128,7 +128,7 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyRead
 
     @Inject
     public AstyanaxBlockedDataReaderDAO(PlacementCache placementCache, ChangeEncoder changeEncoder, MetricRegistry metricRegistry,
-                                 DAOUtils daoUtils, @PrefixLength int deltaPrefixLength) {
+                                        DAOUtils daoUtils, @PrefixLength int deltaPrefixLength) {
         checkArgument(deltaPrefixLength > 0, "delta prefix length must be > 0");
 
         _placementCache = placementCache;
@@ -147,17 +147,17 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyRead
         return MetricRegistry.name("bv.emodb.sor", "AstyanaxDataReaderDAO", name);
     }
 
-    @Timed (name = "bv.emodb.sor.AstyanaxDataReaderDAO.count", absolute = true)
+    @Timed(name = "bv.emodb.sor.AstyanaxDataReaderDAO.count", absolute = true)
     @Override
     public long count(Table table, ReadConsistency consistency) {
         return count(table, null, consistency);
     }
 
-    @Timed (name = "bv.emodb.sor.AstyanaxDataReaderDAO.count", absolute = true)
+    @Timed(name = "bv.emodb.sor.AstyanaxDataReaderDAO.count", absolute = true)
     @Override
     public long count(Table tbl, @Nullable Integer limit, ReadConsistency consistency) {
-        checkNotNull(tbl, "table");
-        checkNotNull(consistency, "consistency");
+        requireNonNull(tbl, "table");
+        requireNonNull(consistency, "consistency");
 
         // The current implementation scans through every row in the table.  It's very expensive for large tables.
         // Given a limit, count up to the limit, and then estimate for the remaining range splits.
@@ -183,8 +183,8 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyRead
     }
 
     private long approximateCount(Table tbl, ReadConsistency consistency, String fromKey) {
-        checkNotNull(tbl, "table");
-        checkNotNull(consistency, "consistency");
+        requireNonNull(tbl, "table");
+        requireNonNull(consistency, "consistency");
 
         long count = 0;
         List<CfSplit> cfSplits = getCfSplits(tbl, 10000, fromKey);
@@ -195,11 +195,11 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyRead
         return count;
     }
 
-    @Timed (name = "bv.emodb.sor.AstyanaxDataReaderDAO.read", absolute = true)
+    @Timed(name = "bv.emodb.sor.AstyanaxDataReaderDAO.read", absolute = true)
     @Override
     public Record read(Key key, ReadConsistency consistency) {
-        checkNotNull(key, "key");
-        checkNotNull(consistency, "consistency");
+        requireNonNull(key, "key");
+        requireNonNull(consistency, "consistency");
 
         AstyanaxTable table = (AstyanaxTable) key.getTable();
         AstyanaxStorage storage = table.getReadStorage();
@@ -221,11 +221,11 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyRead
         return newRecord(key, rowKey, columns, _maxColumnsRange.getLimit(), consistency, null);
     }
 
-    @Timed (name = "bv.emodb.sor.AstyanaxDataReaderDAO.readAll", absolute = true)
+    @Timed(name = "bv.emodb.sor.AstyanaxDataReaderDAO.readAll", absolute = true)
     @Override
     public Iterator<Record> readAll(Collection<Key> keys, final ReadConsistency consistency) {
-        checkNotNull(keys, "keys");
-        checkNotNull(consistency, "consistency");
+        requireNonNull(keys, "keys");
+        requireNonNull(consistency, "consistency");
 
         // Group the keys by placement.  Each placement will result in a separate set of queries.  Dedup keys.
         Multimap<DeltaPlacement, Key> placementMap = HashMultimap.create();
@@ -250,7 +250,7 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyRead
      * Read a batch of keys that all belong to the same placement (ColumnFamily).
      */
     private Iterator<Record> readBatch(final DeltaPlacement placement, Collection<Key> keys, final ReadConsistency consistency) {
-        checkNotNull(keys, "keys");
+        requireNonNull(keys, "keys");
 
         // Convert the keys to ByteBuffer Cassandra row keys
         List<Map.Entry<ByteBuffer, Key>> rowKeys = Lists.newArrayListWithCapacity(keys.size());
@@ -286,9 +286,9 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyRead
     @Override
     public Iterator<Change> readTimeline(Key key, boolean includeContentData, UUID start, UUID end, boolean reversed,
                                          long limit, ReadConsistency consistency) {
-        checkNotNull(key, "key");
+        requireNonNull(key, "key");
         checkArgument(limit > 0, "Limit must be >0");
-        checkNotNull(consistency, "consistency");
+        requireNonNull(consistency, "consistency");
 
         AstyanaxTable table = (AstyanaxTable) key.getTable();
         AstyanaxStorage storage = table.getReadStorage();
@@ -323,12 +323,12 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyRead
         return decodeColumns(columnScan(rowKey, placement, cf, start, end, true, _uuidInc, MAX_COLUMN_SCAN_BATCH, 0, consistency));
     }
 
-    @Timed (name = "bv.emodb.sor.AstyanaxDataReaderDAO.scan", absolute = true)
+    @Timed(name = "bv.emodb.sor.AstyanaxDataReaderDAO.scan", absolute = true)
     @Override
     public Iterator<Record> scan(Table tbl, @Nullable String fromKeyExclusive, final LimitCounter limit, final ReadConsistency consistency) {
-        checkNotNull(tbl, "table");
-        checkNotNull(limit, "limit");
-        checkNotNull(consistency, "consistency");
+        requireNonNull(tbl, "table");
+        requireNonNull(limit, "limit");
+        requireNonNull(consistency, "consistency");
 
         final AstyanaxTable table = (AstyanaxTable) tbl;
         AstyanaxStorage storage = table.getReadStorage();
@@ -353,8 +353,8 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyRead
 
     @Override
     public Iterator<String> scanKeys(AstyanaxStorage storage, final ReadConsistency consistency) {
-        checkNotNull(storage, "storage");
-        checkNotNull(consistency, "consistency");
+        requireNonNull(storage, "storage");
+        requireNonNull(consistency, "consistency");
 
         final DeltaPlacement placement = (DeltaPlacement) storage.getPlacement();
 
@@ -393,10 +393,10 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyRead
         return splitTokens;
     }
 
-    @Timed (name = "bv.emodb.sor.AstyanaxDataReaderDAO.getSplits", absolute = true)
+    @Timed(name = "bv.emodb.sor.AstyanaxDataReaderDAO.getSplits", absolute = true)
     @Override
     public List<String> getSplits(Table tbl, int recordsPerSplit, int localResplits) throws TimeoutException {
-        checkNotNull(tbl, "table");
+        requireNonNull(tbl, "table");
         checkArgument(recordsPerSplit > 0);
         checkArgument(localResplits >= 0);
 
@@ -407,7 +407,7 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyRead
 
                 List<Token> splitTokens = resplitLocally(split.getStartToken(), split.getEndToken(), localResplits);
 
-                for (int i = 0; i < splitTokens.size() -1; i++) {
+                for (int i = 0; i < splitTokens.size() - 1; i++) {
                     splits.add(SplitFormat.encode(new ByteBufferRangeImpl(_tokenFactory.toByteArray(splitTokens.get(i)),
                             _tokenFactory.toByteArray(splitTokens.get(i + 1)), -1, false)));
                 }
@@ -430,7 +430,7 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyRead
     }
 
     private List<CfSplit> getCfSplits(Table tbl, int desiredRecordsPerSplit, @Nullable String fromKey) {
-        checkNotNull(tbl, "table");
+        requireNonNull(tbl, "table");
 
         AstyanaxTable table = (AstyanaxTable) tbl;
         AstyanaxStorage storage = table.getReadStorage();
@@ -496,13 +496,13 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyRead
         return cfSplits;
     }
 
-    @Timed (name = "bv.emodb.sor.AstyanaxDataReaderDAO.getSplit", absolute = true)
+    @Timed(name = "bv.emodb.sor.AstyanaxDataReaderDAO.getSplit", absolute = true)
     @Override
     public Iterator<Record> getSplit(Table tbl, String split, @Nullable String fromKeyExclusive, LimitCounter limit, ReadConsistency consistency) {
-        checkNotNull(tbl, "table");
-        checkNotNull(split, "split");
-        checkNotNull(limit, "limit");
-        checkNotNull(consistency, "consistency");
+        requireNonNull(tbl, "table");
+        requireNonNull(split, "split");
+        requireNonNull(limit, "limit");
+        requireNonNull(consistency, "consistency");
 
         ByteBufferRange splitRange = SplitFormat.decode(split);
 
@@ -544,7 +544,7 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyRead
      */
     private Multimap<String, TokenRange> describeCassandraTopology(final Keyspace keyspace) {
         try {
-            @SuppressWarnings ("unchecked")
+            @SuppressWarnings("unchecked")
             ConnectionPool<Cassandra.Client> connectionPool = (ConnectionPool<Cassandra.Client>) keyspace.getConnectionPool();
 
             return connectionPool.executeWithFailover(
@@ -570,7 +570,7 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyRead
 
     @Override
     public ScanRangeSplits getScanRangeSplits(String placementName, int desiredRecordsPerSplit, Optional<ScanRange> subrange) {
-        checkNotNull(placementName, "placement");
+        requireNonNull(placementName, "placement");
         checkArgument(desiredRecordsPerSplit >= 0, "Min records per split too low");
 
         DeltaPlacement placement = (DeltaPlacement) _placementCache.get(placementName);
@@ -684,7 +684,7 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyRead
 
     @Override
     public String getPlacementCluster(String placementName) {
-        checkNotNull(placementName, "placement");
+        requireNonNull(placementName, "placement");
 
         DeltaPlacement placement = (DeltaPlacement) _placementCache.get(placementName);
         return placement.getKeyspace().getClusterName();
@@ -697,8 +697,8 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyRead
     @Override
     public Iterator<MultiTableScanResult> multiTableScan(final MultiTableScanOptions query, final TableSet tables,
                                                          final LimitCounter limit, final ReadConsistency consistency, @Nullable Instant cutoffTime) {
-        checkNotNull(query, "query");
-        String placementName = checkNotNull(query.getPlacement(), "placement");
+        requireNonNull(query, "query");
+        String placementName = requireNonNull(query.getPlacement(), "placement");
         final DeltaPlacement placement = (DeltaPlacement) _placementCache.get(placementName);
 
         ScanRange scanRange = ofNullable(query.getScanRange()).orElse(ScanRange.all());
@@ -990,6 +990,7 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyRead
 
     private interface ColumnInc<C> {
         C previous(C col);
+
         C next(C col);
     }
 
@@ -1165,7 +1166,7 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyRead
                     }
                 }
 
-                return Iterators.peekingIterator(Collections.<Row<ByteBuffer, DeltaKey>>emptyIterator());
+                return Iterators.peekingIterator(Collections.emptyIterator());
             }
         });
     }

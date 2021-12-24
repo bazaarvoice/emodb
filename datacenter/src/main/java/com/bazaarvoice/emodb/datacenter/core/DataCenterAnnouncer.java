@@ -17,7 +17,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Updates the record for *this* data center in the System of Record so other clusters can discover it.
@@ -44,14 +44,14 @@ public class DataCenterAnnouncer implements Managed {
                                @SelfDataCenterAdmin URI selfAdminUri,
                                @SystemDataCenter String systemDataCenter,
                                DataCenters dataCenters) {
-        _dataCenterDao = checkNotNull(dataCenterDao, "dataCenterDao");
+        _dataCenterDao = requireNonNull(dataCenterDao, "dataCenterDao");
         _keyspaceDiscoveries = ImmutableList.of(sorKeyspaceDiscovery, blobKeyspaceDiscovery);
-        _selfDataCenter = checkNotNull(selfDataCenter, "selfDataCenter");
-        _selfCassandraDataCenter = checkNotNull(selfCassandraDataCenter, "selfCassandraDataCenter");
-        _selfServiceUri = checkNotNull(selfServiceUri, "selfServiceUri");
-        _selfAdminUri = checkNotNull(selfAdminUri, "selfAdminUri");
-        _systemDataCenter = checkNotNull(systemDataCenter, "systemDataCenter");
-        _dataCenters = checkNotNull(dataCenters, "dataCenters");
+        _selfDataCenter = requireNonNull(selfDataCenter, "selfDataCenter");
+        _selfCassandraDataCenter = requireNonNull(selfCassandraDataCenter, "selfCassandraDataCenter");
+        _selfServiceUri = requireNonNull(selfServiceUri, "selfServiceUri");
+        _selfAdminUri = requireNonNull(selfAdminUri, "selfAdminUri");
+        _systemDataCenter = requireNonNull(systemDataCenter, "systemDataCenter");
+        _dataCenters = requireNonNull(dataCenters, "dataCenters");
         lifeCycle.manage(this);
     }
 

@@ -28,7 +28,7 @@ import java.util.UUID;
 import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * AuthIdentity manager that uses an EmoDB table to store identities.
@@ -81,12 +81,12 @@ public class TableAuthIdentityManagerDAO<T extends AuthIdentity> implements Auth
     public TableAuthIdentityManagerDAO(Class<T> authIdentityClass, DataStore dataStore, String identityTableName,
                                        String idIndexTableName, String placement, Supplier<String> uniqueIdSupplier,
                                        @Nullable HashFunction hash) {
-        _authIdentityClass = checkNotNull(authIdentityClass, "authIdentityClass");
-        _dataStore = checkNotNull(dataStore, "client");
-        _identityTableName = checkNotNull(identityTableName, "identityTableName");
-        _idIndexTableName = checkNotNull(idIndexTableName, "idIndexTableName");
-        _placement = checkNotNull(placement, "placement");
-        _uniqueIdSupplier = checkNotNull(uniqueIdSupplier, "uniqueIdSupplier");
+        _authIdentityClass = requireNonNull(authIdentityClass, "authIdentityClass");
+        _dataStore = requireNonNull(dataStore, "client");
+        _identityTableName = requireNonNull(identityTableName, "identityTableName");
+        _idIndexTableName = requireNonNull(idIndexTableName, "idIndexTableName");
+        _placement = requireNonNull(placement, "placement");
+        _uniqueIdSupplier = requireNonNull(uniqueIdSupplier, "uniqueIdSupplier");
         _hash = hash;
 
         checkArgument(!_identityTableName.equals(idIndexTableName), "Identity and ID index tables must be distinct");
@@ -94,7 +94,7 @@ public class TableAuthIdentityManagerDAO<T extends AuthIdentity> implements Auth
 
     @Override
     public T getIdentityByAuthenticationId(String authenticationId) {
-        checkNotNull(authenticationId, "authenticationId");
+        requireNonNull(authenticationId, "authenticationId");
         validateTables();
 
         String hashedAuthenticationId = hash(authenticationId);
@@ -153,8 +153,8 @@ public class TableAuthIdentityManagerDAO<T extends AuthIdentity> implements Auth
     @Override
     public String createIdentity(String authenticationId, AuthIdentityModification<T> modification)
             throws IdentityExistsException {
-        checkNotNull(authenticationId, "authenticationId");
-        checkNotNull(modification, "modification");
+        requireNonNull(authenticationId, "authenticationId");
+        requireNonNull(modification, "modification");
         validateTables();
 
         // Check whether the authentication ID conflicts with an existing identity.  Note that we can't protect from a
@@ -191,8 +191,8 @@ public class TableAuthIdentityManagerDAO<T extends AuthIdentity> implements Auth
     @Override
     public void updateIdentity(String id, AuthIdentityModification<T> modification)
             throws IdentityNotFoundException {
-        checkNotNull(id, "id");
-        checkNotNull(modification, "modification");
+        requireNonNull(id, "id");
+        requireNonNull(modification, "modification");
         validateTables();
 
         // Load the existing identity, both to verify it exists and to use for performing partial modifications.
@@ -220,8 +220,8 @@ public class TableAuthIdentityManagerDAO<T extends AuthIdentity> implements Auth
     @Override
     public void migrateIdentity(String id, String newAuthenticationId)
             throws IdentityNotFoundException, IdentityExistsException {
-        checkNotNull(id, "id");
-        checkNotNull(newAuthenticationId, newAuthenticationId);
+        requireNonNull(id, "id");
+        requireNonNull(newAuthenticationId, newAuthenticationId);
 
         // Check the new authentication ID conflicts with an existing identity.  Note that we can't protect from a race
         // condition here; we rely on this method being run inside a global synchronization lock.
@@ -264,7 +264,7 @@ public class TableAuthIdentityManagerDAO<T extends AuthIdentity> implements Auth
 
     @Override
     public void deleteIdentity(String id) {
-        checkNotNull(id, "id");
+        requireNonNull(id, "id");
         validateTables();
 
         ResolvedIdentity resolvedIdentity = resolveIdentityById(id);
@@ -286,7 +286,7 @@ public class TableAuthIdentityManagerDAO<T extends AuthIdentity> implements Auth
     }
 
     private ResolvedIdentity resolveIdentityById(String id) {
-        checkNotNull(id, "id");
+        requireNonNull(id, "id");
         validateTables();
         
         String hashedAuthenticationId = null;

@@ -4,7 +4,7 @@ import java.net.URI;
 import java.util.Date;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Metadata about a Stash run passed to {@link StashStateListener}.
@@ -17,10 +17,10 @@ public class StashMetadata {
     private final Set<URI> _destinations;
 
     public StashMetadata(String id, Date startTime, Set<String> placements, Set<URI> destinations) {
-        _id = checkNotNull(id, "id");
-        _startTime = checkNotNull(startTime, "startTime");
-        _placements = checkNotNull(placements, "placements");
-        _destinations = checkNotNull(destinations, "destinations");
+        _id = requireNonNull(id, "id");
+        _startTime = requireNonNull(startTime, "startTime");
+        _placements = requireNonNull(placements, "placements");
+        _destinations = requireNonNull(destinations, "destinations");
     }
 
     public String getId() {

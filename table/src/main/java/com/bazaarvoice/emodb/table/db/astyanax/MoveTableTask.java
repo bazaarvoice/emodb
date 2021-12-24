@@ -10,8 +10,6 @@ import com.bazaarvoice.emodb.table.db.MoveType;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableDAO;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Objects;
-import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableMultimap;
@@ -31,12 +29,14 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Shows the current scheduled table maintenance (for move and drop operations) and allows scheduling table moves,
@@ -86,9 +86,9 @@ public class MoveTableTask extends Task {
                          TableDAO tableDao, MaintenanceDAO maintDao,
                          @PlacementsUnderMove Map<String, String> placementsUnderMove) {
         super(scope + "-move");
-        _tableDao = checkNotNull(tableDao, "tableDAO");
-        _maintDao = checkNotNull(maintDao, "maintDao");
-        _placementsUnderMove = checkNotNull(placementsUnderMove, "placementsUnderMove");
+        _tableDao = requireNonNull(tableDao, "tableDAO");
+        _maintDao = requireNonNull(maintDao, "maintDao");
+        _placementsUnderMove = requireNonNull(placementsUnderMove, "placementsUnderMove");
         taskRegistry.addTask(this);
     }
 
@@ -171,7 +171,7 @@ public class MoveTableTask extends Task {
 
     private Map<String, MaintenanceOp> getLocallyScheduledMaintenance() {
         MaintenanceScheduler scheduler = getMaintenanceScheduler();
-        return scheduler != null ? scheduler.getScheduledMaintenance() : Collections.<String, MaintenanceOp>emptyMap();
+        return scheduler != null ? scheduler.getScheduledMaintenance() : Collections.emptyMap();
     }
 
     private Map<String, MaintenanceOp> getGloballyScheduledMaintenance() {
@@ -221,7 +221,7 @@ public class MoveTableTask extends Task {
             out.println("The 'dest' placement query parameter is required when moving placement.");
             return;
         }
-        if (!Objects.equal(_placementsUnderMove.get(placement), destPlacement)) {
+        if (!Objects.equals(_placementsUnderMove.get(placement), destPlacement)) {
             out.println("The 'dest' placement should be configured as destination for the source placement");
             return;
         }
@@ -232,7 +232,7 @@ public class MoveTableTask extends Task {
     }
 
     private Optional<Integer> parseNumShards(String numShards) {
-        return Optional.fromNullable(numShards != null ? Integer.parseInt(numShards) : null);
+        return Optional.ofNullable(numShards != null ? Integer.parseInt(numShards) : null);
     }
 
     private <K, V> Map<K, V> toMap(Iterator<Map.Entry<K, V>> iter) {
@@ -280,8 +280,8 @@ public class MoveTableTask extends Task {
 
     @VisibleForTesting
     public class MovePlacement {
-        private Set<String> _tables = Sets.newHashSet();
-        private Set<String> _facades = Sets.newHashSet();
+        private final Set<String> _tables = Sets.newHashSet();
+        private final Set<String> _facades = Sets.newHashSet();
 
         public Set<String> getTables() {
             return _tables;

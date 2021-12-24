@@ -19,8 +19,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 /*
  * Default implementation which uses ZooKeeper to store stash times just in the local data center.
@@ -34,16 +34,16 @@ public class DefaultCompactionControlSource implements CompactionControlSource {
 
     @Inject
     public DefaultCompactionControlSource(@StashRunTimeMapStore final MapStore<StashRunTimeInfo> stashStartTimestampInfo, final MetricRegistry metricRegistry) {
-        _stashStartTimestampInfo = checkNotNull(stashStartTimestampInfo, "stashStartTimestampInfo");
-        checkNotNull(metricRegistry, "metricRegistry").register(MetricRegistry.name("bv.emodb.scan", "CompactionControlSource", "map-size"),
+        _stashStartTimestampInfo = requireNonNull(stashStartTimestampInfo, "stashStartTimestampInfo");
+        requireNonNull(metricRegistry, "metricRegistry").register(MetricRegistry.name("bv.emodb.scan", "CompactionControlSource", "map-size"),
                 (Gauge<Integer>) () -> _stashStartTimestampInfo.keySet().size());
     }
 
     @Override
     public void updateStashTime(String id, long timestamp, List<String> placements, long expiredTimestamp, String dataCenter) {
-        checkNotNull(id, "id");
-        checkNotNull(placements, "placements");
-        checkNotNull(dataCenter, "dataCenter");
+        requireNonNull(id, "id");
+        requireNonNull(placements, "placements");
+        requireNonNull(dataCenter, "dataCenter");
         checkState(timestamp > System.currentTimeMillis() + Duration.ofSeconds(10).toMillis(), "specified timestamp seems to be in the past");
 
         try {
@@ -56,8 +56,8 @@ public class DefaultCompactionControlSource implements CompactionControlSource {
 
     @Override
     public void deleteStashTime(String id, String dataCenter) {
-        checkNotNull(id, "id");
-        checkNotNull(dataCenter, "dataCenter");
+        requireNonNull(id, "id");
+        requireNonNull(dataCenter, "dataCenter");
 
         try {
             _stashStartTimestampInfo.remove(zkKey(id, dataCenter));
@@ -69,8 +69,8 @@ public class DefaultCompactionControlSource implements CompactionControlSource {
 
     @Override
     public StashRunTimeInfo getStashTime(String id, String dataCenter) {
-        checkNotNull(id, "id");
-        checkNotNull(dataCenter, "dataCenter");
+        requireNonNull(id, "id");
+        requireNonNull(dataCenter, "dataCenter");
 
         return _stashStartTimestampInfo.get(zkKey(id, dataCenter));
     }

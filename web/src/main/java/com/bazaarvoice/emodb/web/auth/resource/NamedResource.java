@@ -3,7 +3,7 @@ package com.bazaarvoice.emodb.web.auth.resource;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Matches a single resource by name.  The meaning of the name depends on the context.  For example, in the
@@ -15,7 +15,7 @@ public class NamedResource extends VerifiableResource {
 
     @JsonCreator
     public NamedResource(String name) {
-        _name = checkNotNull(name);
+        _name = requireNonNull(name);
     }
 
     @JsonValue
