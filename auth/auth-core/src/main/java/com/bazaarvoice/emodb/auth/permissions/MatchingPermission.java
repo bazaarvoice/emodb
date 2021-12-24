@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Similar to {@link org.apache.shiro.authz.permission.WildcardPermission} with the following differences:
@@ -45,7 +45,7 @@ public class MatchingPermission implements Permission, Serializable {
     }
 
     protected MatchingPermission(String permission, boolean initializePermission) {
-        _permission = checkNotNull(permission, "permission");
+        _permission = requireNonNull(permission, "permission");
         if ("".equals(permission.trim())) {
             throw new InvalidPermissionStringException("Permission must be a non-null, non-empty string", permission);
         }
@@ -154,7 +154,7 @@ public class MatchingPermission implements Permission, Serializable {
      * '|' and '*' characters to "\|" and "\*" respectively.
      */
     public static String escape(String raw) {
-        checkNotNull(raw, "raw");
+        requireNonNull(raw, "raw");
         String escaped = raw;
         escaped = escaped.replaceAll(UNESCAPED_WILDCARD_REGEX, WILDCARD_ESCAPE);
         escaped = escapeSeparators(escaped);

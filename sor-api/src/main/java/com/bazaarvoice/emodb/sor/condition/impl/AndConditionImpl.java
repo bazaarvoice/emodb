@@ -13,7 +13,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Standard implementation for {@link AndCondition}.  Note that this implementation preserves the original condition
@@ -26,7 +26,7 @@ public class AndConditionImpl extends AbstractCondition implements AndCondition 
     private final List<Condition> _weightSortedConditions;
 
     public AndConditionImpl(Collection<Condition> conditions) {
-        _conditions = checkNotNull(conditions, "conditions");
+        _conditions = requireNonNull(conditions, "conditions");
         _weightSortedConditions = Collections.unmodifiableList(
                 conditions.stream()
                         .sorted(Comparator.comparingInt(Condition::weight))

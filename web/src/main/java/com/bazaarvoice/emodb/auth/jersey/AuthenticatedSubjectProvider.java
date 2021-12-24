@@ -10,7 +10,7 @@ import org.apache.shiro.util.ThreadContext;
 
 import javax.ws.rs.ext.Provider;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Provider to inject a {@link Subject} as a parameter to a request that requires authentication or authorization.
@@ -22,7 +22,7 @@ public class AuthenticatedSubjectProvider implements InjectableProvider<Authenti
     private final SecurityManager _securityManager;
 
     public AuthenticatedSubjectProvider(SecurityManager securityManager) {
-        _securityManager = checkNotNull(securityManager, "securityManager");
+        _securityManager = requireNonNull(securityManager, "securityManager");
     }
 
     @Override

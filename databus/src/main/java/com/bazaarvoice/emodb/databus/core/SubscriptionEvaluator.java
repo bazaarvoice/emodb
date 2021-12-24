@@ -12,7 +12,6 @@ import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Maps;
-import com.bazaarvoice.emodb.table.db.TableFilterIntrinsics;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +23,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class SubscriptionEvaluator {
     private static final Logger _log = LoggerFactory.getLogger(SubscriptionEvaluator.class);
@@ -98,7 +97,7 @@ public class SubscriptionEvaluator {
         private final UUID _changeId;
 
         public MatchEventData(Table table, String key, Set<String> tags, UUID changeId) {
-            _table = checkNotNull(table, "table");
+            _table = requireNonNull(table, "table");
             _key = key;
             _tags = tags;
             _changeId = changeId;

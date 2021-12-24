@@ -15,7 +15,6 @@ import com.bazaarvoice.emodb.web.scanner.writer.ScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriterGenerator;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ComparisonChain;
@@ -41,12 +40,13 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Service which monitors active scans for when each scan range completes uploading.  It then analyzes the results and
@@ -89,14 +89,14 @@ public class LocalScanUploadMonitor extends AbstractService {
                                   ScanWriterGenerator scanWriterGenerator,
                                   StashStateListener stashStateListener, ScanCountListener scanCountListener,
                                   DataTools dataTools, CompactionControlSource compactionControlSource, DataCenters dataCenters) {
-        _scanWorkflow = checkNotNull(scanWorkflow, "scanWorkflow");
-        _scanStatusDAO = checkNotNull(scanStatusDAO, "scanStatusDAO");
-        _scanWriterGenerator = checkNotNull(scanWriterGenerator, "scanWriterGenerator");
-        _stashStateListener = checkNotNull(stashStateListener, "stashStateListener");
-        _scanCountListener = checkNotNull(scanCountListener, "scanCountListener");
-        _dataTools = checkNotNull(dataTools, "dataTools");
-        _compactionControlSource = checkNotNull(compactionControlSource, "compactionControlSource");
-        _dataCenters = checkNotNull(dataCenters, "dataCenters");
+        _scanWorkflow = requireNonNull(scanWorkflow, "scanWorkflow");
+        _scanStatusDAO = requireNonNull(scanStatusDAO, "scanStatusDAO");
+        _scanWriterGenerator = requireNonNull(scanWriterGenerator, "scanWriterGenerator");
+        _stashStateListener = requireNonNull(stashStateListener, "stashStateListener");
+        _scanCountListener = requireNonNull(scanCountListener, "scanCountListener");
+        _dataTools = requireNonNull(dataTools, "dataTools");
+        _compactionControlSource = requireNonNull(compactionControlSource, "compactionControlSource");
+        _dataCenters = requireNonNull(dataCenters, "dataCenters");
     }
 
     @VisibleForTesting

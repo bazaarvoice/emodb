@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Service which monitors the lags for all fanouts currently being performed by this server and publishes the maximum
@@ -32,7 +32,7 @@ public class FanoutLagMonitor extends AbstractScheduledService {
 
     @Inject
     public FanoutLagMonitor(LifeCycleRegistry lifeCycle, MetricRegistry metricRegistry) {
-        _metricRegistry = checkNotNull(metricRegistry, "metricRegistry");
+        _metricRegistry = requireNonNull(metricRegistry, "metricRegistry");
         _gauges = new MetricsGroup(metricRegistry);
         _lagTable = HashBasedTable.create();
 

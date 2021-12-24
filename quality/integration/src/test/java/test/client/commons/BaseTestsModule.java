@@ -21,14 +21,12 @@ import com.bazaarvoice.emodb.uac.api.AuthUserAccessControl;
 import com.bazaarvoice.emodb.uac.api.UserAccessControl;
 import com.bazaarvoice.emodb.uac.client.UserAccessControlAuthenticator;
 import com.bazaarvoice.emodb.uac.client.UserAccessControlClientFactory;
-import test.client.commons.annotations.ApiKeyTestDataStore;
 import com.bazaarvoice.ostrich.ServiceEndPoint;
 import com.bazaarvoice.ostrich.ServiceFactory;
 import com.bazaarvoice.ostrich.discovery.zookeeper.ZooKeeperHostDiscovery;
 import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Preconditions;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -51,12 +49,14 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import test.client.commons.annotations.ApiKeyTestDataStore;
 
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+
+import static java.util.Objects.requireNonNull;
 
 public class BaseTestsModule extends AbstractModule {
     private static final Logger LOGGER = LoggerFactory.getLogger(BaseTestsModule.class);
@@ -84,7 +84,7 @@ public class BaseTestsModule extends AbstractModule {
     @Singleton
     @Named("curator")
     private CuratorFramework getCurator(@Named("zkConnection") String zkConnection, @Named("zkNamespace") String zkNamespace) {
-        Preconditions.checkNotNull(zkConnection, "zooKeeperConnection not configured");
+        requireNonNull(zkConnection, "zooKeeperConnection not configured");
         LOGGER.info("zkNamespace:" + zkNamespace);
         LOGGER.info("zkConnection:" + zkConnection);
         ZooKeeperConfiguration zkConfiguration = new ZooKeeperConfiguration();
@@ -130,9 +130,9 @@ public class BaseTestsModule extends AbstractModule {
     @Named("emodbHost")
     private String getEmodbHost(@Named("clusterName") String clusterName, HttpClientConfiguration httpClientConfiguration,
                                   @Named("curator") CuratorFramework curator) {
-        Objects.requireNonNull(clusterName);
-        Objects.requireNonNull(httpClientConfiguration);
-        Objects.requireNonNull(curator);
+        requireNonNull(clusterName);
+        requireNonNull(httpClientConfiguration);
+        requireNonNull(curator);
 
         DataStoreClientFactory factory = DataStoreClientFactory.forClusterAndHttpConfiguration(clusterName, httpClientConfiguration, new MetricRegistry());
         Iterator<ServiceEndPoint> serviceEndPoints = new ZooKeeperHostDiscovery(curator, factory.getServiceName(), new MetricRegistry()).getHosts().iterator();

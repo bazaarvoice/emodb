@@ -25,11 +25,10 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-
 import java.net.URI;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Resource for API key management.  Note that the usual {@link RequiresPermissions} annotations aren't used on this
@@ -45,7 +44,7 @@ public class ApiKeyResource1 {
 
     @Inject
     public ApiKeyResource1(SubjectUserAccessControl uac) {
-        _uac = checkNotNull(uac, "uac");
+        _uac = requireNonNull(uac, "uac");
     }
 
     /**
@@ -95,10 +94,10 @@ public class ApiKeyResource1 {
         checkArgument(emoApiKey.getId().equals(id), "Body contains conflicting API key identifier");
         return updateApiKey(id,
                 new UpdateEmoApiKeyRequest()
-                    .setOwner(emoApiKey.getOwner())
-                    .setDescription(emoApiKey.getDescription())
-                    .setAssignedRoles(emoApiKey.getRoles())
-                    .setUnassignOtherRoles(true),
+                        .setOwner(emoApiKey.getOwner())
+                        .setDescription(emoApiKey.getDescription())
+                        .setAssignedRoles(emoApiKey.getRoles())
+                        .setUnassignOtherRoles(true),
                 subject);
     }
 

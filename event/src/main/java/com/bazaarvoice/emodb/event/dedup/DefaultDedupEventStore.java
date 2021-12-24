@@ -50,7 +50,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * An alternative implementation of {@link EventStore} that attempts to sort events and remove duplicates as they
@@ -127,9 +127,9 @@ public class DefaultDedupEventStore implements DedupEventStore, DedupQueueAdmin 
                                   @MetricsGroupName String metricsGroup,
                                   final SortedQueueFactory sortedQueueFactory,
                                   final MetricRegistry metricRegistry) {
-        _delegate = checkNotNull(delegate, "delegate");
-        _channels = checkNotNull(channels, "channels");
-        _queueDAO = checkNotNull(queueDAO, "queueDAO");
+        _delegate = requireNonNull(delegate, "delegate");
+        _channels = requireNonNull(channels, "channels");
+        _queueDAO = requireNonNull(queueDAO, "queueDAO");
         _sortedQueueFactory = sortedQueueFactory;
 
         String name = metricsGroup.substring(metricsGroup.lastIndexOf('.') + 1);
@@ -227,23 +227,23 @@ public class DefaultDedupEventStore implements DedupEventStore, DedupQueueAdmin 
 
     @Override
     public void add(String queue, ByteBuffer event) {
-        checkNotNull(queue, "queue");
-        checkNotNull(event, "event");
+        requireNonNull(queue, "queue");
+        requireNonNull(event, "event");
 
         _delegate.add(_channels.writeChannel(queue), event);
     }
 
     @Override
     public void addAll(String queue, Collection<ByteBuffer> events) {
-        checkNotNull(queue, "queue");
-        checkNotNull(events, "events");
+        requireNonNull(queue, "queue");
+        requireNonNull(events, "events");
 
         _delegate.addAll(_channels.writeChannel(queue), events);
     }
 
     @Override
     public void addAll(Multimap<String, ByteBuffer> eventsByQueue) {
-        checkNotNull(eventsByQueue, "eventsByQueue");
+        requireNonNull(eventsByQueue, "eventsByQueue");
 
         Multimap<String, ByteBuffer> eventsByWriteChannel = ArrayListMultimap.create();
         for (Map.Entry<String, Collection<ByteBuffer>> entry : eventsByQueue.asMap().entrySet()) {
@@ -254,7 +254,7 @@ public class DefaultDedupEventStore implements DedupEventStore, DedupQueueAdmin 
 
     @Override
     public long getSizeEstimate(String queue, long limit) {
-        checkNotNull(queue, "queue");
+        requireNonNull(queue, "queue");
         checkLimit(limit, Long.MAX_VALUE);
 
         return _delegate.getSizeEstimate(_channels.writeChannel(queue), limit) +
@@ -264,7 +264,7 @@ public class DefaultDedupEventStore implements DedupEventStore, DedupQueueAdmin 
 
     @Override
     public long getClaimCount(String queue) {
-        checkNotNull(queue, "queue");
+        requireNonNull(queue, "queue");
 
         // Ignore write channel claims.  Client poll() requests only claim on the read channel.
         return _delegate.getClaimCount(_channels.readChannel(queue));
@@ -293,7 +293,7 @@ public class DefaultDedupEventStore implements DedupEventStore, DedupQueueAdmin 
 
     @Override
     public boolean peek(String queue, EventSink sink) {
-        checkNotNull(queue, "queue");
+        requireNonNull(queue, "queue");
         checkLimit(sink.remaining(), Limits.MAX_PEEK_LIMIT);
 
         // Ideally, peek() would have no side-effects.  Unfortunately, it must return EventData objects that include
@@ -325,7 +325,7 @@ public class DefaultDedupEventStore implements DedupEventStore, DedupQueueAdmin 
 
     @Override
     public boolean poll(String queue, Duration claimTtl, EventSink sink) {
-        checkNotNull(queue, "queue");
+        requireNonNull(queue, "queue");
         checkLimit(sink.remaining(), Limits.MAX_POLL_LIMIT);
 
         DedupQueue service = getQueueReadWrite(queue, SERVICE_FAST_WAIT_DURATION);
@@ -346,14 +346,14 @@ public class DefaultDedupEventStore implements DedupEventStore, DedupQueueAdmin 
 
     @Override
     public void renew(String queue, Collection<String> eventIds, Duration claimTtl, boolean extendOnly) {
-        checkNotNull(queue, "queue");
+        requireNonNull(queue, "queue");
 
         _delegate.renew(_channels.readChannel(queue), eventIds, claimTtl, extendOnly);
     }
 
     @Override
     public void delete(String queue, Collection<String> eventIds, boolean cancelClaims) {
-        checkNotNull(queue, "queue");
+        requireNonNull(queue, "queue");
 
         DedupQueue service = getQueueReadWrite(queue, SERVICE_FAST_WAIT_DURATION);
         if (service != null) {
@@ -365,7 +365,7 @@ public class DefaultDedupEventStore implements DedupEventStore, DedupQueueAdmin 
 
     @Override
     public void unclaimAll(String queue) {
-        checkNotNull(queue, "queue");
+        requireNonNull(queue, "queue");
 
         _delegate.unclaimAll(_channels.readChannel(queue));
     }
@@ -379,8 +379,8 @@ public class DefaultDedupEventStore implements DedupEventStore, DedupQueueAdmin 
      */
     @Override
     public void copy(String from, String to, Predicate<ByteBuffer> filter, Date since) {
-        checkNotNull(from, "from");
-        checkNotNull(to, "to");
+        requireNonNull(from, "from");
+        requireNonNull(to, "to");
 
         ScanSink sink = newCopySink(to);
 
@@ -398,8 +398,8 @@ public class DefaultDedupEventStore implements DedupEventStore, DedupQueueAdmin 
 
     @Override
     public void copyFromRawChannel(String from, String to, Predicate<ByteBuffer> filter, Date since) {
-        checkNotNull(from, "from");
-        checkNotNull(to, "to");
+        requireNonNull(from, "from");
+        requireNonNull(to, "to");
 
         _delegate.scan(from, filter, newCopySink(to), COPY_BATCH_SIZE, since);
     }
@@ -445,16 +445,16 @@ public class DefaultDedupEventStore implements DedupEventStore, DedupQueueAdmin 
 
     @Override
     public void move(String from, String to) {
-        checkNotNull(from, "from");
-        checkNotNull(to, "to");
+        requireNonNull(from, "from");
+        requireNonNull(to, "to");
 
         moveToRawChannel(from, _channels.writeChannel(to));
     }
 
     @Override
     public void moveToRawChannel(String from, String to) {
-        checkNotNull(from, "from");
-        checkNotNull(to, "to");
+        requireNonNull(from, "from");
+        requireNonNull(to, "to");
 
         DedupQueue source = getQueueReadWrite(from, SERVICE_SLOW_WAIT_DURATION);
         if (source == null) {
@@ -465,7 +465,7 @@ public class DefaultDedupEventStore implements DedupEventStore, DedupQueueAdmin 
 
     @Override
     public void purge(String queue) {
-        checkNotNull(queue, "queue");
+        requireNonNull(queue, "queue");
 
         DedupQueue service = getQueueReadWrite(queue, SERVICE_SLOW_WAIT_DURATION);
         if (service == null) {

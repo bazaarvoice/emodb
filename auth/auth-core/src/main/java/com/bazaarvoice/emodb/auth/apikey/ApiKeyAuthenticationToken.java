@@ -3,7 +3,7 @@ package com.bazaarvoice.emodb.auth.apikey;
 import com.google.common.base.MoreObjects;
 import org.apache.shiro.authc.AuthenticationToken;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link AuthenticationToken} implementation for ApiKeys.  Since API keys do not have credentials (the presence
@@ -14,7 +14,7 @@ public class ApiKeyAuthenticationToken implements AuthenticationToken {
     private final String _apiKey;
 
     public ApiKeyAuthenticationToken(String apiKey) {
-        _apiKey = checkNotNull(apiKey, "apiKey");
+        _apiKey = requireNonNull(apiKey, "apiKey");
     }
 
     @Override

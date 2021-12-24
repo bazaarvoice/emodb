@@ -1,13 +1,13 @@
 package com.bazaarvoice.emodb.web.scanner.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Configuration for an optional scan and upload task that will run daily.
@@ -20,8 +20,8 @@ public class ScheduledScanConfiguration {
     // Leave unset to not perform an automated daily scan
     @Valid
     @NotNull
-    @JsonProperty ("dailyScanTime")
-    private Optional<String> _dailyScanTime = Optional.absent();
+    @JsonProperty("dailyScanTime")
+    private Optional<String> _dailyScanTime = Optional.empty();
 
     // SimpleDateFormat string which is used to generate a unique identifier for each instance of the scan's execution.
     // Required iff dailyScanTime is set.
@@ -34,8 +34,8 @@ public class ScheduledScanConfiguration {
     // is set.  Default is intentionally not ISO8601 to avoid characters which interfere with Hadoop distributed copy.
     @Valid
     @NotNull
-    @JsonProperty ("scanDirectory")
-    private Optional<String> _scanDirectory = Optional.absent();
+    @JsonProperty("scanDirectory")
+    private Optional<String> _scanDirectory = Optional.empty();
 
     // List of placements to scan and upload in the daily scan.  Required iff dailyScanTime is set.
     @Valid

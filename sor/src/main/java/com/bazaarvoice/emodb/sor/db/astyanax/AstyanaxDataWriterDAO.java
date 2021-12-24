@@ -24,9 +24,6 @@ import com.bazaarvoice.emodb.table.db.consistency.HintsConsistencyTimeProvider;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.annotation.Timed;
-import com.google.common.base.Function;
-import com.google.common.base.Objects;
-import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
@@ -58,11 +55,12 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.hash;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Cassandra implementation of {@link DataWriterDAO} that uses the Netflix Astyanax client library.
@@ -102,12 +100,12 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                                  DAOUtils daoUtils, @BlockSize int deltaBlockSize,
                                  @PrefixLength int deltaPrefixLength) {
 
-        _cqlWriterDAO = checkNotNull(delegate, "delegate");
-        _keyScanner = checkNotNull(keyScanner, "keyScanner");
-        _fullConsistencyTimeProvider = checkNotNull(fullConsistencyTimeProvider, "fullConsistencyTimeProvider");
-        _rawConsistencyTimeProvider = checkNotNull(rawConsistencyTimeProvider, "rawConsistencyTimeProvider");
-        _historyStore = checkNotNull(historyStore, "historyStore");
-        _changeEncoder = checkNotNull(changeEncoder, "changeEncoder");
+        _cqlWriterDAO = requireNonNull(delegate, "delegate");
+        _keyScanner = requireNonNull(keyScanner, "keyScanner");
+        _fullConsistencyTimeProvider = requireNonNull(fullConsistencyTimeProvider, "fullConsistencyTimeProvider");
+        _rawConsistencyTimeProvider = requireNonNull(rawConsistencyTimeProvider, "rawConsistencyTimeProvider");
+        _historyStore = requireNonNull(historyStore, "historyStore");
+        _changeEncoder = requireNonNull(changeEncoder, "changeEncoder");
         _updateMeter = metricRegistry.meter(getMetricName("updates"));
         _oversizeUpdateMeter = metricRegistry.meter(getMetricName("oversizeUpdates"));
         _daoUtils = daoUtils;
@@ -287,10 +285,10 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     @Timed (name = "bv.emodb.sorAstyanaxDataWriterDAO.storeCompactedDeltas", absolute = true)
     @Override
     public void storeCompactedDeltas(Table tbl, String key, List<History> histories, WriteConsistency consistency) {
-        checkNotNull(tbl, "table");
-        checkNotNull(key, "key");
-        checkNotNull(histories, "histories");
-        checkNotNull(consistency, "consistency");
+        requireNonNull(tbl, "table");
+        requireNonNull(key, "key");
+        requireNonNull(histories, "histories");
+        requireNonNull(consistency, "consistency");
 
         AstyanaxTable table = (AstyanaxTable) tbl;
         for (AstyanaxStorage storage : table.getWriteStorage()) {
@@ -315,7 +313,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     @Timed(name = "bv.emodb.sor.AstyanaxDataWriterDAO.purgeUnsafe", absolute = true)
     @Override
     public void purgeUnsafe(Table tbl) {
-        checkNotNull(tbl, "table");
+        requireNonNull(tbl, "table");
 
         AstyanaxTable table = (AstyanaxTable) tbl;
         for (AstyanaxStorage storage : table.getWriteStorage()) {
@@ -365,7 +363,9 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
         // Thrift framed transport size overruns don't have an explicit exception, but they fall under the general
         // umbrella of "unknown" thrift transport exceptions.
         Optional<Throwable> thriftException =
-                Iterables.tryFind(Throwables.getCausalChain(exception), Predicates.instanceOf(TTransportException.class));
+                Iterables.tryFind(Throwables.getCausalChain(exception), Predicates.instanceOf(TTransportException.class))
+                        .transform(java.util.Optional::of)
+                        .or(java.util.Optional.empty());
         //noinspection ThrowableResultOfMethodCallIgnored
         if (!thriftException.isPresent() || ((TTransportException) thriftException.get()).getType() != TTransportException.UNKNOWN) {
             return false;
@@ -431,7 +431,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
 
         @Override
         public int hashCode() {
-            return Objects.hashCode(_placement, _consistency);
+            return hash(_placement, _consistency);
         }
     }
 

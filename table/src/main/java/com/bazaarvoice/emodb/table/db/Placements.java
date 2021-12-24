@@ -1,8 +1,7 @@
 package com.bazaarvoice.emodb.table.db;
 
-import com.google.common.base.Optional;
-
 import java.util.Collection;
+import java.util.Optional;
 
 public interface Placements {
 

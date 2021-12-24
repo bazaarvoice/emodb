@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class PurgeDatabusEventsCommand extends ConfiguredCommand<EmoConfiguration> {
 
@@ -79,9 +79,9 @@ public class PurgeDatabusEventsCommand extends ConfiguredCommand<EmoConfiguratio
             List<String> ids = Lists.newArrayList();
             for (Message event : events) {
                 //noinspection unchecked
-                Map<String, String> coord = (Map<String, String>) checkNotNull(event.getPayload());
-                String table = checkNotNull(coord.get("table"));
-                String key = checkNotNull(coord.get("key"));
+                Map<String, String> coord = (Map<String, String>) requireNonNull(event.getPayload());
+                String table = requireNonNull(coord.get("table"));
+                String key = requireNonNull(coord.get("key"));
                 if (tables.contains(table) && (keySet == null || keySet.contains(key))) {
                     ids.add(event.getId());
                     if (--limit <= 0) {

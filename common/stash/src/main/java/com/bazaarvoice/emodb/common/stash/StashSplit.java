@@ -3,18 +3,21 @@ package com.bazaarvoice.emodb.common.stash;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
-import com.google.common.base.Objects;
 import com.google.common.io.BaseEncoding;
+
+import java.util.Objects;
+
+import static java.util.Objects.hash;
 
 /**
  * POJO to maintain attributes of a Stash split.
  */
 public class StashSplit {
-    @JsonProperty ("table")
+    @JsonProperty("table")
     private final String _table;
-    @JsonProperty ("key")
+    @JsonProperty("key")
     private final String _key;
-    @JsonProperty ("size")
+    @JsonProperty("size")
     private final long _size;
 
     @JsonCreator
@@ -74,13 +77,13 @@ public class StashSplit {
 
         StashSplit that = (StashSplit) o;
 
-        return Objects.equal(_table, that._table) &&
-                Objects.equal(_key, that._key) &&
+        return Objects.equals(_table, that._table) &&
+                Objects.equals(_key, that._key) &&
                 _size == that._size;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_table, _key);
+        return hash(_table, _key);
     }
 }

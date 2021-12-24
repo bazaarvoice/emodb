@@ -4,15 +4,15 @@ import com.bazaarvoice.emodb.event.api.EventData;
 
 import java.nio.ByteBuffer;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 class DefaultEventData implements EventData {
     private final String _id;
     private final ByteBuffer _data;
 
     DefaultEventData(String id, ByteBuffer data) {
-        _id = checkNotNull(id, "id");
-        _data = checkNotNull(data, "data");
+        _id = requireNonNull(id, "id");
+        _data = requireNonNull(data, "data");
     }
 
     @Override

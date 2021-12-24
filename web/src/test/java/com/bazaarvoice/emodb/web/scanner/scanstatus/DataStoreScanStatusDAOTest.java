@@ -9,7 +9,6 @@ import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.web.scanner.ScanDestination;
 import com.bazaarvoice.emodb.web.scanner.ScanOptions;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.testng.annotations.BeforeMethod;
@@ -21,6 +20,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
@@ -47,14 +47,14 @@ public class DataStoreScanStatusDAOTest {
                         0, Optional.of(1), Optional.of(3));
 
         ScanRangeStatus active = new ScanRangeStatus(1, "p0",
-                                ScanRange.create(ByteBuffer.wrap(new byte[] {0x02}), ByteBuffer.wrap(new byte[] {0x03})),
-                                1, Optional.<Integer>absent(), Optional.<Integer>absent());
+                ScanRange.create(ByteBuffer.wrap(new byte[]{0x02}), ByteBuffer.wrap(new byte[]{0x03})),
+                1, Optional.empty(), Optional.empty());
         active.setScanQueuedTime(Date.from(Instant.now().minus(Duration.ofMinutes(10))));
         active.setScanStartTime(Date.from(Instant.now().minus(Duration.ofMinutes(5))));
 
         ScanRangeStatus complete = new ScanRangeStatus(2, "p0",
-                                ScanRange.create(ByteBuffer.wrap(new byte[] {0x04}), ByteBuffer.wrap(new byte[] {0x05})),
-                                2, Optional.<Integer>absent(), Optional.<Integer>absent());
+                ScanRange.create(ByteBuffer.wrap(new byte[]{0x04}), ByteBuffer.wrap(new byte[]{0x05})),
+                2, Optional.empty(), Optional.empty());
         complete.setScanQueuedTime(Date.from(Instant.now().minus(Duration.ofMinutes(30))));
         complete.setScanStartTime(Date.from(Instant.now().minus(Duration.ofMinutes(25))));
         complete.setScanCompleteTime(Date.from(Instant.now().minus(Duration.ofMinutes(20))));
@@ -73,11 +73,11 @@ public class DataStoreScanStatusDAOTest {
         ScanOptions options = new ScanOptions(ImmutableList.of("p0"));
         options.addDestination(ScanDestination.to(URI.create("s3://bucket/path/to/root")));
 
-        ScanRangeStatus pending = new ScanRangeStatus(0, "p0", ScanRange.all() ,0,
-                Optional.<Integer>absent(), Optional.<Integer>absent());
+        ScanRangeStatus pending = new ScanRangeStatus(0, "p0", ScanRange.all(), 0,
+                Optional.empty(), Optional.empty());
 
         ScanStatus scanStatus = new ScanStatus("id", options, true, false, new Date(),
-                ImmutableList.of(pending), ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of());
+                ImmutableList.of(pending), ImmutableList.of(), ImmutableList.of());
 
         _dao.updateScanStatus(scanStatus);
 
@@ -103,12 +103,12 @@ public class DataStoreScanStatusDAOTest {
         ScanOptions options = new ScanOptions(ImmutableList.of("p0"));
         options.addDestination(ScanDestination.to(URI.create("s3://bucket/path/to/root")));
 
-        ScanRangeStatus pending = new ScanRangeStatus(0, "p0", ScanRange.all() ,0,
-                Optional.<Integer>absent(), Optional.<Integer>absent());
+        ScanRangeStatus pending = new ScanRangeStatus(0, "p0", ScanRange.all(), 0,
+                Optional.empty(), Optional.empty());
         pending.setScanQueuedTime(Date.from(Instant.now().minus(Duration.ofMinutes(1))));
 
         ScanStatus scanStatus = new ScanStatus("id", options, true, false, new Date(),
-                ImmutableList.of(pending), ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of());
+                ImmutableList.of(pending), ImmutableList.of(), ImmutableList.of());
         _dao.updateScanStatus(scanStatus);
 
         Date startTime = Date.from(Instant.now().minus(Duration.ofSeconds(1)));
@@ -132,13 +132,13 @@ public class DataStoreScanStatusDAOTest {
         ScanOptions options = new ScanOptions(ImmutableList.of("p0"));
         options.addDestination(ScanDestination.to(URI.create("s3://bucket/path/to/root")));
 
-        ScanRangeStatus active = new ScanRangeStatus(0, "p0", ScanRange.all() ,0,
-                Optional.<Integer>absent(), Optional.<Integer>absent());
+        ScanRangeStatus active = new ScanRangeStatus(0, "p0", ScanRange.all(), 0,
+                Optional.empty(), Optional.empty());
         active.setScanQueuedTime(Date.from(Instant.now().minus(Duration.ofMinutes(2))));
         active.setScanStartTime(Date.from(Instant.now().minus(Duration.ofMinutes(1))));
 
         ScanStatus scanStatus = new ScanStatus("id", options, true, false, new Date(),
-                ImmutableList.<ScanRangeStatus>of(), ImmutableList.of(active), ImmutableList.<ScanRangeStatus>of());
+                ImmutableList.of(), ImmutableList.of(active), ImmutableList.of());
         _dao.updateScanStatus(scanStatus);
 
         Date completeTime = Date.from(Instant.now().minusSeconds(1));
@@ -162,13 +162,13 @@ public class DataStoreScanStatusDAOTest {
         ScanOptions options = new ScanOptions(ImmutableList.of("p0"));
         options.addDestination(ScanDestination.to(URI.create("s3://bucket/path/to/root")));
 
-        ScanRangeStatus active = new ScanRangeStatus(0, "p0", ScanRange.all() ,0,
-                Optional.<Integer>absent(), Optional.<Integer>absent());
+        ScanRangeStatus active = new ScanRangeStatus(0, "p0", ScanRange.all(), 0,
+                Optional.empty(), Optional.empty());
         active.setScanQueuedTime(new Date());
         active.setScanStartTime(new Date());
 
         ScanStatus scanStatus = new ScanStatus("id", options, true, false, new Date(),
-                ImmutableList.<ScanRangeStatus>of(), ImmutableList.of(active), ImmutableList.<ScanRangeStatus>of());
+                ImmutableList.of(), ImmutableList.of(active), ImmutableList.of());
         _dao.updateScanStatus(scanStatus);
 
         _dao.setScanRangeTaskInactive("id", 0);
@@ -188,16 +188,16 @@ public class DataStoreScanStatusDAOTest {
         ScanOptions options = new ScanOptions(ImmutableList.of("p0"));
         options.addDestination(ScanDestination.to(URI.create("s3://bucket/path/to/root")));
 
-        ScanRangeStatus active = new ScanRangeStatus(0, "p0", ScanRange.all() ,0,
-                Optional.<Integer>absent(), Optional.<Integer>absent());
+        ScanRangeStatus active = new ScanRangeStatus(0, "p0", ScanRange.all(), 0,
+                Optional.empty(), Optional.empty());
         active.setScanQueuedTime(new Date());
         active.setScanStartTime(new Date());
 
         ScanStatus scanStatus = new ScanStatus("id", options, true, false, new Date(),
-                ImmutableList.<ScanRangeStatus>of(), ImmutableList.of(active), ImmutableList.<ScanRangeStatus>of());
+                ImmutableList.of(), ImmutableList.of(active), ImmutableList.of());
         _dao.updateScanStatus(scanStatus);
 
-        ScanRange completeRange = ScanRange.create(ScanRange.MIN_VALUE, ByteBuffer.wrap(new byte[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}));
+        ScanRange completeRange = ScanRange.create(ScanRange.MIN_VALUE, ByteBuffer.wrap(new byte[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}));
         ScanRange resplitRange = ScanRange.create(completeRange.getFrom(), ScanRange.MAX_VALUE);
         Date completeTime = new Date();
 
@@ -223,20 +223,20 @@ public class DataStoreScanStatusDAOTest {
         ByteBuffer row3 = ByteBuffer.wrap(new byte[] { 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3});
 
         ScanRangeStatus complete = new ScanRangeStatus(0, "p0", ScanRange.create(ScanRange.MIN_VALUE, row1), 0,
-                Optional.<Integer>absent(), Optional.<Integer>absent());
+                Optional.empty(), Optional.empty());
         complete.setScanQueuedTime(new Date());
         complete.setScanStartTime(new Date());
         complete.setScanCompleteTime(new Date());
         complete.setResplitRange(ScanRange.create(row1, ScanRange.MAX_VALUE));
 
         ScanStatus scanStatus = new ScanStatus("id", options, true, false, new Date(),
-                ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of(), ImmutableList.of(complete));
+                ImmutableList.of(), ImmutableList.of(), ImmutableList.of(complete));
         _dao.updateScanStatus(scanStatus);
 
         List<ScanRangeStatus> resplits = ImmutableList.of(
-                new ScanRangeStatus(1, "p0", ScanRange.create(row1, row2), 0, Optional.<Integer>absent(), Optional.<Integer>absent()),
-                new ScanRangeStatus(2, "p0", ScanRange.create(row2, row3), 0, Optional.<Integer>absent(), Optional.<Integer>absent()),
-                new ScanRangeStatus(3, "p0", ScanRange.create(row3, ScanRange.MAX_VALUE), 0, Optional.<Integer>absent(), Optional.<Integer>absent()));
+                new ScanRangeStatus(1, "p0", ScanRange.create(row1, row2), 0, Optional.empty(), Optional.empty()),
+                new ScanRangeStatus(2, "p0", ScanRange.create(row2, row3), 0, Optional.empty(), Optional.empty()),
+                new ScanRangeStatus(3, "p0", ScanRange.create(row3, ScanRange.MAX_VALUE), 0, Optional.empty(), Optional.empty()));
 
         _dao.resplitScanRangeTask("id", 0, resplits);
 
@@ -245,7 +245,7 @@ public class DataStoreScanStatusDAOTest {
         assertEquals(returned.getPendingScanRanges().size(), 3);
         assertTrue(returned.getActiveScanRanges().isEmpty());
 
-        assertEquals(returned.getCompleteScanRanges().get(0).getResplitRange(), Optional.<ScanRange>absent());
+        assertEquals(returned.getCompleteScanRanges().get(0).getResplitRange(), Optional.<ScanRange>empty());
         assertEquals(ImmutableSet.copyOf(returned.getPendingScanRanges()), ImmutableSet.copyOf(resplits));
     }
 
@@ -254,13 +254,13 @@ public class DataStoreScanStatusDAOTest {
         ScanOptions options = new ScanOptions(ImmutableList.of("p0"));
         options.addDestination(ScanDestination.to(URI.create("s3://bucket/path/to/root")));
 
-        ScanRangeStatus active = new ScanRangeStatus(0, "p0", ScanRange.all() ,0,
-                Optional.<Integer>absent(), Optional.<Integer>absent());
+        ScanRangeStatus active = new ScanRangeStatus(0, "p0", ScanRange.all(), 0,
+                Optional.empty(), Optional.empty());
         active.setScanQueuedTime(new Date());
         active.setScanStartTime(new Date());
 
         ScanStatus scanStatus = new ScanStatus("id", options, true, false, new Date(),
-                ImmutableList.<ScanRangeStatus>of(), ImmutableList.of(active), ImmutableList.<ScanRangeStatus>of());
+                ImmutableList.of(), ImmutableList.of(active), ImmutableList.of());
         _dao.updateScanStatus(scanStatus);
 
         _dao.setCanceled("id");
@@ -274,14 +274,14 @@ public class DataStoreScanStatusDAOTest {
         ScanOptions options = new ScanOptions(ImmutableList.of("p0"));
         options.addDestination(ScanDestination.to(URI.create("s3://bucket/path/to/root")));
 
-        ScanRangeStatus complete = new ScanRangeStatus(0, "p0", ScanRange.all() ,0,
-                Optional.<Integer>absent(), Optional.<Integer>absent());
+        ScanRangeStatus complete = new ScanRangeStatus(0, "p0", ScanRange.all(), 0,
+                Optional.empty(), Optional.empty());
         complete.setScanQueuedTime(new Date());
         complete.setScanStartTime(new Date());
         complete.setScanCompleteTime(new Date());
 
         ScanStatus scanStatus = new ScanStatus("id", options, true, false, new Date(),
-                ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of(), ImmutableList.of(complete));
+                ImmutableList.of(), ImmutableList.of(), ImmutableList.of(complete));
         _dao.updateScanStatus(scanStatus);
 
         Date completeTime = new Date();
@@ -301,14 +301,14 @@ public class DataStoreScanStatusDAOTest {
                 0, Optional.of(1), Optional.of(3));
 
         ScanRangeStatus active = new ScanRangeStatus(1, "p0",
-                ScanRange.create(ByteBuffer.wrap(new byte[] {0x02}), ByteBuffer.wrap(new byte[] {0x03})),
-                1, Optional.<Integer>absent(), Optional.<Integer>absent());
+                ScanRange.create(ByteBuffer.wrap(new byte[]{0x02}), ByteBuffer.wrap(new byte[]{0x03})),
+                1, Optional.empty(), Optional.empty());
         active.setScanQueuedTime(Date.from(Instant.now().minus(Duration.ofMinutes(10))));
         active.setScanStartTime(Date.from(Instant.now().minus(Duration.ofMinutes(5))));
 
         ScanRangeStatus complete = new ScanRangeStatus(2, "p0",
-                ScanRange.create(ByteBuffer.wrap(new byte[] {0x04}), ByteBuffer.wrap(new byte[] {0x05})),
-                2, Optional.<Integer>absent(), Optional.<Integer>absent());
+                ScanRange.create(ByteBuffer.wrap(new byte[]{0x04}), ByteBuffer.wrap(new byte[]{0x05})),
+                2, Optional.empty(), Optional.empty());
         complete.setScanQueuedTime(Date.from(Instant.now().minus(Duration.ofMinutes(30))));
         complete.setScanStartTime(Date.from(Instant.now().minus(Duration.ofMinutes(25))));
         complete.setScanCompleteTime(Date.from(Instant.now().minus(Duration.ofMinutes(20))));

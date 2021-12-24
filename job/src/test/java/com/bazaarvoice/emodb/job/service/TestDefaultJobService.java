@@ -13,7 +13,6 @@ import com.bazaarvoice.emodb.queue.api.Message;
 import com.bazaarvoice.emodb.queue.api.QueueService;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Closeables;
@@ -28,6 +27,7 @@ import org.testng.annotations.Test;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
@@ -182,7 +182,7 @@ public class TestDefaultJobService {
 
         public boolean equals(Object other) {
             return other instanceof TestRequest &&
-                    Objects.equal(((TestRequest) other)._value1, _value1) &&
+                    Objects.equals(((TestRequest) other)._value1, _value1) &&
                     ((TestRequest) other)._value2 == _value2;
         }
     }
@@ -201,7 +201,7 @@ public class TestDefaultJobService {
 
         public boolean equals(Object other) {
             return other instanceof TestResult &&
-                    Objects.equal(((TestResult) other)._values, _values);
+                    Objects.equals(((TestResult) other)._values, _values);
         }
 
     }

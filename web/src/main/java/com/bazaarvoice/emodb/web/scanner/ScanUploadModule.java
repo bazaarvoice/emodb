@@ -74,7 +74,6 @@ import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -99,6 +98,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -323,7 +323,7 @@ public class ScanUploadModule extends PrivateModule {
             listener.init(environment, metadata, null);
             return Optional.of(listener);
         }
-        return Optional.absent();
+        return Optional.empty();
     }
 
     @Provides
@@ -382,7 +382,7 @@ public class ScanUploadModule extends PrivateModule {
         if (_config.getNotifications().isEnableCloudWatchMetrics()) {
             return Optional.of(provider.get());
         }
-        return Optional.absent();
+        return Optional.empty();
     }
 
     @Provides
@@ -439,8 +439,8 @@ public class ScanUploadModule extends PrivateModule {
             _apiKey = apiKey;
             _environment = environment;
             _metricRegistry = metricRegistry;
-            _pendingScanRangeQueueName = pendingScanRangeQueueName.or("emodb-pending-scan-ranges");
-            _completeScanRangeQueueName = completeScanRangeQueueName.or("emodb-complete-scan-ranges");
+            _pendingScanRangeQueueName = pendingScanRangeQueueName.orElse("emodb-pending-scan-ranges");
+            _completeScanRangeQueueName = completeScanRangeQueueName.orElse("emodb-complete-scan-ranges");
         }
 
         @Override
@@ -476,8 +476,8 @@ public class ScanUploadModule extends PrivateModule {
                                        @Named("pendingScanRangeQueueName") Optional<String> pendingScanRangeQueueName,
                                        @Named("completeScanRangeQueueName") Optional<String> completeScanRangeQueueName) {
             _amazonSQS = amazonSQS;
-            _pendingScanRangeQueueName = pendingScanRangeQueueName.or(String.format("emodb-pending-scan-ranges-%s", cluster));
-            _completeScanRangeQueueName = completeScanRangeQueueName.or(String.format("emodb-complete-scan-ranges-%s", cluster));
+            _pendingScanRangeQueueName = pendingScanRangeQueueName.orElse(String.format("emodb-pending-scan-ranges-%s", cluster));
+            _completeScanRangeQueueName = completeScanRangeQueueName.orElse(String.format("emodb-complete-scan-ranges-%s", cluster));
         }
 
         @Override

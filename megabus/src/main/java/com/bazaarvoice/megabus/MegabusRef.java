@@ -3,13 +3,13 @@ package com.bazaarvoice.megabus;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 
 import javax.annotation.Nullable;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
+import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 
 
@@ -94,6 +94,6 @@ public class MegabusRef {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_table, _key, _changeId, _readTime);
+        return hash(_table, _key, _changeId, _readTime);
     }
 }

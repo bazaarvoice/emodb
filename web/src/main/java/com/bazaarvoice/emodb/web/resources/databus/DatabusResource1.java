@@ -51,7 +51,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 @Path ("/bus/1")
 @Produces (MediaType.APPLICATION_JSON)
@@ -71,9 +71,9 @@ public class DatabusResource1 {
 
     public DatabusResource1(SubjectDatabus databus, SubjectDatabus databusClient, DatabusEventStore eventStore,
                             DatabusResourcePoller databusResourcePoller) {
-        _databus = checkNotNull(databus, "databus");
-        _databusClient = checkNotNull(databusClient, "databusClient");
-        _eventStore = checkNotNull(eventStore, "eventStore");
+        _databus = requireNonNull(databus, "databus");
+        _databusClient = requireNonNull(databusClient, "databusClient");
+        _eventStore = requireNonNull(eventStore, "eventStore");
         _poller = databusResourcePoller;
     }
 

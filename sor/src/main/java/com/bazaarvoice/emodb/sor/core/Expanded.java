@@ -2,7 +2,7 @@ package com.bazaarvoice.emodb.sor.core;
 
 import javax.annotation.Nullable;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /** The result of resolving a sequence of deltas in the presence of the compaction algorithm. */
 public class Expanded {
@@ -13,7 +13,7 @@ public class Expanded {
 
     public Expanded(Resolved resolved, @Nullable PendingCompaction pendingCompaction,
                     int numPersistentDeltas, long numDeletedDeltas) {
-        _resolved = checkNotNull(resolved, "resolved");
+        _resolved = requireNonNull(resolved, "resolved");
         _pendingCompaction = pendingCompaction;
         _numPersistentDeltas = numPersistentDeltas;
         _numDeletedDeltas = numDeletedDeltas;

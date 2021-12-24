@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
 import java.time.Clock;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Dropwizard factory for Cassandra per-keyspace connection pools.  Integrates with the Dropwizard lifecycle
@@ -36,9 +36,9 @@ public class CassandraFactory {
     public CassandraFactory(LifeCycleRegistry lifeCycle, HealthCheckRegistry healthChecks,
                             @Global CuratorFramework curator,
                             MetricRegistry metricRegistry, Clock clock) {
-        _lifeCycle = checkNotNull(lifeCycle, "lifeCycle");
-        _curator = checkNotNull(curator, "zooKeeperConnection");
-        _healthChecks = checkNotNull(healthChecks, "healthChecks");
+        _lifeCycle = requireNonNull(lifeCycle, "lifeCycle");
+        _curator = requireNonNull(curator, "zooKeeperConnection");
+        _healthChecks = requireNonNull(healthChecks, "healthChecks");
         _metricRegistry = metricRegistry;
         _clock = clock;
     }

@@ -3,7 +3,7 @@ package com.bazaarvoice.emodb.event.api;
 import javax.annotation.Nullable;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Specifies instances of {@link DedupEventStore} should store data internally.
@@ -48,8 +48,8 @@ public abstract class DedupEventStoreChannels {
         private final String _readPrefix;
 
         private Impl(String writePrefix, String readPrefix) {
-            _writePrefix = checkNotNull(writePrefix, "writePrefix");
-            _readPrefix = checkNotNull(readPrefix, "readPrefix");
+            _writePrefix = requireNonNull(writePrefix, "writePrefix");
+            _readPrefix = requireNonNull(readPrefix, "readPrefix");
             checkArgument(!_readPrefix.equals(_writePrefix));
         }
 

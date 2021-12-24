@@ -26,7 +26,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class DefaultSlabAllocator implements SlabAllocator {
     private final ManifestPersister _persister;
@@ -105,7 +105,7 @@ public class DefaultSlabAllocator implements SlabAllocator {
 
     @Override
     public SlabAllocation allocate(String channelName, int desiredCount, PeekingIterator<Integer> eventSizes) {
-        checkNotNull(channelName, "channelName");
+        requireNonNull(channelName, "channelName");
         checkArgument(desiredCount > 0, "desiredCount must be >0");
 
         ChannelAllocationState channelState = _channelStateCache.getUnchecked(channelName);

@@ -21,7 +21,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.TreeMap;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Dropwizard task to update the black list of offending IpAddress
@@ -52,8 +52,8 @@ public class IpBlacklistControlTask extends Task {
                                   @Global CuratorFramework curator,
                                   @BlackListIpValueStore MapStore<Long> mapStore) {
         super("blacklist");
-        _curator = checkNotNull(curator, "curator");
-        _mapStore = checkNotNull(mapStore, "mapStore");
+        _curator = requireNonNull(curator, "curator");
+        _mapStore = requireNonNull(mapStore, "mapStore");
         taskRegistry.addTask(this);
     }
 

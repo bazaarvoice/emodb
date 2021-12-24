@@ -19,8 +19,8 @@ import java.util.List;
 import java.util.concurrent.Future;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Helper for writing a bunch of rows and columns that coalesces writes together and flushes periodically.
@@ -39,8 +39,8 @@ public class BatchUpdate {
     public BatchUpdate(CassandraKeyspace keyspace, ConsistencyLevel consistencyLevel, int maxRows, int maxColumns) {
         checkArgument(maxRows > 0);
         checkArgument(maxColumns > 0);
-        _keyspace = checkNotNull(keyspace);
-        _consistencyLevel = checkNotNull(consistencyLevel);
+        _keyspace = requireNonNull(keyspace);
+        _consistencyLevel = requireNonNull(consistencyLevel);
         _maxRows = maxRows;
         _maxColumns = maxColumns;
     }
@@ -96,8 +96,8 @@ public class BatchUpdate {
         private ColumnListMutation<C> _row;
 
         Row(ColumnFamily<K, C> columnFamily, K rowKey, Function<Row<K, C>, Void> newRowCallback) {
-            _columnFamily = checkNotNull(columnFamily);
-            _rowKey = checkNotNull(rowKey);
+            _columnFamily = requireNonNull(columnFamily);
+            _rowKey = requireNonNull(rowKey);
             _newRowCallback = newRowCallback;
         }
 

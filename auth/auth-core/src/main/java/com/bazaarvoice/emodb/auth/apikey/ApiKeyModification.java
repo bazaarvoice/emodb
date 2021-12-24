@@ -4,7 +4,7 @@ import com.bazaarvoice.emodb.auth.identity.AuthIdentity;
 import com.bazaarvoice.emodb.auth.identity.AuthIdentityModification;
 import com.google.common.collect.ImmutableSet;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link AuthIdentityModification} implementation for API keys.  Since API keys introduce no new attributes to
@@ -14,13 +14,13 @@ public class ApiKeyModification extends AuthIdentityModification<ApiKey> {
 
     @Override
     public ApiKey buildNew(String id) {
-        checkNotNull(id, "id");
+        requireNonNull(id, "id");
         return buildFrom(new ApiKey(id, getUpdatedRolesFrom(ImmutableSet.of())));
     }
 
     @Override
     public ApiKey buildFrom(ApiKey identity) {
-        checkNotNull(identity, "identity");
+        requireNonNull(identity, "identity");
         ApiKey apiKey = new ApiKey(identity.getId(), getUpdatedRolesFrom(identity.getRoles()));
         apiKey.setOwner(isOwnerPresent() ? getOwner() : identity.getOwner());
         apiKey.setDescription(isDescriptionPresent() ? getDescription() : identity.getDescription());

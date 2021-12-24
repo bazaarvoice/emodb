@@ -5,8 +5,8 @@ import org.apache.shiro.authc.AuthenticationInfo;
 import org.apache.shiro.subject.PrincipalCollection;
 import org.apache.shiro.subject.SimplePrincipalCollection;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link AuthenticationInfo} implementation for ApiKeys.  Since API keys do not have credentials (the presence
@@ -18,9 +18,9 @@ public class ApiKeyAuthenticationInfo implements AuthenticationInfo {
     private final String _credentials;
 
     public ApiKeyAuthenticationInfo(String authenticationId, ApiKey apiKey, String realm) {
-        checkNotNull(authenticationId, "authenticationId");
-        checkNotNull(apiKey, "apiKey");
-        checkNotNull(realm, "realm");
+        requireNonNull(authenticationId, "authenticationId");
+        requireNonNull(apiKey, "apiKey");
+        requireNonNull(realm, "realm");
         // Identify the principal by API key
         PrincipalWithRoles principal = new PrincipalWithRoles(authenticationId, apiKey.getId(), apiKey.getRoles());
         _principals = new SimplePrincipalCollection(principal, realm);

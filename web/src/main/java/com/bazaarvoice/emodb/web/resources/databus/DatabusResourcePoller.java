@@ -7,9 +7,7 @@ import com.codahale.metrics.Histogram;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Iterators;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,11 +20,12 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Helper class for asynchronously polling databus resource requests.
@@ -56,7 +55,7 @@ public class DatabusResourcePoller {
     @Inject
     public DatabusResourcePoller(Optional<LongPollingExecutorServices> longPollingExecutorServices,
                                  MetricRegistry metricRegistry) {
-        checkNotNull(longPollingExecutorServices, "longPollingExecutorServices");
+        requireNonNull(longPollingExecutorServices, "longPollingExecutorServices");
         if (longPollingExecutorServices.isPresent()) {
             _keepAliveExecutorService = longPollingExecutorServices.get().getKeepAlive();
             _pollingExecutorService = longPollingExecutorServices.get().getPoller();
@@ -93,15 +92,15 @@ public class DatabusResourcePoller {
         private volatile boolean _pollingActive = true;
 
         private final AsyncContext _asyncContext;
-        private KeepAliveRunnable _keepAliveRunnable;
-        private Subject _subject;
-        private SubjectDatabus _databus;
-        private Duration _claimTtl;
-        private int _limit;
-        private String _subscription;
-        private PeekOrPollResponseHelper _helper;
-        private long _longPollStopTime;
-        private Timer.Context _timerContext;
+        private final KeepAliveRunnable _keepAliveRunnable;
+        private final Subject _subject;
+        private final SubjectDatabus _databus;
+        private final Duration _claimTtl;
+        private final int _limit;
+        private final String _subscription;
+        private final PeekOrPollResponseHelper _helper;
+        private final long _longPollStopTime;
+        private final Timer.Context _timerContext;
         private long _lastRunTime = 0;
 
         DatabusPollRunnable(AsyncContext asyncContext, KeepAliveRunnable keepAliveRunnable, Subject subject, SubjectDatabus databus,
@@ -190,7 +189,7 @@ public class DatabusResourcePoller {
 
         private final AsyncContext _asyncContext;
         private volatile boolean _keepAliveRequired = true;
-        private Instant _keepAliveStopTime;
+        private final Instant _keepAliveStopTime;
         private DatabusPollRunnable _databusPollRunnable;
         private long _lastRunTime = 0;
 

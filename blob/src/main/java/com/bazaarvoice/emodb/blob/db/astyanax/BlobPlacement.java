@@ -7,7 +7,7 @@ import com.netflix.astyanax.model.Composite;
 
 import java.nio.ByteBuffer;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A Cassandra keyspace and the BlobStore column family.
@@ -20,9 +20,9 @@ class BlobPlacement implements Placement {
     BlobPlacement(String name,
                   CassandraKeyspace keyspace,
                   ColumnFamily<ByteBuffer, Composite> blobColumnFamily) {
-        _name = checkNotNull(name, "name");
-        _keyspace = checkNotNull(keyspace, "keyspace");
-        _blobColumnFamily = checkNotNull(blobColumnFamily, "blobColumnFamily");
+        _name = requireNonNull(name, "name");
+        _keyspace = requireNonNull(keyspace, "keyspace");
+        _blobColumnFamily = requireNonNull(blobColumnFamily, "blobColumnFamily");
     }
 
     @Override

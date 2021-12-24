@@ -7,7 +7,7 @@ import com.google.common.collect.Maps;
 
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class DefaultJobHandlerRegistry implements JobHandlerRegistryInternal {
 
@@ -15,15 +15,15 @@ public class DefaultJobHandlerRegistry implements JobHandlerRegistryInternal {
 
     @Override
     public <Q, R> boolean addHandler(JobType<Q, R> jobType, Supplier<JobHandler<Q, R>> handlerSupplier) {
-        checkNotNull(jobType, "jobType");
-        checkNotNull(handlerSupplier, "handlerSupplier");
+        requireNonNull(jobType, "jobType");
+        requireNonNull(handlerSupplier, "handlerSupplier");
         RegistryEntry<?, ?> existing = _entries.put(jobType.getName(), new RegistryEntry<>(jobType, handlerSupplier));
         return existing != null;
     }
 
     @Override
     public RegistryEntry<?, ?> getRegistryEntry(String jobName) {
-        checkNotNull(jobName, "jobName");
+        requireNonNull(jobName, "jobName");
         return _entries.get(jobName);
     }
 }

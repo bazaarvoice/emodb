@@ -4,7 +4,6 @@ import com.bazaarvoice.emodb.common.uuid.UUIDs;
 import com.bazaarvoice.emodb.sor.api.Compaction;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.eval.DeltaEvaluator;
-import com.google.common.base.Objects;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -15,6 +14,7 @@ import com.google.common.hash.Hashing;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
 
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -70,7 +70,7 @@ public class DefaultResolver implements Resolver {
         // Evaluate the delta.
         Object updated = DeltaEvaluator.eval(delta, _content, _intrinsics);
 
-        boolean contentChanged = !Objects.equal(_content, updated);
+        boolean contentChanged = !Objects.equals(_content, updated);
 
         // The caller may want to know if a particular delta modified the object.
         // If it didn't, the caller can suppress databus events for it. Note: a

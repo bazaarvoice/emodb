@@ -20,7 +20,7 @@ import java.nio.ByteBuffer;
 import java.util.Optional;
 import java.util.UUID;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 class Segment {
     private static final Logger _log = LoggerFactory.getLogger(Segment.class);
@@ -70,7 +70,7 @@ class Segment {
         _bytesUntilSplitCheckSize = splitThresholdBytes / 16;
         _bytesUntilSplitCheckRemaining = _bytesUntilSplitCheckSize;
         _splitThresholdBytes = splitThresholdBytes;
-        _splitQueue = checkNotNull(splitQueue, "splitQueue");
+        _splitQueue = requireNonNull(splitQueue, "splitQueue");
     }
 
     /**
@@ -81,13 +81,13 @@ class Segment {
         if (snapshot.version > PERSISTENCE_VERSION) {
             throw new UnsupportedOperationException("Unsupported persistent sorted queue data version: " + snapshot.version);
         }
-        _id = checkNotNull(id, "id");
+        _id = requireNonNull(id, "id");
         _dataId = Optional.ofNullable(snapshot.dataId).orElse(id);  // dataId should be non-null except for segments before dataId was introduced
         _min = (snapshot.min != null) ? ByteBufferUtil.hexToBytes(snapshot.min) : null;
         _adds = snapshot.adds;
         _bytesAdded = snapshot.bytesAdded;
         try {
-            _distinctAdds = HyperLogLog.Builder.build(checkNotNull(snapshot.distinctAddsHll, "distinctAddsHll"));
+            _distinctAdds = HyperLogLog.Builder.build(requireNonNull(snapshot.distinctAddsHll, "distinctAddsHll"));
         } catch (IOException e) {
             throw Throwables.propagate(e);
         }
@@ -98,7 +98,7 @@ class Segment {
         _splitting = snapshot.splitting;
         _splitTargetSize = snapshot.splitTargetSize;
         _splitTargetRemaining = snapshot.splitTargetRemaining;
-        _splitQueue = checkNotNull(splitQueue, "splitQueue");
+        _splitQueue = requireNonNull(splitQueue, "splitQueue");
     }
 
     Snapshot snapshot() {

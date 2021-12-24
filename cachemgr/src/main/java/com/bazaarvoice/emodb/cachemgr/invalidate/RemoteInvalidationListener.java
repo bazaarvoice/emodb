@@ -6,7 +6,7 @@ import com.bazaarvoice.emodb.cachemgr.api.InvalidationListener;
 import com.bazaarvoice.emodb.cachemgr.api.InvalidationScope;
 import com.google.inject.Inject;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Listens for {@link InvalidationEvent} and forwards those events to other servers and other
@@ -17,7 +17,7 @@ public class RemoteInvalidationListener implements InvalidationListener {
 
     @Inject
     public RemoteInvalidationListener(CacheRegistry cacheRegistry, RemoteInvalidationProvider invalidator) {
-        _invalidator = checkNotNull(invalidator, "invalidator");
+        _invalidator = requireNonNull(invalidator, "invalidator");
         cacheRegistry.addListener(this);
     }
 

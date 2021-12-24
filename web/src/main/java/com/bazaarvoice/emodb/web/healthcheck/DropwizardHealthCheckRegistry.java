@@ -7,7 +7,7 @@ import io.dropwizard.setup.Environment;
 
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Implementation of {@link HealthCheckRegistry} for Dropwizard {@code Environment} objects.
@@ -17,7 +17,7 @@ public class DropwizardHealthCheckRegistry implements HealthCheckRegistry {
 
     @Inject
     public DropwizardHealthCheckRegistry(Environment environment) {
-        _environment = checkNotNull(environment, "environment");
+        _environment = requireNonNull(environment, "environment");
     }
 
     @Override

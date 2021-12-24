@@ -15,7 +15,7 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.List;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Jersey client for downloading databus events from a remote data center.
@@ -30,14 +30,14 @@ public class ReplicationClient implements ReplicationSource {
     private final String _apiKey;
 
     public ReplicationClient(URI endPoint, Client jerseyClient, String apiKey) {
-        _client = checkNotNull(jerseyClient, "jerseyClient");
+        _client = requireNonNull(jerseyClient, "jerseyClient");
         _replicationSource = UriBuilder.fromUri(endPoint);
         _apiKey = apiKey;
     }
 
     @Override
     public List<ReplicationEvent> get(String channel, int limit) {
-        checkNotNull(channel, "channel");
+        requireNonNull(channel, "channel");
         try {
             URI uri = _replicationSource.clone()
                     .segment(channel)
@@ -54,8 +54,8 @@ public class ReplicationClient implements ReplicationSource {
 
     @Override
     public void delete(String channel, Collection<String> eventIds) {
-        checkNotNull(channel, "channel");
-        checkNotNull(eventIds, "eventIds");
+        requireNonNull(channel, "channel");
+        requireNonNull(eventIds, "eventIds");
         try {
             URI uri = _replicationSource.clone()
                     .segment(channel, "ack")

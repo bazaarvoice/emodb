@@ -8,7 +8,6 @@ import com.bazaarvoice.emodb.databus.model.OwnedSubscription;
 import com.bazaarvoice.emodb.web.auth.resource.NamedResource;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Objects;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -21,7 +20,8 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.hash;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Implementation of {@link DatabusAuthorizer} which checks the owner's permissions for all operations.
@@ -73,11 +73,11 @@ public class OwnerDatabusAuthorizer implements DatabusAuthorizer {
     public OwnerDatabusAuthorizer(InternalAuthorizer internalAuthorizer, final PermissionResolver permissionResolver,
                                   MetricRegistry metricRegistry, Clock clock, int permissionCheckCacheSize,
                                   Duration permissionCheckCacheTimeout, int readPermissionCacheSize) {
-        _internalAuthorizer = checkNotNull(internalAuthorizer, "internalAuthorizer");
-        _permissionResolver = checkNotNull(permissionResolver, "permissionResolver");
+        _internalAuthorizer = requireNonNull(internalAuthorizer, "internalAuthorizer");
+        _permissionResolver = requireNonNull(permissionResolver, "permissionResolver");
 
         if (permissionCheckCacheSize > 0) {
-            checkNotNull(permissionCheckCacheTimeout, "permissionCheckCacheTimeout");
+            requireNonNull(permissionCheckCacheTimeout, "permissionCheckCacheTimeout");
             checkArgument(permissionCheckCacheTimeout.compareTo(MAX_PERMISSION_CHECK_CACHE_TIMEOUT) <= 0,
                     "Permission check cache timeout is too long");
 
@@ -138,7 +138,7 @@ public class OwnerDatabusAuthorizer implements DatabusAuthorizer {
         //        commented-out version once enough time has passed for all grandfathered-in
         //        subscriptions to have been renewed and therefore have an owner attached.
         //
-        // return new OwnerDatabusAuthorizerForOwner(checkNotNull(ownerId, "ownerId"));
+        // return new OwnerDatabusAuthorizerForOwner(requireNonNull(ownerId, "ownerId"));
 
         if (ownerId != null) {
             return new OwnerDatabusAuthorizerForOwner(ownerId);
@@ -218,7 +218,7 @@ public class OwnerDatabusAuthorizer implements DatabusAuthorizer {
         private OwnerTableCacheKey(String ownerId, String table) {
             _ownerId = ownerId;
             _table = table;
-            _hashCode = Objects.hashCode(ownerId, table);
+            _hashCode = hash(ownerId, table);
         }
 
         @Override

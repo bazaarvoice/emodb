@@ -27,7 +27,7 @@ import java.net.URI;
 import java.util.Iterator;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Resource for role management.  Note that the usual {@link RequiresPermissions} annotations aren't used on this
@@ -42,7 +42,7 @@ public class RoleResource1 {
     private final SubjectUserAccessControl _uac;
 
     public RoleResource1(SubjectUserAccessControl uac) {
-        _uac = checkNotNull(uac, "uac");
+        _uac = requireNonNull(uac, "uac");
     }
 
     /**
