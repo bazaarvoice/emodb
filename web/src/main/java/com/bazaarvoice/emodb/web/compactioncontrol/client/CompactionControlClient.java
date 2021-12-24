@@ -5,7 +5,6 @@ import com.bazaarvoice.emodb.client.EmoClient;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.StashRunTimeInfo;
 import com.bazaarvoice.emodb.sor.api.StashTimeKey;
-import com.google.common.base.Preconditions;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.UniformInterfaceException;
 
@@ -16,7 +15,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class CompactionControlClient implements CompactionControlSource {
 
@@ -25,16 +24,16 @@ public class CompactionControlClient implements CompactionControlSource {
     private final String _apiKey;
 
     public CompactionControlClient(URI endPoint, EmoClient jerseyClient, String apiKey) {
-        _client = Preconditions.checkNotNull(jerseyClient, "jerseyClient");
+        _client = requireNonNull(jerseyClient, "jerseyClient");
         _compactionControlSource = UriBuilder.fromUri(endPoint);
-        _apiKey = Preconditions.checkNotNull(apiKey, "apiKey");
+        _apiKey = requireNonNull(apiKey, "apiKey");
     }
 
     @Override
     public void updateStashTime(String id, long timestamp, List<String> placements, long expiredTimestamp, String dataCenter) {
-        checkNotNull(id, "id");
-        checkNotNull(placements, "placements");
-        checkNotNull(dataCenter, "dataCenter");
+        requireNonNull(id, "id");
+        requireNonNull(placements, "placements");
+        requireNonNull(dataCenter, "dataCenter");
 
         try {
             UriBuilder uriBuilder = _compactionControlSource.clone()
@@ -57,8 +56,8 @@ public class CompactionControlClient implements CompactionControlSource {
 
     @Override
     public void deleteStashTime(String id, String dataCenter) {
-        checkNotNull(id, "id");
-        checkNotNull(dataCenter, "dataCenter");
+        requireNonNull(id, "id");
+        requireNonNull(dataCenter, "dataCenter");
 
         try {
             URI uri = _compactionControlSource.clone()
@@ -76,8 +75,8 @@ public class CompactionControlClient implements CompactionControlSource {
 
     @Override
     public StashRunTimeInfo getStashTime(String id, String dataCenter) {
-        checkNotNull(id, "id");
-        checkNotNull(dataCenter, "dataCenter");
+        requireNonNull(id, "id");
+        requireNonNull(dataCenter, "dataCenter");
 
         try {
             URI uri = _compactionControlSource.clone()
@@ -110,7 +109,7 @@ public class CompactionControlClient implements CompactionControlSource {
 
     @Override
     public Map<StashTimeKey, StashRunTimeInfo> getStashTimesForPlacement(String placement) {
-        checkNotNull(placement, "placement");
+        requireNonNull(placement, "placement");
 
         try {
             URI uri = _compactionControlSource.clone()

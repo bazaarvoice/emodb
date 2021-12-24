@@ -27,7 +27,6 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -55,6 +54,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -66,8 +66,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Implementation of RangeScanUploader which runs the scan synchronously in process.
@@ -103,7 +103,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
     private final DataTools _dataTools;
     private final ScanWriterGenerator _scanWriterGenerator;
     private final ObjectMapper _mapper;
-    private final Set<ExecutorService> _batchServices = Collections.synchronizedSet(Sets.<ExecutorService>newIdentityHashSet());
+    private final Set<ExecutorService> _batchServices = Collections.synchronizedSet(Sets.newIdentityHashSet());
     private final Duration _waitForAllTransfersCompleteCheckInterval;
     private final Duration _waitForAllTransfersCompleteTimeout;
     private ScheduledExecutorService _timeoutService;
@@ -131,7 +131,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
         _waitForAllTransfersCompleteCheckInterval = waitForAllTransfersCompleteCheckInterval;
         _waitForAllTransfersCompleteTimeout = waitForAllTransfersCompleteTimeout;
 
-        _compactionControlSource = checkNotNull(compactionControlSource, "compactionControlSource");
+        _compactionControlSource = requireNonNull(compactionControlSource, "compactionControlSource");
 
         // Initialize the ObjectMapper
         _mapper = new ObjectMapper();
@@ -546,7 +546,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
         if (isFinalPart) {
             shardCounter.inc();
         }
-        writer.closeAndTransferAsync(isFinalPart ? Optional.of(partCount) : Optional.<Integer>absent());
+        writer.closeAndTransferAsync(isFinalPart ? Optional.of(partCount) : Optional.empty());
     }
 
     private JsonGenerator createGenerator(OutputStream out)
@@ -774,7 +774,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
     }
 
     private static class RangeScanTimeout implements Runnable {
-        private int _taskId;
+        private final int _taskId;
         private volatile boolean _timedOut = false;
 
         private RangeScanTimeout(int taskId) {

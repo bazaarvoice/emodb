@@ -61,7 +61,6 @@ import com.google.common.base.CaseFormat;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -116,6 +115,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.Spliterators;
@@ -135,7 +135,6 @@ import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.PRIMARY;
 import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.PURGED_1;
 import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.PURGED_2;
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -198,7 +197,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     private final Map<String, String> _placementsUnderMove;
     private final ObjectMapper _objectMapper;
     private CQLStashTableDAO _stashTableDao;
-    private Clock _clock;
+    private final Clock _clock;
 
     @Inject
     public AstyanaxTableDAO(LifeCycleRegistry lifeCycle,
@@ -218,25 +217,25 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
                             @PlacementsUnderMove Map<String, String> placementsUnderMove,
                             ObjectMapper objectMapper,
                             @Nullable Clock clock) {
-        _systemTablePlacement = checkNotNull(systemTablePlacement, "systemTablePlacement");
-        _bootstrapTables = HashBiMap.create(checkNotNull(bootstrapTables, "bootstrapTables"));
+        _systemTablePlacement = requireNonNull(systemTablePlacement, "systemTablePlacement");
+        _bootstrapTables = HashBiMap.create(requireNonNull(bootstrapTables, "bootstrapTables"));
         _reservedUuids = _bootstrapTables.inverse().keySet();
-        _placementFactory = checkNotNull(placementFactory);
-        _placementCache = checkNotNull(placementCache, "placementCache");
-        _selfDataCenter = checkNotNull(selfDataCenter, "selfDataCenter");
+        _placementFactory = requireNonNull(placementFactory);
+        _placementCache = requireNonNull(placementCache, "placementCache");
+        _selfDataCenter = requireNonNull(selfDataCenter, "selfDataCenter");
         _defaultShardsLog2 = RowKeyUtils.computeShardsLog2(defaultNumShards, "default");
-        _rateLimiterCache = checkNotNull(rateLimiterCache, "rateLimiterCache");
-        _dataCopyDAO = checkNotNull(dataCopyDAO, "copyDataDAO");
-        _dataPurgeDAO = checkNotNull(dataPurgeDAO, "purgeDataDAO");
-        _fullConsistencyTimeProvider = checkNotNull(fullConsistencyTimeProvider, "fullConsistencyTimeProvider");
-        _tableChangesEnabled = checkNotNull(tableChangesEnabled, "tableChangesEnabled");
+        _rateLimiterCache = requireNonNull(rateLimiterCache, "rateLimiterCache");
+        _dataCopyDAO = requireNonNull(dataCopyDAO, "copyDataDAO");
+        _dataPurgeDAO = requireNonNull(dataPurgeDAO, "purgeDataDAO");
+        _fullConsistencyTimeProvider = requireNonNull(fullConsistencyTimeProvider, "fullConsistencyTimeProvider");
+        _tableChangesEnabled = requireNonNull(tableChangesEnabled, "tableChangesEnabled");
         _tableCacheHandle = cacheRegistry.lookup("tables", true);
-        _placementsUnderMove = checkNotNull(placementsUnderMove, "placementsUnderMove");
+        _placementsUnderMove = requireNonNull(placementsUnderMove, "placementsUnderMove");
         _objectMapper = requireNonNull(objectMapper);
         _clock = clock != null ? clock : Clock.systemUTC();
 
         // There are two tables used to store metadata about all the other tables.
-        checkNotNull(systemTableNamespace, "systemTableNamespace");
+        requireNonNull(systemTableNamespace, "systemTableNamespace");
         _systemTable = systemTableNamespace + ":table";
         _systemTableUuid = systemTableNamespace + ":table_uuid";
         String systemDataCenterTable = systemTableNamespace + ":data_center";
@@ -283,7 +282,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         for (String table : new String[] {_systemTable, _systemTableUuid, _systemTableUnPublishedDatabusEvents, _systemTableEventRegistry}) {
             TableOptions options = new TableOptionsBuilder().setPlacement(_systemTablePlacement).build();
             Audit audit = new AuditBuilder().setComment("initial startup").setLocalHost().build();
-            _backingStore.createTable(table, options, ImmutableMap.<String, Object>of(), audit);
+            _backingStore.createTable(table, options, ImmutableMap.of(), audit);
         }
     }
 
@@ -423,7 +422,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
                     public void run(Runnable ignored) {
                         // Retry mirror creation.
                         moveStart(json, storage.getPrimary(), storage.getUuidString(), storage.getPlacement(),
-                                storage.getShardsLog2(), "doMoveCreateMirror", Optional.<Audit>absent(),
+                                storage.getShardsLog2(), "doMoveCreateMirror", Optional.empty(),
                                 (storage.isPlacementMove()) ? MoveType.FULL_PLACEMENT : MoveType.SINGLE_TABLE);
 
                         // No exceptions?  That means every data center knows about the new mirror.
@@ -620,10 +619,10 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     @Override
     public void create(String name, TableOptions options, Map<String, ?> attributes, Audit audit)
             throws TableExistsException {
-        checkNotNull(name, "table");
-        checkNotNull(options, "options");
-        checkNotNull(attributes, "attributes");
-        checkNotNull(audit, "audit");
+        requireNonNull(name, "table");
+        requireNonNull(options, "options");
+        requireNonNull(attributes, "attributes");
+        requireNonNull(audit, "audit");
 
         if (_bootstrapTables.containsKey(name)) {
             throw new TableExistsException(format("May not modify system tables: %s", name), name);
@@ -668,9 +667,9 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     @Override
     public void createFacade(String name, FacadeOptions facadeOptions, Audit audit)
             throws FacadeExistsException {
-        checkNotNull(name, "table");
-        checkNotNull(facadeOptions, "facadeDefinition");
-        checkNotNull(audit, "audit");
+        requireNonNull(name, "table");
+        requireNonNull(facadeOptions, "facadeDefinition");
+        requireNonNull(audit, "audit");
 
         checkTableChangesAllowed(name);
         checkNoExistingMaintenance(name);
@@ -744,8 +743,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     @Override
     public void drop(String name, Audit audit)
             throws UnknownTableException {
-        checkNotNull(name, "table");
-        checkNotNull(audit, "audit");
+        requireNonNull(name, "table");
+        requireNonNull(audit, "audit");
 
         checkTableChangesAllowed(name);
         checkNoExistingMaintenance(name);
@@ -782,8 +781,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     @Override
     public void dropFacade(String name, String placement, Audit audit)
             throws UnknownFacadeException {
-        checkNotNull(name, "table");
-        checkNotNull(audit, "audit");
+        requireNonNull(name, "table");
+        requireNonNull(audit, "audit");
         checkPlacement(placement);
 
         checkTableChangesAllowed(name);
@@ -846,9 +845,9 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     @Override
     public void move(String table, String destPlacement, Optional<Integer> numShards, Audit audit, MoveType moveType)
             throws UnknownTableException {
-        checkNotNull(table, "table");
+        requireNonNull(table, "table");
         checkPlacement(destPlacement);
-        checkNotNull(audit, "audit");
+        requireNonNull(audit, "audit");
 
         checkTableChangesAllowed(table);
         checkNoExistingMaintenance(table);
@@ -863,10 +862,10 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     @Override
     public void moveFacade(String table, String sourcePlacement, String destPlacement, Optional<Integer> numShards, Audit audit, MoveType moveType)
             throws UnknownTableException {
-        checkNotNull(table, "table");
+        requireNonNull(table, "table");
         checkPlacement(sourcePlacement);
         checkPlacement(destPlacement);
-        checkNotNull(audit, "audit");
+        requireNonNull(audit, "audit");
 
         checkTableChangesAllowed(table);
         checkNoExistingMaintenance(table);
@@ -1075,8 +1074,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     @Override
     public void setAttributes(String name, Map<String, ?> attributes, Audit audit)
             throws UnknownTableException {
-        checkNotNull(name, "table");
-        checkNotNull(attributes, "attributes");
+        requireNonNull(name, "table");
+        requireNonNull(attributes, "attributes");
 
         checkTableChangesAllowed(name);
         checkNoExistingMaintenance(name);
@@ -1101,8 +1100,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     @Timed (name = "bv.emodb.table.AstyanaxTableDAO.audit", absolute = true)
     @Override
     public void audit(String name, String op, Audit audit) {
-        checkNotNull(name, "table");
-        checkNotNull(audit, "audit");
+        requireNonNull(name, "table");
+        requireNonNull(audit, "audit");
 
         checkTableChangesAllowed(name);
 
@@ -1428,7 +1427,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
 
     private Supplier<Collection<DataCenter>> getDataCentersSupplier(final String placement,
                                                                     @Nullable final String excludePlacement) {
-        checkNotNull(placement, "placement");
+        requireNonNull(placement, "placement");
         // Recompute the set of data centers each time since, rarely, new data centers may come online.
         return new Supplier<Collection<DataCenter>>() {
             @Override
@@ -1597,14 +1596,14 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
 
     @Override
     public void writeUnpublishedDatabusEvent(String name, UnpublishedDatabusEventType attribute) {
-        checkNotNull(name, "table");
+        requireNonNull(name, "table");
 
         ZonedDateTime dateTime = ZonedDateTime.ofInstant(_clock.instant(), ZoneOffset.UTC);
         String date = dateTime.toLocalDate().toString();
 
         // Forcing millisecond precision for the Zoned date time value,
         // as zero milli second or second case omission will lead to parsing errors when deserializing the UnpublishedDatabusEvents POJO.
-        Delta delta = newUnpublishedDatabusEventUpdate(name, attribute.toString(), getMillisecondPrecisionZonedDateTime(dateTime).toString());
+        Delta delta = newUnpublishedDatabusEventUpdate(name, attribute.toString(), getMillisecondPrecisionZonedDateTime(dateTime));
         Audit augmentedAudit = new AuditBuilder()
                 .set("_unpublished-databus-event-update", attribute.toString())
                 .build();
@@ -1684,7 +1683,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     @Override
     public Stream<String> getIdsForStorage(String table, String uuid) {
 
-        checkNotNull(_storageReaderDAO);
+        requireNonNull(_storageReaderDAO);
 
         Storage uuidStorage = readTableJson(table, false).getStorages().stream()
                 .filter(storage -> storage.getUuidString().equals(uuid))

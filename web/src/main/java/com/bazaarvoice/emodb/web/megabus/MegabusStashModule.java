@@ -27,7 +27,6 @@ import com.bazaarvoice.emodb.web.util.ZKNamespaces;
 import com.bazaarvoice.megabus.MegabusBootConfiguration;
 import com.bazaarvoice.megabus.MegabusBootDAO;
 import com.bazaarvoice.megabus.guice.MegabusZookeeper;
-import com.google.common.base.Optional;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -38,6 +37,8 @@ import com.google.inject.name.Names;
 import io.dropwizard.setup.Environment;
 import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.LoggerFactory;
+
+import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;

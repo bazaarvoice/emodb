@@ -5,7 +5,7 @@ import com.google.inject.Inject;
 import io.dropwizard.servlets.tasks.Task;
 import io.dropwizard.setup.Environment;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Implementation of {@link TaskRegistry} for Dropwizard {@code Environment} objects.
@@ -15,7 +15,7 @@ public class DropwizardTaskRegistry implements TaskRegistry {
 
     @Inject
     public DropwizardTaskRegistry(Environment environment) {
-        _environment = checkNotNull(environment, "environment");
+        _environment = requireNonNull(environment, "environment");
     }
 
     @Override

@@ -2,12 +2,9 @@ package com.bazaarvoice.emodb.web.scanner.writer;
 
 import com.bazaarvoice.emodb.web.scanner.ScanDestination;
 import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.inject.Inject;
 
-import java.net.URI;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;

@@ -14,7 +14,7 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Contrary to the name, AstyanaxTable is not actually specific to Astyanax, and its use does not imply any dependency
@@ -34,13 +34,13 @@ public class AstyanaxTable implements Table {
                          Map<String, Object> attributes, @Nullable TableAvailability availability,
                          AstyanaxStorage readStorage, Collection<AstyanaxStorage> writeStorage,
                          Supplier<Collection<DataCenter>> dataCenters) {
-        _name = checkNotNull(name, "name");
-        _options = checkNotNull(options, "options");
-        _attributes = checkNotNull(attributes, "attributes");
+        _name = requireNonNull(name, "name");
+        _options = requireNonNull(options, "options");
+        _attributes = requireNonNull(attributes, "attributes");
         _availability = availability;
-        _readStorage = checkNotNull(readStorage, "readStorage");
-        _writeStorage = checkNotNull(writeStorage, "writeStorage");
-        _dataCenters = checkNotNull(dataCenters, "dataCenters");
+        _readStorage = requireNonNull(readStorage, "readStorage");
+        _writeStorage = requireNonNull(writeStorage, "writeStorage");
+        _dataCenters = requireNonNull(dataCenters, "dataCenters");
     }
 
     @Override

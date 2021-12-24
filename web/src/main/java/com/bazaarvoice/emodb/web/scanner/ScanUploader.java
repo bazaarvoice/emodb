@@ -1,12 +1,10 @@
 package com.bazaarvoice.emodb.web.scanner;
 
 import com.bazaarvoice.emodb.datacenter.api.DataCenters;
-import com.bazaarvoice.emodb.plugin.stash.StashMetadata;
 import com.bazaarvoice.emodb.plugin.stash.StashStateListener;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.compactioncontrol.DelegateCompactionControl;
 import com.bazaarvoice.emodb.sor.core.DataTools;
-import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
 import com.bazaarvoice.emodb.web.scanner.control.ScanPlan;
 import com.bazaarvoice.emodb.web.scanner.control.ScanWorkflow;
@@ -14,16 +12,12 @@ import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRangeStatus;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatus;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusDAO;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.inject.Inject;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,9 +25,13 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Entry point for uploading JSON representations of a placement to a file system, such as S3.
@@ -69,12 +67,12 @@ public class ScanUploader {
     @Inject
     public ScanUploader(DataTools dataTools, ScanWorkflow scanWorkflow, ScanStatusDAO scanStatusDAO,
                         StashStateListener stashStateListener, @DelegateCompactionControl CompactionControlSource compactionControlSource, DataCenters dataCenters) {
-        _dataTools = checkNotNull(dataTools, "dataTools");
-        _scanWorkflow = checkNotNull(scanWorkflow, "scanWorkflow");
-        _scanStatusDAO = checkNotNull(scanStatusDAO, "scanStatusDAO");
-        _stashStateListener = checkNotNull(stashStateListener, "stashStateListener");
-        _compactionControlSource = checkNotNull(compactionControlSource, "compactionControlSource");
-        _dataCenters = checkNotNull(dataCenters, "dataCenters");
+        _dataTools = requireNonNull(dataTools, "dataTools");
+        _scanWorkflow = requireNonNull(scanWorkflow, "scanWorkflow");
+        _scanStatusDAO = requireNonNull(scanStatusDAO, "scanStatusDAO");
+        _stashStateListener = requireNonNull(stashStateListener, "stashStateListener");
+        _compactionControlSource = requireNonNull(compactionControlSource, "compactionControlSource");
+        _dataCenters = requireNonNull(dataCenters, "dataCenters");
         _executorService = Executors.newSingleThreadScheduledExecutor();
     }
 
@@ -143,7 +141,7 @@ public class ScanUploader {
 
         for (String placement : options.getPlacements()) {
             String cluster = _dataTools.getPlacementCluster(placement);
-            ScanRangeSplits scanRangeSplits = _dataTools.getScanRangeSplits(placement, options.getRangeScanSplitSize(), Optional.<ScanRange>absent());
+            ScanRangeSplits scanRangeSplits = _dataTools.getScanRangeSplits(placement, options.getRangeScanSplitSize(), Optional.empty());
 
             if (!options.isScanByAZ()) {
                 // Optionally we can reduce load across the ring by limiting scans AZ at a time.  However, the caller

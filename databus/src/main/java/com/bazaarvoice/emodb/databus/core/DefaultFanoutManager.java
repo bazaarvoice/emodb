@@ -33,7 +33,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class DefaultFanoutManager implements FanoutManager {
     private static final Duration SAME_DC_SLEEP_WHEN_IDLE = Duration.ofMillis(100);
@@ -64,18 +64,18 @@ public class DefaultFanoutManager implements FanoutManager {
                                 FanoutLagMonitor fanoutLagMonitor,
                                 LeaderServiceTask dropwizardTask, RateLimitedLogFactory logFactory,
                                 MetricRegistry metricRegistry, Clock clock) {
-        _eventStore = checkNotNull(eventStore, "eventStore");
-        _subscriptionDao = checkNotNull(subscriptionDao, "subscriptionDao");
-        _subscriptionEvaluator = checkNotNull(subscriptionEvaluator, "subscriptionEvaluator");
-        _dataCenters = checkNotNull(dataCenters, "dataCenters");
-        _curator = checkNotNull(curator, "curator");
-        _selfId = checkNotNull(self, "self").toString();
-        _dropwizardTask = checkNotNull(dropwizardTask, "dropwizardTask");
-        _logFactory = checkNotNull(logFactory, "logFactory");
+        _eventStore = requireNonNull(eventStore, "eventStore");
+        _subscriptionDao = requireNonNull(subscriptionDao, "subscriptionDao");
+        _subscriptionEvaluator = requireNonNull(subscriptionEvaluator, "subscriptionEvaluator");
+        _dataCenters = requireNonNull(dataCenters, "dataCenters");
+        _curator = requireNonNull(curator, "curator");
+        _selfId = requireNonNull(self, "self").toString();
+        _dropwizardTask = requireNonNull(dropwizardTask, "dropwizardTask");
+        _logFactory = requireNonNull(logFactory, "logFactory");
         _masterFanoutPartitions = masterFanoutPartitions;
         _dataCenterFanoutPartitions = dataCenterFanoutPartitions;
-        _dataCenterFanoutPartitionSelector = checkNotNull(dataCenterFanoutPartitionSelector, "dataCenterFanoutPartitionSelector");
-        _fanoutLagMonitor = checkNotNull(fanoutLagMonitor, "fanoutLagMonitor");
+        _dataCenterFanoutPartitionSelector = requireNonNull(dataCenterFanoutPartitionSelector, "dataCenterFanoutPartitionSelector");
+        _fanoutLagMonitor = requireNonNull(fanoutLagMonitor, "fanoutLagMonitor");
         _metricRegistry = metricRegistry;
         _clock = clock;
     }

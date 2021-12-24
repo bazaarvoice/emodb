@@ -8,7 +8,7 @@ import com.google.inject.Inject;
 import java.time.Duration;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Implementation of {@link FullConsistencyTimeProvider} that sets the maximum full consistency timestamp
@@ -20,7 +20,7 @@ public class HintsConsistencyTimeProvider implements FullConsistencyTimeProvider
 
     @Inject
     public HintsConsistencyTimeProvider(@HintsConsistencyTimeValues Map<String, ValueStore<Long>> timestampCache) {
-        _timestampCache = checkNotNull(timestampCache, "timestampCache");
+        _timestampCache = requireNonNull(timestampCache, "timestampCache");
     }
 
     @Override

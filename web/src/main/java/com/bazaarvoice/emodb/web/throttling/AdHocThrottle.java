@@ -1,12 +1,13 @@
 package com.bazaarvoice.emodb.web.throttling;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
 
 import java.time.Instant;
+import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.hash;
+import static java.util.Objects.requireNonNull;
 
 /**
  * An ad-hoc throttle consists of two attributes:
@@ -26,12 +27,12 @@ public class AdHocThrottle {
     private AdHocThrottle(int limit, Instant expiration) {
         checkArgument(limit >= 0, "limit cannot be negative");
         _limit = limit;
-        _expiration = checkNotNull(expiration, "expiration");
+        _expiration = requireNonNull(expiration, "expiration");
     }
 
     public static AdHocThrottle create(int limit, Instant expiration) {
         // If the throttle is unlimited or already expired then return the unlimited throttle.
-        if (limit == Integer.MAX_VALUE || checkNotNull(expiration, "expiration").isBefore(Instant.now())) {
+        if (limit == Integer.MAX_VALUE || requireNonNull(expiration, "expiration").isBefore(Instant.now())) {
             return unlimitedInstance();
         }
         return new AdHocThrottle(limit, expiration);
@@ -64,12 +65,12 @@ public class AdHocThrottle {
 
         AdHocThrottle that = (AdHocThrottle) o;
 
-        return _limit == that._limit && Objects.equal(_expiration, that._expiration);
+        return _limit == that._limit && Objects.equals(_expiration, that._expiration);
     }
 
     @Override
     public int hashCode() {
-        return  Objects.hashCode(_limit, _expiration);
+        return hash(_limit, _expiration);
     }
 
     public String toString() {

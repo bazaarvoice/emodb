@@ -24,7 +24,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 abstract class AbstractQueueClient {
     protected final EmoClient _client;
@@ -32,14 +32,14 @@ abstract class AbstractQueueClient {
     protected final boolean _partitionSafe;
 
     protected AbstractQueueClient(URI endPoint, boolean partitionSafe, EmoClient client) {
-        _client = checkNotNull(client, "client");
+        _client = requireNonNull(client, "client");
         _queueService = EmoUriBuilder.fromUri(endPoint);
         _partitionSafe = partitionSafe;
     }
 
     // Any server can handle sending messages, no need for @PartitionKey
     public void send(String apiKey, String queue, final Object message) {
-        checkNotNull(queue, "queue");
+        requireNonNull(queue, "queue");
         try {
             URI uri = _queueService.clone()
                     .segment(queue, "send")
@@ -57,8 +57,8 @@ abstract class AbstractQueueClient {
 
     // Any server can handle sending messages, no need for @PartitionKey
     public void sendAll(String apiKey, String queue, Collection<?> messages) {
-        checkNotNull(queue, "queue");
-        checkNotNull(messages, "messages");
+        requireNonNull(queue, "queue");
+        requireNonNull(messages, "messages");
         if (messages.isEmpty()) {
             return;
         }
@@ -77,7 +77,7 @@ abstract class AbstractQueueClient {
 
     // Any server can handle sending messages, no need for @PartitionKey
     public void sendAll(String apiKey, Map<String, ? extends Collection<?>> messagesByQueue) {
-        checkNotNull(messagesByQueue, "messagesByQueue");
+        requireNonNull(messagesByQueue, "messagesByQueue");
         if (messagesByQueue.isEmpty()) {
             return;
         }
@@ -101,7 +101,7 @@ abstract class AbstractQueueClient {
     }
 
     protected long doGetMessageCountUpTo(String apiKey, String queue, long limit, boolean partitioned) {
-        checkNotNull(queue, "queue");
+        requireNonNull(queue, "queue");
         try {
             URI uri = _queueService.clone()
                     .segment(queue, "size")
@@ -118,7 +118,7 @@ abstract class AbstractQueueClient {
     }
 
     protected long doGetClaimCount(String apiKey, String queue) {
-        checkNotNull(queue, "queue");
+        requireNonNull(queue, "queue");
         try {
             URI uri = _queueService.clone()
                     .segment(queue, "claimcount")
@@ -134,7 +134,7 @@ abstract class AbstractQueueClient {
     }
 
     protected List<Message> doPeek(String apiKey, String queue, int limit, boolean partitioned) {
-        checkNotNull(queue, "queue");
+        requireNonNull(queue, "queue");
         try {
             URI uri = _queueService.clone()
                     .segment(queue, "peek")
@@ -144,15 +144,16 @@ abstract class AbstractQueueClient {
             return _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<List<Message>>() {});
+                    .get(new TypeReference<List<Message>>() {
+                    });
         } catch (EmoClientException e) {
             throw convertException(e);
         }
     }
 
     protected List<Message> doPoll(String apiKey, String queue, Duration claimTtl, int limit) {
-        checkNotNull(queue, "queue");
-        checkNotNull(claimTtl, "claimTtl");
+        requireNonNull(queue, "queue");
+        requireNonNull(claimTtl, "claimTtl");
         try {
             URI uri = _queueService.clone()
                     .segment(queue, "poll")
@@ -163,16 +164,17 @@ abstract class AbstractQueueClient {
             return _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<List<Message>>() {});
+                    .get(new TypeReference<List<Message>>() {
+                    });
         } catch (EmoClientException e) {
             throw convertException(e);
         }
     }
 
     protected void doRenew(String apiKey, String queue, Collection<String> messageIds, Duration claimTtl) {
-        checkNotNull(queue, "queue");
-        checkNotNull(messageIds, "messageIds");
-        checkNotNull(claimTtl, "claimTtl");
+        requireNonNull(queue, "queue");
+        requireNonNull(messageIds, "messageIds");
+        requireNonNull(claimTtl, "claimTtl");
         try {
             URI uri = _queueService.clone()
                     .segment(queue, "renew")
@@ -189,8 +191,8 @@ abstract class AbstractQueueClient {
     }
 
     protected void doAcknowledge(String apiKey, String queue, Collection<String> messageIds) {
-        checkNotNull(queue, "queue");
-        checkNotNull(messageIds, "messageIds");
+        requireNonNull(queue, "queue");
+        requireNonNull(messageIds, "messageIds");
         try {
             URI uri = _queueService.clone()
                     .segment(queue, "ack")
@@ -206,8 +208,8 @@ abstract class AbstractQueueClient {
     }
 
     protected String doMoveAsync(String apiKey, String from, String to) {
-        checkNotNull(from, "from");
-        checkNotNull(to, "to");
+        requireNonNull(from, "from");
+        requireNonNull(to, "to");
         try {
             URI uri = _queueService.clone()
                     .segment("_move")
@@ -216,7 +218,8 @@ abstract class AbstractQueueClient {
                     .build();
             Map<String, Object> response = _client.resource(uri)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .post(new TypeReference<Map<String, Object>>(){}, null);
+                    .post(new TypeReference<Map<String, Object>>() {
+                    }, null);
             return response.get("id").toString();
         } catch (EmoClientException e) {
             throw convertException(e);
@@ -224,7 +227,7 @@ abstract class AbstractQueueClient {
     }
 
     protected MoveQueueStatus doGetMoveStatus(String apiKey, String reference) {
-        checkNotNull(reference, "reference");
+        requireNonNull(reference, "reference");
         try {
             URI uri = _queueService.clone()
                     .segment("_move")
@@ -239,7 +242,7 @@ abstract class AbstractQueueClient {
     }
 
     protected void doUnclaimAll(String apiKey, String queue) {
-        checkNotNull(queue, "queue");
+        requireNonNull(queue, "queue");
         try {
             URI uri = _queueService.clone()
                     .segment(queue, "unclaimall")
@@ -254,7 +257,7 @@ abstract class AbstractQueueClient {
     }
 
     protected void doPurge(String apiKey, String queue) {
-        checkNotNull(queue, "queue");
+        requireNonNull(queue, "queue");
         try {
             URI uri = _queueService.clone()
                     .segment(queue)

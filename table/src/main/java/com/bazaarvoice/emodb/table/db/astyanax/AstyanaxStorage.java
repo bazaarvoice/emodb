@@ -7,7 +7,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Storage configuration for a single table in Astyanax.  Usually there is exactly one storage configuration active
@@ -29,8 +29,8 @@ public class AstyanaxStorage {
         _uuid = uuid;
         _shardsLog2 = shardsLog2;
         _readsAllowed = readsAllowed;
-        _placementName = checkNotNull(placementName, "placementName");
-        _placement = checkNotNull(placement, "placement");
+        _placementName = requireNonNull(placementName, "placementName");
+        _placement = requireNonNull(placement, "placement");
     }
 
     public boolean getReadsAllowed() {

@@ -3,7 +3,6 @@ package com.bazaarvoice.emodb.sor.delta.impl;
 import com.bazaarvoice.emodb.sor.delta.DeltaVisitor;
 import com.bazaarvoice.emodb.sor.delta.Literal;
 import com.bazaarvoice.emodb.sor.delta.SetDelta;
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 
@@ -12,7 +11,8 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.hash;
+import static java.util.Objects.requireNonNull;
 
 public class SetDeltaImpl extends AbstractDelta implements SetDelta {
 
@@ -23,8 +23,8 @@ public class SetDeltaImpl extends AbstractDelta implements SetDelta {
 
     public SetDeltaImpl(boolean removeRest, Collection<Literal> addedValues, Collection<Literal> removedValues, boolean deleteIfEmpty) {
         _removeRest = removeRest;
-        _addedValues = sorted(checkNotNull(addedValues, "addedValues"));
-        _removedValues = sorted(checkNotNull(removedValues, "removedValues"));
+        _addedValues = sorted(requireNonNull(addedValues, "addedValues"));
+        _removedValues = sorted(requireNonNull(removedValues, "removedValues"));
         _deleteIfEmpty = deleteIfEmpty;
     }
 
@@ -125,6 +125,6 @@ public class SetDeltaImpl extends AbstractDelta implements SetDelta {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(9532, _removeRest, _addedValues, _removedValues, _deleteIfEmpty);
+        return hash(9532, _removeRest, _addedValues, _removedValues, _deleteIfEmpty);
     }
 }

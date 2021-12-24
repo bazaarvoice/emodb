@@ -10,7 +10,7 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.List;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Enumerates cache invalidation end points for foreign data centers based on a static list of end points.
@@ -25,8 +25,8 @@ public class ForeignDataCenterEndPointProvider implements EndPointProvider {
     @Inject
     public ForeignDataCenterEndPointProvider(InvalidationServiceEndPointAdapter endPointAdapter,
                                              DataCenters dataCenters) {
-        _endPointAdapter = checkNotNull(endPointAdapter, "endPointAdapter");
-        _dataCenters = checkNotNull(dataCenters, "dataCenters");
+        _endPointAdapter = requireNonNull(endPointAdapter, "endPointAdapter");
+        _dataCenters = requireNonNull(dataCenters, "dataCenters");
     }
 
     @Override

@@ -25,12 +25,11 @@ import javax.annotation.Nullable;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.net.URI;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Provides basic access to Stashed tables and content.
@@ -42,8 +41,8 @@ abstract public class StashReader {
     protected final String _rootPath;
 
     protected StashReader(URI stashRoot, AmazonS3 s3) {
-        checkNotNull(stashRoot, "stashRoot");
-        _s3 = checkNotNull(s3, "s3");
+        requireNonNull(stashRoot, "stashRoot");
+        _s3 = requireNonNull(s3, "s3");
         _bucket = stashRoot.getHost();
 
         String path = stashRoot.getPath();

@@ -3,7 +3,7 @@ package com.bazaarvoice.emodb.event.db.astyanax;
 import java.nio.ByteBuffer;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class DefaultSlabAllocation implements SlabAllocation {
     private final SlabRef _slab;
@@ -13,7 +13,7 @@ public class DefaultSlabAllocation implements SlabAllocation {
     public DefaultSlabAllocation(SlabRef slab, int offset, int length) {
         checkArgument(offset >= 0);
         checkArgument(length > 0);
-        _slab = checkNotNull(slab);
+        _slab = requireNonNull(slab);
         _offset = offset;
         _length = length;
     }

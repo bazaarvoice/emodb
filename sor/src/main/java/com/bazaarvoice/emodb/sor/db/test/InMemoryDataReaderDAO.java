@@ -10,13 +10,21 @@ import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.HistoryStore;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryHistoryStore;
-import com.bazaarvoice.emodb.sor.db.*;
+import com.bazaarvoice.emodb.sor.db.DataReaderDAO;
+import com.bazaarvoice.emodb.sor.db.DataWriterDAO;
+import com.bazaarvoice.emodb.sor.db.Key;
+import com.bazaarvoice.emodb.sor.db.MultiTableScanOptions;
+import com.bazaarvoice.emodb.sor.db.MultiTableScanResult;
+import com.bazaarvoice.emodb.sor.db.Record;
+import com.bazaarvoice.emodb.sor.db.RecordEntryRawMetadata;
+import com.bazaarvoice.emodb.sor.db.RecordUpdate;
+import com.bazaarvoice.emodb.sor.db.ScanRange;
+import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableSet;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.FluentIterable;
@@ -26,8 +34,6 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import com.google.common.util.concurrent.RateLimiter;
-import java.util.concurrent.TimeoutException;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
 
@@ -40,12 +46,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * In-memory implementation of {@link DataWriterDAO}, for testing.
@@ -69,7 +77,7 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO {
     }
 
     public InMemoryDataReaderDAO setHistoryStore(HistoryStore historyStore) {
-        _historyStore = checkNotNull(historyStore);
+        _historyStore = requireNonNull(historyStore);
         return this;
     }
 
@@ -108,7 +116,7 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO {
 
     @Override
     public Record read(Key key, ReadConsistency ignored) {
-        checkNotNull(key, "key");
+        requireNonNull(key, "key");
         String table = key.getTable().getName();
         return newRecord(key, safeGet(_contentChanges, table, key.getKey()));
     }
@@ -126,7 +134,7 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO {
     @Override
     public Iterator<Change> readTimeline(Key key, boolean includeContentData,
                                          UUID start, UUID end, boolean reversed, long limit, ReadConsistency consistency) {
-        checkNotNull(key, "key");
+        requireNonNull(key, "key");
 
         String table = key.getTable().getName();
 
@@ -164,7 +172,7 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO {
     @Override
     public ScanRangeSplits getScanRangeSplits(String placement, int desiredRecordsPerSplit, Optional<ScanRange> subrange) {
         return ScanRangeSplits.builder()
-                .addScanRange("dummy_group", "dummy_host", subrange.or(ScanRange.all()))
+                .addScanRange("dummy_group", "dummy_host", subrange.orElse(ScanRange.all()))
                 .build();
     }
 
@@ -248,10 +256,10 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO {
     }
 
     private synchronized void update(Table table, String key, UUID changeId, Delta delta, Set<String> tags, WriteConsistency ignored) {
-        checkNotNull(table, "table");
-        checkNotNull(key, "key");
-        checkNotNull(changeId, "changeId");
-        checkNotNull(delta, "delta");
+        requireNonNull(table, "table");
+        requireNonNull(key, "key");
+        requireNonNull(changeId, "changeId");
+        requireNonNull(delta, "delta");
 
         safePut(_contentChanges, table.getName(), key, changeId, ChangeBuilder.just(changeId, delta, tags));
     }
@@ -259,13 +267,13 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO {
     @Override
     public synchronized void compact(Table table, String key, UUID compactionKey, Compaction compaction,
                                      UUID changeId, Delta delta, Collection<DeltaClusteringKey> changesToDelete, List<History> historyList, WriteConsistency consistency) {
-        checkNotNull(table, "table");
-        checkNotNull(key, "key");
-        checkNotNull(compactionKey, "compactionKey");
-        checkNotNull(compaction, "compaction");
-        checkNotNull(changeId, "changeId");
-        checkNotNull(delta, "delta");
-        checkNotNull(changesToDelete, "changesToDelete");
+        requireNonNull(table, "table");
+        requireNonNull(key, "key");
+        requireNonNull(compactionKey, "compactionKey");
+        requireNonNull(compaction, "compaction");
+        requireNonNull(changeId, "changeId");
+        requireNonNull(delta, "delta");
+        requireNonNull(changesToDelete, "changesToDelete");
 
         Map<UUID, Change> changes = safePut(_contentChanges, table.getName(), key);
 
@@ -282,13 +290,13 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO {
 
     public synchronized void deleteDeltasOnly(Table table, String key, UUID compactionKey, Compaction compaction,
                                               UUID changeId, Delta delta, Collection<DeltaClusteringKey> changesToDelete, List<History> historyList, WriteConsistency consistency) {
-        checkNotNull(table, "table");
-        checkNotNull(key, "key");
-        checkNotNull(compactionKey, "compactionKey");
-        checkNotNull(compaction, "compaction");
-        checkNotNull(changeId, "changeId");
-        checkNotNull(delta, "delta");
-        checkNotNull(changesToDelete, "changesToDelete");
+        requireNonNull(table, "table");
+        requireNonNull(key, "key");
+        requireNonNull(compactionKey, "compactionKey");
+        requireNonNull(compaction, "compaction");
+        requireNonNull(changeId, "changeId");
+        requireNonNull(delta, "delta");
+        requireNonNull(changesToDelete, "changesToDelete");
 
         Map<UUID, Change> changes = safePut(_contentChanges, table.getName(), key);
 
@@ -299,13 +307,13 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO {
 
     public synchronized void addCompactionOnly(Table table, String key, UUID compactionKey, Compaction compaction,
                                                UUID changeId, Delta delta, Collection<DeltaClusteringKey> changesToDelete, List<History> historyList, WriteConsistency consistency) {
-        checkNotNull(table, "table");
-        checkNotNull(key, "key");
-        checkNotNull(compactionKey, "compactionKey");
-        checkNotNull(compaction, "compaction");
-        checkNotNull(changeId, "changeId");
-        checkNotNull(delta, "delta");
-        checkNotNull(changesToDelete, "changesToDelete");
+        requireNonNull(table, "table");
+        requireNonNull(key, "key");
+        requireNonNull(compactionKey, "compactionKey");
+        requireNonNull(compaction, "compaction");
+        requireNonNull(changeId, "changeId");
+        requireNonNull(delta, "delta");
+        requireNonNull(changesToDelete, "changesToDelete");
 
         Map<UUID, Change> changes = safePut(_contentChanges, table.getName(), key);
 
@@ -341,12 +349,12 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO {
 
     private NavigableMap<String, Map<UUID, Change>> safeGet(Map<String, NavigableMap<String, Map<UUID, Change>>> map, String key) {
         NavigableMap<String, Map<UUID, Change>> map2 = map.get(key);
-        return (map2 != null) ? map2 : ImmutableSortedMap.<String, Map<UUID, Change>>of();
+        return (map2 != null) ? map2 : ImmutableSortedMap.of();
     }
 
     private Map<UUID, Change> safeGet(Map<String, NavigableMap<String, Map<UUID, Change>>> map, String key1, String key2) {
         Map<UUID, Change> map2 = safeGet(map, key1).get(key2);
-        return (map2 != null) ? map2 : Collections.<UUID, Change>emptyMap();
+        return (map2 != null) ? map2 : Collections.emptyMap();
     }
 
     private void safePut(Map<String, NavigableMap<String, Map<UUID, Change>>> map,

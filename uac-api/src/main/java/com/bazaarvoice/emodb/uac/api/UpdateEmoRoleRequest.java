@@ -15,7 +15,7 @@ import java.io.IOException;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Request object for updating an existing role.  The request can update the role's name, description, permissions
@@ -52,7 +52,7 @@ public class UpdateEmoRoleRequest extends UserAccessControlRequest {
     }
 
     public UpdateEmoRoleRequest setRoleKey(EmoRoleKey roleKey) {
-        _roleKey = checkNotNull(roleKey, "roleKey");
+        _roleKey = requireNonNull(roleKey, "roleKey");
         return this;
     }
 

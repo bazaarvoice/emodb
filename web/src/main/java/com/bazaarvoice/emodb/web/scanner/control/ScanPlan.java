@@ -4,7 +4,6 @@ import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.web.scanner.ScanOptions;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRangeStatus;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatus;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Lists;
@@ -14,6 +13,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -109,12 +109,12 @@ public class ScanPlan {
             while (batch != null) {
                 List<PlanItem> items = batch.getItems();
                 if (!items.isEmpty()) {
-                    Optional<Integer> blockingBatch = Optional.fromNullable(lastBatchId);
+                    Optional<Integer> blockingBatch = Optional.ofNullable(lastBatchId);
                     for (PlanItem item : items) {
                         String placement = item.getPlacement();
                         // If the token range is subdivided into more than one scan range then mark all sub-ranges with
                         // the same unique concurrency ID.
-                        Optional<Integer> concurrency = item.getScanRanges().size() > 1 ? Optional.of(concurrencyId++) : Optional.<Integer>absent();
+                        Optional<Integer> concurrency = item.getScanRanges().size() > 1 ? Optional.of(concurrencyId++) : Optional.empty();
 
                         for (ScanRange scanRange : item.getScanRanges()) {
                             pendingRangeStatuses.add(new ScanRangeStatus(
@@ -129,7 +129,7 @@ public class ScanPlan {
         }
 
         return new ScanStatus(_scanId, _options, false, false, new Date(), pendingRangeStatuses,
-                ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of());
+                ImmutableList.of(), ImmutableList.of());
     }
 
     public static class PlanItem {

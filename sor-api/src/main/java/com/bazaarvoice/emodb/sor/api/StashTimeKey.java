@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.sor.api;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public final class StashTimeKey {
 
@@ -10,8 +10,8 @@ public final class StashTimeKey {
     private final String _datacenter;
 
     public StashTimeKey(String id, String datacenter) {
-        _id = checkNotNull(id, "id");
-        _datacenter = checkNotNull(datacenter, "datacenter");
+        _id = requireNonNull(id, "id");
+        _datacenter = requireNonNull(datacenter, "datacenter");
     }
 
     public static StashTimeKey of(String id, String datacenter) {

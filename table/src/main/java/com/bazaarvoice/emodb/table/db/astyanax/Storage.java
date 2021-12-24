@@ -13,7 +13,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static com.bazaarvoice.emodb.table.db.astyanax.RowKeyUtils.LEGACY_SHARDS_LOG2;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Wrapper around the json table storage metadata for a specific table uuid.
@@ -113,8 +113,8 @@ class Storage extends JsonMap implements Comparable<Storage> {
     private List<Storage> _group;
 
     Storage(String uuid, Map<String, Object> json, boolean masterPrimary) {
-        super(checkNotNull(json, "missing storage json for uuid: %s", uuid));
-        _uuid = checkNotNull(uuid, "uuid");
+        super(requireNonNull(json, String.format("missing storage json for uuid: %s", uuid)));
+        _uuid = requireNonNull(uuid, "uuid");
         _masterPrimary = masterPrimary;
     }
 

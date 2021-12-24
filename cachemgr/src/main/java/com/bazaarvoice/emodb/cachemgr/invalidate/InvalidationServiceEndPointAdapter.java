@@ -13,7 +13,7 @@ import javax.ws.rs.core.UriBuilder;
 import java.net.URI;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class InvalidationServiceEndPointAdapter {
     private final String _serviceName;
@@ -24,9 +24,9 @@ public class InvalidationServiceEndPointAdapter {
     public InvalidationServiceEndPointAdapter(@InvalidationService String serviceName,
                                               @SelfHostAndPort HostAndPort self,
                                               @SelfAdminHostAndPort HostAndPort selfAdmin) {
-        _serviceName = checkNotNull(serviceName, "serviceName");
-        _self = checkNotNull(self, "self");
-        _selfAdmin = checkNotNull(selfAdmin, "selfAdmin");
+        _serviceName = requireNonNull(serviceName, "serviceName");
+        _self = requireNonNull(self, "self");
+        _selfAdmin = requireNonNull(selfAdmin, "selfAdmin");
     }
 
     public String getServiceName() {
@@ -51,7 +51,7 @@ public class InvalidationServiceEndPointAdapter {
     public String toEndPointAddress(ServiceEndPoint endPoint) {
         String payload = endPoint.getPayload();
         Map<?,?> payloadMap = JsonHelper.fromJson(payload, Map.class);
-        return (String) checkNotNull(payloadMap.get("invalidateUrl"), "invalidateUrl");
+        return (String) requireNonNull(payloadMap.get("invalidateUrl"), "invalidateUrl");
     }
 
     public String toEndPointAddress(URI adminUrl) {

@@ -50,7 +50,6 @@ import com.bazaarvoice.ostrich.discovery.FixedHostDiscovery;
 import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -77,6 +76,7 @@ import org.slf4j.LoggerFactory;
 import java.net.URI;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -163,7 +163,7 @@ public class SecurityModule extends PrivateModule {
                 .withRealmName(REALM_NAME)
                 .withAuthIdentityReader(authIdentityReader)
                 .withPermissionReader(permissionReader)
-                .withAnonymousAccessAs(anonymousKey.orNull())
+                .withAnonymousAccessAs(anonymousKey.orElse(null))
                 .withCacheManager(cacheManager)
                 .build();
     }
@@ -226,7 +226,7 @@ public class SecurityModule extends PrivateModule {
         if (!anonymousRoles.isEmpty()) {
             return Optional.of(ANONYMOUS_KEY);
         }
-        return Optional.absent();
+        return Optional.empty();
     }
 
     /**

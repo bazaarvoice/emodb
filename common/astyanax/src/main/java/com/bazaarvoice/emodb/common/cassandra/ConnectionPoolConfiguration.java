@@ -1,7 +1,8 @@
 package com.bazaarvoice.emodb.common.cassandra;
 
-import com.google.common.base.Optional;
 import io.dropwizard.util.Size;
+
+import java.util.Optional;
 
 /**
  * Interface for configuring the Cassandra cluster connection pool.  Note that depending on whether the Astyanax or
@@ -10,7 +11,9 @@ import io.dropwizard.util.Size;
 public interface ConnectionPoolConfiguration {
 
     Optional<Integer> getInitialConnectionsPerHost();
+
     Optional<Integer> getMaxConnectionsPerHost();
+
     Optional<Integer> getCoreConnectionsPerHost();
     Optional<Integer> getSocketTimeout();
     Optional<Integer> getConnectTimeout();

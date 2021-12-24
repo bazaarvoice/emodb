@@ -7,7 +7,7 @@ import com.bazaarvoice.ostrich.ServiceEndPoint;
 import com.bazaarvoice.ostrich.partition.ConsistentHashPartitionFilter;
 import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Service factory for a SubjectDatabus.  Implementation is a thin wrapper around an {@link AuthDatabus}
@@ -23,7 +23,7 @@ public class SubjectDatabusClientFactory implements MultiThreadedServiceFactory<
     private final MultiThreadedServiceFactory<AuthDatabus> _authDatabusFactory;
 
     public SubjectDatabusClientFactory(MultiThreadedServiceFactory<AuthDatabus> authDatabusFactory) {
-        _authDatabusFactory = checkNotNull(authDatabusFactory, "authDatabusFactory");
+        _authDatabusFactory = requireNonNull(authDatabusFactory, "authDatabusFactory");
     }
 
     @Override

@@ -87,8 +87,8 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Managed {
 
@@ -175,7 +175,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
         _databusAuthorizer = databusAuthorizer;
         _systemOwnerId = systemOwnerId;
         _defaultJoinFilterCondition = defaultJoinFilterCondition;
-        _drainService = checkNotNull(drainService, "drainService");
+        _drainService = requireNonNull(drainService, "drainService");
         _masterPartitionSelector = masterPartitionSelector;
         _ticker = ClockTicker.getTicker(clock);
         _clock = clock;
@@ -210,8 +210,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
             masterFanoutChannels.add(ChannelNames.getMasterFanoutChannel(partition));
         }
         _masterFanoutChannels = masterFanoutChannels.build();
-        
-        checkNotNull(jobHandlerRegistry, "jobHandlerRegistry");
+
+        requireNonNull(jobHandlerRegistry, "jobHandlerRegistry");
         registerMoveSubscriptionJobHandler(jobHandlerRegistry);
         registerReplaySubscriptionJobHandler(jobHandlerRegistry);
     }
@@ -343,7 +343,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
         // This call should be deprecated soon.
         checkLegalSubscriptionName(subscription);
         checkSubscriptionOwner(ownerId, subscription);
-        checkNotNull(tableFilter, "tableFilter");
+        requireNonNull(tableFilter, "tableFilter");
         checkArgument(subscriptionTtl.compareTo(Duration.ZERO) > 0, "SubscriptionTtl must be >0");
         checkArgument(subscriptionTtl.compareTo(MAX_SUBSCRIPTION_TTL) <= 0, "Subscription TTL duration limit is 10 years. The value cannot go beyond that.");
         checkArgument(eventTtl.compareTo(Duration.ZERO) > 0, "EventTtl must be >0");
@@ -800,7 +800,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
     @Override
     public void renew(String ownerId, String subscription, Collection<String> eventKeys, Duration claimTtl) {
         checkLegalSubscriptionName(subscription);
-        checkNotNull(eventKeys, "eventKeys");
+        requireNonNull(eventKeys, "eventKeys");
         checkArgument(claimTtl.compareTo(Duration.ZERO) >= 0, "ClaimTtl must be >=0");
         checkSubscriptionOwner(ownerId, subscription);
 
@@ -811,7 +811,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
     @Override
     public void acknowledge(String ownerId, String subscription, Collection<String> eventKeys) {
         checkLegalSubscriptionName(subscription);
-        checkNotNull(eventKeys, "eventKeys");
+        requireNonNull(eventKeys, "eventKeys");
         checkSubscriptionOwner(ownerId, subscription);
 
         _eventStore.delete(subscription, EventKeyFormat.decodeAll(eventKeys), true);
@@ -849,7 +849,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
 
     @Override
     public ReplaySubscriptionStatus getReplayStatus(String ownerId, String reference) {
-        checkNotNull(reference, "reference");
+        requireNonNull(reference, "reference");
 
         JobIdentifier<ReplaySubscriptionRequest, ReplaySubscriptionResult> jobId;
         try {
@@ -900,7 +900,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
 
     @Override
     public MoveSubscriptionStatus getMoveStatus(String ownerId, String reference) {
-        checkNotNull(reference, "reference");
+        requireNonNull(reference, "reference");
 
         JobIdentifier<MoveSubscriptionRequest, MoveSubscriptionResult> jobId;
         try {
@@ -974,7 +974,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
     }
 
     private void checkSubscriptionOwner(String ownerId, OwnedSubscription subscription) {
-        checkNotNull(ownerId, "ownerId");
+        requireNonNull(ownerId, "ownerId");
         if (subscription != null) {
             // Grandfather-in subscriptions created before ownership was introduced.  This should be a temporary issue
             // since the subscriptions will need to renew at some point or expire.

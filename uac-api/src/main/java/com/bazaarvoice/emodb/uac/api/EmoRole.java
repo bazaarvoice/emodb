@@ -5,13 +5,13 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableSet;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Role object for an Emo role.  Each role is uniquely identified by a {@link EmoRoleKey}.  Although it is useful
@@ -29,11 +29,11 @@ public class EmoRole {
     private EmoRole(@JsonProperty("group") String group, @JsonProperty("id") String id) {
         this(new EmoRoleKey(
                 Optional.ofNullable(group).orElse(EmoRoleKey.NO_GROUP),
-                checkNotNull(id, "id")));
+                requireNonNull(id, "id")));
     }
 
     public EmoRole(EmoRoleKey id) {
-        _id = checkNotNull(id, "id");
+        _id = requireNonNull(id, "id");
     }
 
     @JsonProperty("group")
@@ -88,8 +88,8 @@ public class EmoRole {
         EmoRole emoRole = (EmoRole) o;
 
         return _id.equals(emoRole.getId()) &&
-                Objects.equal(_name, emoRole.getName()) &&
-                Objects.equal(_description, emoRole.getDescription()) &&
+                Objects.equals(_name, emoRole.getName()) &&
+                Objects.equals(_description, emoRole.getDescription()) &&
                 _permissions.equals(emoRole.getPermissions());
     }
 

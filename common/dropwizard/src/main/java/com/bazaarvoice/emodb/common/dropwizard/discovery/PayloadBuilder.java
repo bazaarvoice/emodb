@@ -9,8 +9,8 @@ import java.util.Collections;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Builder for constructing instances of {@link Payload}.
@@ -42,7 +42,7 @@ public class PayloadBuilder implements Cloneable {
      * Sets the protocol, ie. "http" or "https".
      */
     public PayloadBuilder withScheme(String scheme) {
-        _scheme = checkNotNull(scheme, "scheme");
+        _scheme = requireNonNull(scheme, "scheme");
         return this;
     }
 
@@ -56,7 +56,7 @@ public class PayloadBuilder implements Cloneable {
     }
 
     public PayloadBuilder withHost(String host) {
-        _host = checkNotNull(host, "host");
+        _host = requireNonNull(host, "host");
         return this;
     }
 
@@ -67,12 +67,12 @@ public class PayloadBuilder implements Cloneable {
     }
 
     public PayloadBuilder withPath(String path) {
-        _path = checkNotNull(path, "path");
+        _path = requireNonNull(path, "path");
         return this;
     }
 
     public PayloadBuilder withUrl(URI url) {
-        _url = checkNotNull(url, "url");
+        _url = requireNonNull(url, "url");
         return this;
     }
 
@@ -83,12 +83,12 @@ public class PayloadBuilder implements Cloneable {
     }
 
     public PayloadBuilder withAdminPath(String adminPath) {
-        _adminPath = checkNotNull(adminPath, "adminPath");
+        _adminPath = requireNonNull(adminPath, "adminPath");
         return this;
     }
 
     public PayloadBuilder withAdminUrl(URI adminUrl) {
-        _adminUrl = checkNotNull(adminUrl, "adminUrl");
+        _adminUrl = requireNonNull(adminUrl, "adminUrl");
         return this;
     }
 
@@ -116,7 +116,7 @@ public class PayloadBuilder implements Cloneable {
 
     private String getPath(Class<?> resourceType) {
         Path path = resourceType.getAnnotation(Path.class);
-        checkNotNull(path, "The resource %s is not annotated with @Path", resourceType.getName());
+        requireNonNull(path, String.format("The resource %s is not annotated with @Path", resourceType.getName()));
         return path.value();
     }
 

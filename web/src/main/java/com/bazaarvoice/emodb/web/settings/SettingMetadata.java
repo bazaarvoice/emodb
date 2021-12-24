@@ -1,9 +1,9 @@
 package com.bazaarvoice.emodb.web.settings;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Objects;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.hash;
+import static java.util.Objects.requireNonNull;
 
 /**
  * POJO for metadata about a setting, namely:
@@ -21,9 +21,9 @@ public class SettingMetadata<T> {
     private final T _defaultValue;
 
     public SettingMetadata(String name, TypeReference<T> typeReference, T defaultValue) {
-        _name = checkNotNull(name);
-        _typeReference = checkNotNull(typeReference, "type");
-        _defaultValue = checkNotNull(defaultValue, "defaultValue");
+        _name = requireNonNull(name);
+        _typeReference = requireNonNull(typeReference, "type");
+        _defaultValue = requireNonNull(defaultValue, "defaultValue");
     }
 
     public String getName() {
@@ -56,6 +56,6 @@ public class SettingMetadata<T> {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_name, _defaultValue);
+        return hash(_name, _defaultValue);
     }
 }

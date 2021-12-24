@@ -11,7 +11,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * This class manages all system-wide ad-hoc throttles.  Clients can use it to create, remove, and query
@@ -25,14 +25,14 @@ public class AdHocThrottleManager {
 
     @Inject
     public AdHocThrottleManager(@AdHocThrottleMapStore MapStore<AdHocThrottle> throttleMap) {
-        _throttleMap = checkNotNull(throttleMap, "throttleMap");
+        _throttleMap = requireNonNull(throttleMap, "throttleMap");
     }
 
     /**
      * Adds a throttle for an HTTP method and path.
      */
     public void addThrottle(AdHocThrottleEndpoint endpoint, AdHocThrottle throttle) {
-        checkNotNull(throttle, "throttle");
+        requireNonNull(throttle, "throttle");
 
         String key = endpoint.toString();
         try {

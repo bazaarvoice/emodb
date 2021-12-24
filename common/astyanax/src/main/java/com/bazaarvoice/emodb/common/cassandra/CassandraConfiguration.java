@@ -20,7 +20,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -48,9 +47,11 @@ import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Stream;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 
 /**
@@ -96,14 +97,14 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
     private String _seeds;
     private boolean _hostDiscoveryPerformed = false;
 
-    private Optional<Integer> _initialConnectionsPerHost = Optional.absent();
-    private Optional<Integer> _maxConnectionsPerHost = Optional.absent();
-    private Optional<Integer> _coreConnectionsPerHost = Optional.absent();
+    private Optional<Integer> _initialConnectionsPerHost = Optional.empty();
+    private Optional<Integer> _maxConnectionsPerHost = Optional.empty();
+    private Optional<Integer> _coreConnectionsPerHost = Optional.empty();
     private int _thriftPort = ConnectionPoolConfigurationImpl.DEFAULT_PORT;
     private int _cqlPort = ProtocolOptions.DEFAULT_PORT;
-    private Optional<Integer> _socketTimeout = Optional.absent();
-    private Optional<Integer> _connectTimeout = Optional.absent();
-    private Optional<Integer> _maxFailoverCount = Optional.absent();
+    private Optional<Integer> _socketTimeout = Optional.empty();
+    private Optional<Integer> _connectTimeout = Optional.empty();
+    private Optional<Integer> _maxFailoverCount = Optional.empty();
     // not used
     private boolean _latencyAware;
     private int _latencyAwareWindowSize = ConnectionPoolConfigurationImpl.DEFAULT_LATENCY_AWARE_WINDOW_SIZE;
@@ -111,22 +112,22 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
     private float _latencyAwareBadnessThreshold = ConnectionPoolConfigurationImpl.DEFAULT_LATENCY_AWARE_BADNESS_THRESHOLD;
     private int _latencyAwareUpdateInterval = ConnectionPoolConfigurationImpl.DEFAULT_LATENCY_AWARE_UPDATE_INTERVAL;
     private int _latencyAwareResetInterval = ConnectionPoolConfigurationImpl.DEFAULT_LATENCY_AWARE_RESET_INTERVAL;
-    private Optional<Integer> _connectionLimiterWindowSize = Optional.absent();
-    private Optional<Integer> _connectionLimiterMaxPendingCount = Optional.absent();
-    private Optional<Integer> _maxPendingConnectionsPerHost = Optional.absent();
-    private Optional<Integer> _maxBlockedThreadsPerHost = Optional.absent();
-    private Optional<Integer> _maxTimeoutCount = Optional.absent();
-    private Optional<Integer> _timeoutWindow = Optional.absent();
+    private Optional<Integer> _connectionLimiterWindowSize = Optional.empty();
+    private Optional<Integer> _connectionLimiterMaxPendingCount = Optional.empty();
+    private Optional<Integer> _maxPendingConnectionsPerHost = Optional.empty();
+    private Optional<Integer> _maxBlockedThreadsPerHost = Optional.empty();
+    private Optional<Integer> _maxTimeoutCount = Optional.empty();
+    private Optional<Integer> _timeoutWindow = Optional.empty();
     // ExponentialRetryBackoffStrategy configuration
-    private Optional<Integer> _retrySuspendWindow = Optional.absent();
-    private Optional<Integer> _retryDelaySlice = Optional.absent();
-    private Optional<Integer> _retryMaxDelaySlice = Optional.absent();
+    private Optional<Integer> _retrySuspendWindow = Optional.empty();
+    private Optional<Integer> _retryDelaySlice = Optional.empty();
+    private Optional<Integer> _retryMaxDelaySlice = Optional.empty();
     // BagOfConnectionsConnectionPoolImpl configuration
     //    private int _maximumConnections = ConnectionPoolConfigurationImpl.DEFAULT_MAX_CONNS;
     //    private int _maxOperationsPerConnection = ConnectionPoolConfigurationImpl.DEFAULT_MAX_OPERATIONS_PER_CONNECTION;
-    private Optional<Integer> _maxTimeoutWhenExhausted = Optional.absent();
+    private Optional<Integer> _maxTimeoutWhenExhausted = Optional.empty();
     private SimpleAuthenticationCredentials _authenticationCredentials;
-    private Optional<Size> _maxThriftFrameSize = Optional.absent();
+    private Optional<Size> _maxThriftFrameSize = Optional.empty();
 
     //
     // Post-configuration methods
@@ -176,7 +177,7 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
         }
 
         public AstyanaxCluster cluster() {
-            checkNotNull(_cluster, "cluster");
+            requireNonNull(_cluster, "cluster");
             String metricName;
             ConnectionPoolConfiguration poolConfig;
 
@@ -186,7 +187,7 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
                 poolConfig = CassandraConfiguration.this;
             } else {
                 // Use the configuration specifically for this keyspace
-                KeyspaceConfiguration keyspaceConfig = checkNotNull(_keyspaces.get(_keyspace), "keyspaceConfig");
+                KeyspaceConfiguration keyspaceConfig = requireNonNull(_keyspaces.get(_keyspace), "keyspaceConfig");
                 metricName = ofNullable(keyspaceConfig.getKeyspaceMetric()).orElse(_keyspace);
                 poolConfig = keyspaceConfig;
             }
@@ -214,29 +215,6 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
                 new EmaLatencyScoreStrategyImpl(_latencyAwareWindowSize) :
                 new EmptyLatencyScoreStrategyImpl();
 
-        ConnectionPoolConfigurationImpl poolConfiguration = new ConnectionPoolConfigurationImpl(name)
-                .setLocalDatacenter(_dataCenter)
-                .setSeeds(_seeds)
-                .setPartitioner(_partitioner.newAstyanaxPartitioner())
-                .setInitConnsPerHost(poolConfig.getInitialConnectionsPerHost().or(getInitialConnectionsPerHost()).or(ConnectionPoolConfigurationImpl.DEFAULT_INIT_PER_PARTITION))
-                .setMaxConnsPerHost(poolConfig.getMaxConnectionsPerHost().or(getMaxConnectionsPerHost()).or(ConnectionPoolConfigurationImpl.DEFAULT_MAX_ACTIVE_PER_PARTITION))
-                .setPort(_thriftPort)
-                .setSocketTimeout(poolConfig.getSocketTimeout().or(getSocketTimeout()).or(ConnectionPoolConfigurationImpl.DEFAULT_SOCKET_TIMEOUT))
-                .setConnectTimeout(poolConfig.getConnectTimeout().or(getConnectTimeout()).or(ConnectionPoolConfigurationImpl.DEFAULT_CONNECT_TIMEOUT))
-                .setMaxFailoverCount(poolConfig.getMaxFailoverCount().or(getMaxFailoverCount()).or(ConnectionPoolConfigurationImpl.DEFAULT_FAILOVER_COUNT))
-                .setConnectionLimiterWindowSize(poolConfig.getConnectionLimiterWindowSize().or(getConnectionLimiterWindowSize()).or(ConnectionPoolConfigurationImpl.DEFAULT_CONNECTION_LIMITER_WINDOW_SIZE))
-                .setConnectionLimiterMaxPendingCount(poolConfig.getConnectionLimiterMaxPendingCount().or(getConnectionLimiterMaxPendingCount()).or(ConnectionPoolConfigurationImpl.DEFAULT_CONNECTION_LIMITER_MAX_PENDING_COUNT))
-                .setMaxPendingConnectionsPerHost(poolConfig.getMaxPendingConnectionsPerHost().or(getMaxPendingConnectionsPerHost()).or(ConnectionPoolConfigurationImpl.DEFAULT_MAX_PENDING_CONNECTIONS_PER_HOST))
-                .setMaxBlockedThreadsPerHost(poolConfig.getMaxBlockedThreadsPerHost().or(getMaxBlockedThreadsPerHost()).or(ConnectionPoolConfigurationImpl.DEFAULT_MAX_BLOCKED_THREADS_PER_HOST))
-                .setMaxTimeoutCount(poolConfig.getMaxTimeoutCount().or(getMaxTimeoutCount()).or(ConnectionPoolConfigurationImpl.DEFAULT_MAX_TIMEOUT_COUNT))
-                .setTimeoutWindow(poolConfig.getTimeoutWindow().or(getTimeoutWindow()).or(ConnectionPoolConfigurationImpl.DEFAULT_TIMEOUT_WINDOW))
-                .setRetrySuspendWindow(poolConfig.getRetrySuspendWindow().or(getRetrySuspendWindow()).or(ConnectionPoolConfigurationImpl.DEFAULT_RETRY_SUSPEND_WINDOW))
-                .setRetryDelaySlice(poolConfig.getRetryDelaySlice().or(getRetryDelaySlice()).or(ConnectionPoolConfigurationImpl.DEFAULT_RETRY_DELAY_SLICE))
-                .setRetryMaxDelaySlice(poolConfig.getRetryMaxDelaySlice().or(getRetryMaxDelaySlice()).or(ConnectionPoolConfigurationImpl.DEFAULT_RETRY_MAX_DELAY_SLICE))
-                .setMaxTimeoutWhenExhausted(poolConfig.getMaxTimeoutWhenExhausted().or(getMaxTimeoutWhenExhausted()).or(ConnectionPoolConfigurationImpl.DEFAULT_MAX_TIME_WHEN_EXHAUSTED))
-                .setAuthenticationCredentials(_authenticationCredentials)
-                .setLatencyScoreStrategy(latencyScoreStrategy);
-
         CountingConnectionPoolMonitor poolMonitor = _verboseHostLogging ?
                 new Slf4jConnectionPoolMonitorImpl() :
                 new CountingConnectionPoolMonitor();
@@ -252,8 +230,33 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
 
         return new AstyanaxContext.Builder()
                 .withAstyanaxConfiguration(asConfig)
-                .withConnectionPoolConfiguration(poolConfiguration)
+                .withConnectionPoolConfiguration(getConnectionPoolConfiguration(name, poolConfig, latencyScoreStrategy))
                 .withConnectionPoolMonitor(poolMonitor);
+    }
+
+    private ConnectionPoolConfigurationImpl getConnectionPoolConfiguration(String name, ConnectionPoolConfiguration poolConfig, LatencyScoreStrategy latencyScoreStrategy) {
+        return new ConnectionPoolConfigurationImpl(name)
+                .setLocalDatacenter(_dataCenter)
+                .setSeeds(_seeds)
+                .setPartitioner(_partitioner.newAstyanaxPartitioner())
+                .setInitConnsPerHost(or(poolConfig.getInitialConnectionsPerHost(), getInitialConnectionsPerHost()).orElse(ConnectionPoolConfigurationImpl.DEFAULT_INIT_PER_PARTITION))
+                .setMaxConnsPerHost(or(poolConfig.getMaxConnectionsPerHost(), getMaxConnectionsPerHost()).orElse(ConnectionPoolConfigurationImpl.DEFAULT_MAX_ACTIVE_PER_PARTITION))
+                .setPort(_thriftPort)
+                .setSocketTimeout(or(poolConfig.getSocketTimeout(), getSocketTimeout()).orElse(ConnectionPoolConfigurationImpl.DEFAULT_SOCKET_TIMEOUT))
+                .setConnectTimeout(or(poolConfig.getConnectTimeout(), getConnectTimeout()).orElse(ConnectionPoolConfigurationImpl.DEFAULT_CONNECT_TIMEOUT))
+                .setMaxFailoverCount(or(poolConfig.getMaxFailoverCount(), getMaxFailoverCount()).orElse(ConnectionPoolConfigurationImpl.DEFAULT_FAILOVER_COUNT))
+                .setConnectionLimiterWindowSize(or(poolConfig.getConnectionLimiterWindowSize(), getConnectionLimiterWindowSize()).orElse(ConnectionPoolConfigurationImpl.DEFAULT_CONNECTION_LIMITER_WINDOW_SIZE))
+                .setConnectionLimiterMaxPendingCount(or(poolConfig.getConnectionLimiterMaxPendingCount(), getConnectionLimiterMaxPendingCount()).orElse(ConnectionPoolConfigurationImpl.DEFAULT_CONNECTION_LIMITER_MAX_PENDING_COUNT))
+                .setMaxPendingConnectionsPerHost(or(poolConfig.getMaxPendingConnectionsPerHost(), getMaxPendingConnectionsPerHost()).orElse(ConnectionPoolConfigurationImpl.DEFAULT_MAX_PENDING_CONNECTIONS_PER_HOST))
+                .setMaxBlockedThreadsPerHost(or(poolConfig.getMaxBlockedThreadsPerHost(), getMaxBlockedThreadsPerHost()).orElse(ConnectionPoolConfigurationImpl.DEFAULT_MAX_BLOCKED_THREADS_PER_HOST))
+                .setMaxTimeoutCount(or(poolConfig.getMaxTimeoutCount(), getMaxTimeoutCount()).orElse(ConnectionPoolConfigurationImpl.DEFAULT_MAX_TIMEOUT_COUNT))
+                .setTimeoutWindow(or(poolConfig.getTimeoutWindow(), getTimeoutWindow()).orElse(ConnectionPoolConfigurationImpl.DEFAULT_TIMEOUT_WINDOW))
+                .setRetrySuspendWindow(or(poolConfig.getRetrySuspendWindow(), getRetrySuspendWindow()).orElse(ConnectionPoolConfigurationImpl.DEFAULT_RETRY_SUSPEND_WINDOW))
+                .setRetryDelaySlice(or(poolConfig.getRetryDelaySlice(), getRetryDelaySlice()).orElse(ConnectionPoolConfigurationImpl.DEFAULT_RETRY_DELAY_SLICE))
+                .setRetryMaxDelaySlice(or(poolConfig.getRetryMaxDelaySlice(), getRetryMaxDelaySlice()).orElse(ConnectionPoolConfigurationImpl.DEFAULT_RETRY_MAX_DELAY_SLICE))
+                .setMaxTimeoutWhenExhausted(or(poolConfig.getMaxTimeoutWhenExhausted(), getMaxTimeoutWhenExhausted()).orElse(ConnectionPoolConfigurationImpl.DEFAULT_MAX_TIME_WHEN_EXHAUSTED))
+                .setAuthenticationCredentials(_authenticationCredentials)
+                .setLatencyScoreStrategy(latencyScoreStrategy);
     }
 
     public Cql cql() {
@@ -269,8 +272,8 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
         private boolean _disableClusterMetrics = false;
         private LoadBalancingPolicy _loadBalancingPolicy;
         private RetryPolicy _retryPolicy;
-        private Optional<Integer> _maxConnectionsPerHost = Optional.absent();
-        private Optional<Integer> _coreConnectionsPerHost = Optional.absent();
+        private Optional<Integer> _maxConnectionsPerHost = Optional.empty();
+        private Optional<Integer> _coreConnectionsPerHost = Optional.empty();
 
         private Cql() {
             // empty
@@ -312,7 +315,7 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
         }
 
         public CqlCluster cluster() {
-            checkNotNull(_cluster, "cluster");
+            requireNonNull(_cluster, "cluster");
             String metricName;
             FilterConnectionPoolConfiguration poolConfig;
 
@@ -322,7 +325,7 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
                 poolConfig = new FilterConnectionPoolConfiguration(CassandraConfiguration.this);
             } else {
                 // Use the configuration specifically for this keyspace
-                KeyspaceConfiguration keyspaceConfig = checkNotNull(_keyspaces.get(_keyspace), "keyspaceConfig");
+                KeyspaceConfiguration keyspaceConfig = requireNonNull(_keyspaces.get(_keyspace), "keyspaceConfig");
                 metricName = ofNullable(keyspaceConfig.getKeyspaceMetric()).orElse(_keyspace);
                 poolConfig = new FilterConnectionPoolConfiguration(keyspaceConfig);
             }
@@ -379,19 +382,24 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
         }
 
         PoolingOptions poolingOptions = new PoolingOptions();
-        if (poolConfig.getMaxConnectionsPerHost().or(getMaxConnectionsPerHost()).isPresent()) {
-            poolingOptions.setMaxConnectionsPerHost(HostDistance.LOCAL, poolConfig.getMaxConnectionsPerHost().or(getMaxConnectionsPerHost()).get());
+
+        Optional<Integer> maxConnectionsPerHost = or(poolConfig.getMaxConnectionsPerHost(), getMaxConnectionsPerHost());
+        if (maxConnectionsPerHost.isPresent()) {
+            poolingOptions.setMaxConnectionsPerHost(HostDistance.LOCAL, maxConnectionsPerHost.get());
         }
-        if (poolConfig.getCoreConnectionsPerHost().or(getCoreConnectionsPerHost()).isPresent()) {
-            poolingOptions.setCoreConnectionsPerHost(HostDistance.LOCAL, poolConfig.getCoreConnectionsPerHost().or(getCoreConnectionsPerHost()).get());
+        Optional<Integer> coreConnectionsPerHost = or(poolConfig.getCoreConnectionsPerHost(), getCoreConnectionsPerHost());
+        if (coreConnectionsPerHost.isPresent()) {
+            poolingOptions.setCoreConnectionsPerHost(HostDistance.LOCAL, coreConnectionsPerHost.get());
         }
 
         SocketOptions socketOptions = new SocketOptions();
-        if (poolConfig.getConnectTimeout().or(getConnectTimeout()).isPresent()) {
-            socketOptions.setConnectTimeoutMillis(poolConfig.getConnectTimeout().or(getConnectTimeout()).get());
+        Optional<Integer> connectTimeout = or(poolConfig.getConnectTimeout(), getConnectTimeout());
+        if (connectTimeout.isPresent()) {
+            socketOptions.setConnectTimeoutMillis(connectTimeout.get());
         }
-        if (poolConfig.getSocketTimeout().or(getSocketTimeout()).isPresent()) {
-            socketOptions.setReadTimeoutMillis(poolConfig.getSocketTimeout().or(getSocketTimeout()).get());
+        Optional<Integer> socketTimeout = or(poolConfig.getSocketTimeout(), getSocketTimeout());
+        if (socketTimeout.isPresent()) {
+            socketOptions.setReadTimeoutMillis(socketTimeout.get());
         }
 
         AuthProvider authProvider = _authenticationCredentials != null
@@ -405,6 +413,13 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
                 .withSocketOptions(socketOptions)
                 .withRetryPolicy(Policies.defaultRetryPolicy())
                 .withAuthProvider(authProvider);
+    }
+
+    private static <T> Optional<T> or(Optional<T>... values) {
+        return Stream.of(values)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
     }
 
     /**

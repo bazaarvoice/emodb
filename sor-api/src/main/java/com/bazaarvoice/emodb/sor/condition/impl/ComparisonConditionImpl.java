@@ -4,7 +4,6 @@ import com.bazaarvoice.emodb.sor.condition.Comparison;
 import com.bazaarvoice.emodb.sor.condition.ComparisonCondition;
 import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
 import com.bazaarvoice.emodb.sor.delta.deser.DeltaJson;
-import com.google.common.base.Objects;
 import com.google.common.io.CharStreams;
 
 import javax.annotation.Nullable;
@@ -12,7 +11,8 @@ import java.io.IOException;
 import java.io.Writer;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.hash;
+import static java.util.Objects.requireNonNull;
 
 public class ComparisonConditionImpl extends AbstractCondition implements ComparisonCondition {
 
@@ -20,8 +20,8 @@ public class ComparisonConditionImpl extends AbstractCondition implements Compar
     private final Object _value;
 
     public ComparisonConditionImpl(Comparison comparison, Object value) {
-        _comparison = checkNotNull(comparison, "comparison");
-        _value = checkNotNull(value, "value");
+        _comparison = requireNonNull(comparison, "comparison");
+        _value = requireNonNull(value, "value");
         checkArgument(value instanceof Number || value instanceof String, "%s only supports numbers and strings", comparison.getDeltaFunction());
     }
 
@@ -147,6 +147,6 @@ public class ComparisonConditionImpl extends AbstractCondition implements Compar
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_comparison, _value);
+        return hash(_comparison, _value);
     }
 }

@@ -13,7 +13,6 @@ import com.datastax.driver.core.VersionNumber;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +25,7 @@ import javax.management.ReflectionException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static java.lang.String.format;
@@ -77,7 +77,7 @@ public class ClusterHintsPoller {
                         LOGGER.debug("In progress hints found on host: {}", host.getAddress());
                         hintsPollerResult.setHostWithFailure(host.getAddress());
                     } else {
-                        hintsPollerResult.setHintsResult(host.getAddress(), Optional.absent());
+                        hintsPollerResult.setHintsResult(host.getAddress(), Optional.empty());
                     }
                 } catch (IOException | MalformedObjectNameException | AttributeNotFoundException | InstanceNotFoundException | MBeanException | ReflectionException e) {
                     LOGGER.warn("Couldn't fetch Hints JMX metrics on host: '{}'\n{}", host.getAddress(), e.getMessage());
@@ -106,7 +106,7 @@ public class ClusterHintsPoller {
                 // If no targetIDs are found, then it means there are not hints on the node. No need to query for oldest hint.
                 if (targetIds.isEmpty()) {
                     LOGGER.debug("Cassandra cluster: '{}', Node: '{}',  NO hints", clusterName, host);
-                    hintsPollerResult.setHintsResult(host.getAddress(), Optional.absent());
+                    hintsPollerResult.setHintsResult(host.getAddress(), Optional.empty());
                     continue;
                 }
 
@@ -125,7 +125,7 @@ public class ClusterHintsPoller {
                 if ((oldestHintId = hintIdsResult.one()) == null) {
                     // It is possible that by this time all hints were cleared, and we returned nothing
                     LOGGER.debug("Cassandra cluster: '{}', Node: '{}',  NO hints", clusterName, host);
-                    hintsPollerResult.setHintsResult(host.getAddress(), Optional.absent());
+                    hintsPollerResult.setHintsResult(host.getAddress(), Optional.empty());
                     continue;
                 }
 
@@ -142,7 +142,7 @@ public class ClusterHintsPoller {
                     hintsPollerResult.setHintsResult(host.getAddress(), Optional.of(timeInMillis));
                 } else {
                     LOGGER.debug("Cassandra cluster: '{}', Node: '{}',  NO hints", clusterName, host);
-                    hintsPollerResult.setHintsResult(host.getAddress(), Optional.absent());
+                    hintsPollerResult.setHintsResult(host.getAddress(), Optional.empty());
                 }
             }
         }

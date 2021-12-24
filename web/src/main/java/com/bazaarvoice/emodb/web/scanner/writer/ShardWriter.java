@@ -2,13 +2,13 @@ package com.bazaarvoice.emodb.web.scanner.writer;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
 import com.google.common.io.Closeables;
 
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Map;
+import java.util.Optional;
 
 abstract public class ShardWriter implements ScanDestinationWriter {
     private final EmptyCheckedOutputStream _out;

@@ -7,7 +7,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public abstract class Intrinsic {
     // Data Fields
@@ -36,11 +36,11 @@ public abstract class Intrinsic {
     private Intrinsic() {}
 
     public static String getId(Map<String, ?> content) {
-        return (String) checkNotNull(content.get(ID), ID);
+        return (String) requireNonNull(content.get(ID), ID);
     }
 
     public static String getTable(Map<String, ?> content) {
-        return (String) checkNotNull(content.get(TABLE), TABLE);
+        return (String) requireNonNull(content.get(TABLE), TABLE);
     }
 
     public static Long getVersion(Map<String, ?> content) {
@@ -49,11 +49,11 @@ public abstract class Intrinsic {
     }
 
     public static String getSignature(Map<String, ?> content) {
-        return (String) checkNotNull(content.get(SIGNATURE), SIGNATURE);
+        return (String) requireNonNull(content.get(SIGNATURE), SIGNATURE);
     }
 
     public static boolean isDeleted(Map<String, ?> content) {
-        return (Boolean) checkNotNull(content.get(DELETED), DELETED);
+        return (Boolean) requireNonNull(content.get(DELETED), DELETED);
     }
 
     public static Date getFirstUpdateAt(Map<String, ?> content) {

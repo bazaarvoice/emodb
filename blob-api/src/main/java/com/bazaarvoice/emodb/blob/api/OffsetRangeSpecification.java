@@ -1,10 +1,11 @@
 package com.bazaarvoice.emodb.blob.api;
 
-import com.google.common.base.Objects;
-
 import javax.annotation.Nullable;
 
+import java.util.Objects;
+
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.hash;
 
 /**
  * Range specification for a subset of a blob starting at a particular offset.
@@ -40,12 +41,12 @@ class OffsetRangeSpecification implements RangeSpecification {
             return false;
         }
         OffsetRangeSpecification offsetRange = (OffsetRangeSpecification) o;
-        return _offset == offsetRange._offset && Objects.equal(_length, offsetRange._length);
+        return _offset == offsetRange._offset && Objects.equals(_length, offsetRange._length);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_offset, _length);
+        return hash(_offset, _length);
     }
 
     @Override

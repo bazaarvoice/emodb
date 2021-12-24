@@ -40,7 +40,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Copies events from the "__system_bus:master" event channel or an inbound replication channel to the individual
@@ -97,16 +97,16 @@ public class DefaultFanout extends AbstractScheduledService {
                          SubscriptionEvaluator subscriptionEvaluator,
                          FanoutLagMonitor fanoutLagMonitor,
                          MetricRegistry metricRegistry, Clock clock) {
-        _name = checkNotNull(name, "name");
-        checkNotNull(partitionName, "partitionName");
-        _eventSource = checkNotNull(eventSource, "eventSource");
-        _eventSink = checkNotNull(eventSink, "eventSink");
+        _name = requireNonNull(name, "name");
+        requireNonNull(partitionName, "partitionName");
+        _eventSource = requireNonNull(eventSource, "eventSource");
+        _eventSink = requireNonNull(eventSink, "eventSink");
         _replicateOutbound = outboundPartitionSelector != null;
         _outboundPartitionSelector = outboundPartitionSelector;
-        _sleepWhenIdle = checkNotNull(sleepWhenIdle, "sleepWhenIdle");
-        _subscriptionsSupplier = checkNotNull(subscriptionsSupplier, "subscriptionsSupplier");
-        _currentDataCenter = checkNotNull(currentDataCenter, "currentDataCenter");
-        _subscriptionEvaluator = checkNotNull(subscriptionEvaluator, "subscriptionEvaluator");
+        _sleepWhenIdle = requireNonNull(sleepWhenIdle, "sleepWhenIdle");
+        _subscriptionsSupplier = requireNonNull(subscriptionsSupplier, "subscriptionsSupplier");
+        _currentDataCenter = requireNonNull(currentDataCenter, "currentDataCenter");
+        _subscriptionEvaluator = requireNonNull(subscriptionEvaluator, "subscriptionEvaluator");
 
         _rateLimitedLog = logFactory.from(_log);
         _eventsRead = newEventMeter("read", metricRegistry);
@@ -123,7 +123,7 @@ public class DefaultFanout extends AbstractScheduledService {
         _fetchMatchEventDataTimer = metricRegistry.timer(metricName("fetch-match-event-data"));
         _eventFlushTimer = metricRegistry.timer(metricName("flush-events"));
 
-        _lagGauge = checkNotNull(fanoutLagMonitor, "fanoutLagMonitor").createForFanout(name, partitionName);
+        _lagGauge = requireNonNull(fanoutLagMonitor, "fanoutLagMonitor").createForFanout(name, partitionName);
         _lastLagStopwatch = Stopwatch.createStarted(ClockTicker.getTicker(clock));
         _clock = clock;
         ServiceFailureListener.listenTo(this, metricRegistry);

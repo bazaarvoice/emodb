@@ -15,7 +15,6 @@ import com.bazaarvoice.emodb.table.db.MoveType;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableDAO;
 import com.bazaarvoice.emodb.table.db.TableSet;
-import com.google.common.base.Optional;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -32,6 +31,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static java.lang.String.format;
 
@@ -172,9 +172,9 @@ public class InMemoryTableDAO implements TableDAO {
                                 throws Exception {
                             Table table = _uuidToTable.get(uuid);
                             if (table == null) {
-                                return Optional.absent();
+                                return Optional.empty();
                             }
-                            return Optional.<Table>of(new InMemoryTable(table.getName(), table.getOptions(),
+                            return Optional.of(new InMemoryTable(table.getName(), table.getOptions(),
                                     ImmutableMap.copyOf(table.getAttributes()), table.isFacade()));
                         }
                     });

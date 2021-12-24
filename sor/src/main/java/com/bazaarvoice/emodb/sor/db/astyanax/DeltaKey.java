@@ -5,6 +5,8 @@ import com.netflix.astyanax.annotations.Component;
 import java.util.Objects;
 import java.util.UUID;
 
+import static java.util.Objects.hash;
+
 public class DeltaKey {
 
     private @Component(ordinal=0) UUID _changeId;
@@ -29,7 +31,7 @@ public class DeltaKey {
 
     @Override
     public int hashCode() {
-        return Objects.hash(_changeId, _block);
+        return hash(_changeId, _block);
     }
 
     @Override
@@ -38,7 +40,7 @@ public class DeltaKey {
         if (obj == null) return false;
         if (!(obj instanceof DeltaKey)) return false;
         DeltaKey other = (DeltaKey) obj;
-        return com.google.common.base.Objects.equal(_changeId, other.getChangeId()) && com.google.common.base.Objects.equal(_block, other.getBlock());
+        return Objects.equals(_changeId, other.getChangeId()) && Objects.equals(_block, other.getBlock());
     }
 
     public DeltaKey clone() {

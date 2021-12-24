@@ -54,7 +54,7 @@ public class HintsPollerTest extends BaseRoleConnectHelper {
         Assert.assertNotNull(oldestHintsInfo);
 
         // Since we know there should be only one entry
-        long retrievedHintTimeStamp = oldestHintsInfo.getOldestHintTimestamp().or(Long.MAX_VALUE);
+        long retrievedHintTimeStamp = oldestHintsInfo.getOldestHintTimestamp().orElse(Long.MAX_VALUE);
 
         Assert.assertEquals(retrievedHintTimeStamp, hintTimestamp);
 
@@ -96,7 +96,7 @@ public class HintsPollerTest extends BaseRoleConnectHelper {
         Assert.assertNotNull(oldestHintsInfo);
         Assert.assertEquals(oldestHintsInfo.getAllPolledHosts().size(), 2);
 
-        long retrievedHintTimeStamp = oldestHintsInfo.getOldestHintTimestamp().or(Long.MAX_VALUE);
+        long retrievedHintTimeStamp = oldestHintsInfo.getOldestHintTimestamp().orElse(Long.MAX_VALUE);
 
         Assert.assertEquals(retrievedHintTimeStamp, hintTimestamp);
 

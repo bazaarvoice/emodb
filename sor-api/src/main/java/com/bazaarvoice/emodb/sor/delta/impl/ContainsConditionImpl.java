@@ -4,7 +4,6 @@ import com.bazaarvoice.emodb.common.json.OrderedJson;
 import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
 import com.bazaarvoice.emodb.sor.condition.ContainsCondition;
 import com.google.common.base.Joiner;
-import com.google.common.base.Objects;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Sets;
 
@@ -12,7 +11,8 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.hash;
+import static java.util.Objects.requireNonNull;
 
 public class ContainsConditionImpl implements ContainsCondition {
 
@@ -26,7 +26,7 @@ public class ContainsConditionImpl implements ContainsCondition {
     }
 
     public ContainsConditionImpl(Set<Object> values, Containment containment) {
-        _values = checkNotNull(values, "values");
+        _values = requireNonNull(values, "values");
         // If there is only a single value with "contains any" then "contains all" is implied
         if (values.size() == 1 &&  containment == Containment.ANY) {
             _containment = Containment.ALL;
@@ -52,7 +52,7 @@ public class ContainsConditionImpl implements ContainsCondition {
 
     @Override
     public boolean isSubsetOf(ContainsCondition condition) {
-        checkNotNull(condition, "condition");
+        requireNonNull(condition, "condition");
 
         Set<Object> lValues = getValues();
         Set<Object> rValues = condition.getValues();
@@ -138,7 +138,7 @@ public class ContainsConditionImpl implements ContainsCondition {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_values, _containment);
+        return hash(_values, _containment);
     }
 
     @Override

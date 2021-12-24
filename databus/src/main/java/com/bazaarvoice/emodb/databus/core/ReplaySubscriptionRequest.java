@@ -8,7 +8,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.annotation.Nullable;
 import java.util.Date;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 @JsonInclude (JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties (ignoreUnknown = true)
@@ -23,8 +23,8 @@ public class ReplaySubscriptionRequest {
     public ReplaySubscriptionRequest(@JsonProperty ("ownerId") String ownerId,
                                      @JsonProperty ("subscription") String subscription,
                                      @JsonProperty ("since") @Nullable Date since) {
-        _ownerId = checkNotNull(ownerId, "ownerId");
-        _subscription = checkNotNull(subscription, "subscription");
+        _ownerId = requireNonNull(ownerId, "ownerId");
+        _subscription = requireNonNull(subscription, "subscription");
         _since = since;
     }
 
