@@ -2,7 +2,6 @@ package com.bazaarvoice.emodb.web.scanner.writer;
 
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -13,6 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * ScanWriter implementation which discards scan files but goes through the usual motions.  Useful for unit testing

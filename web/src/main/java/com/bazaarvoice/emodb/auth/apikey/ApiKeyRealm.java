@@ -10,7 +10,6 @@ import com.bazaarvoice.emodb.auth.shiro.PrincipalWithRoles;
 import com.bazaarvoice.emodb.auth.shiro.RolePermissionSet;
 import com.bazaarvoice.emodb.auth.shiro.SimpleRolePermissionSet;
 import com.bazaarvoice.emodb.auth.shiro.ValidatingCacheManager;
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
@@ -33,6 +32,7 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
@@ -117,7 +117,7 @@ public class ApiKeyRealm extends AuthorizingRealm {
                             }
 
                             AuthenticationInfo authenticationInfo = getUncachedAuthenticationInfoForKey(id);
-                            return Objects.equal(authenticationInfo, value);
+                            return Objects.equals(authenticationInfo, value);
                         }
                     };
                 }

@@ -5,11 +5,11 @@ import com.bazaarvoice.emodb.common.json.OrderedJson;
 import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
 import com.bazaarvoice.emodb.sor.condition.EqualCondition;
 import com.bazaarvoice.emodb.sor.delta.deser.DeltaJson;
-import com.google.common.base.Objects;
 import com.google.common.io.CharStreams;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.Objects;
 
 public class EqualConditionImpl extends AbstractCondition implements EqualCondition {
 
@@ -36,7 +36,7 @@ public class EqualConditionImpl extends AbstractCondition implements EqualCondit
 
     @Override
     public boolean equals(Object o) {
-        return (this == o) || (o instanceof EqualCondition) && Objects.equal(_value, ((EqualCondition) o).getValue());
+        return (this == o) || (o instanceof EqualCondition) && Objects.equals(_value, ((EqualCondition) o).getValue());
     }
 
     @Override

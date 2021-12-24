@@ -46,7 +46,6 @@ import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
 import com.datastax.driver.core.utils.MoreFutures;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.AbstractIterator;
@@ -78,6 +77,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Spliterators;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
@@ -721,7 +721,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO, StorageReaderDAO 
                     }
                 }
 
-                return Iterators.peekingIterator(Collections.<Iterable<Row>>emptyIterator());
+                return Iterators.peekingIterator(Collections.emptyIterator());
             }
         });
     }

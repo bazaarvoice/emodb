@@ -57,7 +57,6 @@ import com.bazaarvoice.emodb.web.scanner.writer.WaitForAllTransfersCompleteResul
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
-import com.google.common.base.Optional;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableList;
@@ -92,6 +91,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -166,7 +166,7 @@ public class ScanUploaderTest {
 
         int taskId = 0;
         for (int b = 0; b < 3; b++) {
-            Optional<Integer> blockedByBatchId = b == 0 ? Optional.absent() : Optional.of(b - 1);
+            Optional<Integer> blockedByBatchId = b == 0 ? Optional.empty() : Optional.of(b - 1);
 
             for (int p = 0; p < 2; p++) {
                 String placement = "p" + p;
@@ -244,7 +244,7 @@ public class ScanUploaderTest {
         // Mock out a DataTools that will return scan results spread consistently across 8 shards
         DataTools dataTools = mock(DataTools.class);
         when(dataTools.getTablePlacements(true, true)).thenReturn(ImmutableList.of("placement1"));
-        when(dataTools.getScanRangeSplits(eq("placement1"), anyInt(), eq(Optional.absent()))).thenReturn(
+        when(dataTools.getScanRangeSplits(eq("placement1"), anyInt(), eq(Optional.empty()))).thenReturn(
                 ScanRangeSplits.builder()
                         .addScanRange("dummy", "dummy", ScanRange.all())
                         .build());
@@ -422,7 +422,7 @@ public class ScanUploaderTest {
         MetricRegistry metricRegistry = new MetricRegistry();
         // Use an in-memory data store but override the default splits operation to return 4 splits for the test placement
         InMemoryDataStore dataStore = spy(new InMemoryDataStore(metricRegistry));
-        when(dataStore.getScanRangeSplits("app_global:default", 1000000, Optional.absent()))
+        when(dataStore.getScanRangeSplits("app_global:default", 1000000, Optional.empty()))
                 .thenReturn(new ScanRangeSplits(ImmutableList.of(
                         createSimpleSplitGroup("00", "40"),
                         createSimpleSplitGroup("40", "80"),
@@ -617,7 +617,7 @@ public class ScanUploaderTest {
         String id = "id";
         ScanOptions options = new ScanOptions(ImmutableList.of("p0"));
         ScanStatus scanStatus = new ScanStatus(id, options, true, false, new Date(),
-                ImmutableList.of(new ScanRangeStatus(123, "p0", ScanRange.all(), 0, Optional.absent(), Optional.absent())),
+                ImmutableList.of(new ScanRangeStatus(123, "p0", ScanRange.all(), 0, Optional.empty(), Optional.empty())),
                 Lists.newArrayList(), Lists.newArrayList());
 
         InMemoryScanWorkflow scanWorkflow = new InMemoryScanWorkflow();
@@ -679,7 +679,7 @@ public class ScanUploaderTest {
         String placement = "p0";
         ScanOptions options = new ScanOptions(ImmutableList.of(placement));
         ScanStatus scanStatus = new ScanStatus(id, options, true, false, new Date(),
-                ImmutableList.of(new ScanRangeStatus(123, placement, ScanRange.all(), 0, Optional.absent(), Optional.absent())),
+                ImmutableList.of(new ScanRangeStatus(123, placement, ScanRange.all(), 0, Optional.empty(), Optional.empty())),
                 Lists.newArrayList(), Lists.newArrayList());
 
         ScanStatusDAO scanStatusDAO = mock(ScanStatusDAO.class);
@@ -727,21 +727,21 @@ public class ScanUploaderTest {
         ScanOptions options = new ScanOptions(ImmutableList.of("p0"));
         List<ScanRangeStatus> completeTasks = ImmutableList.of(
                 new ScanRangeStatus(0, "p0", ScanRange.create(ByteBuffer.wrap(new byte[]{0x00}), ByteBuffer.wrap(new byte[]{0x01})),
-                        0, Optional.absent(), Optional.absent()),
+                        0, Optional.empty(), Optional.empty()),
                 new ScanRangeStatus(1, "p0", ScanRange.create(ByteBuffer.wrap(new byte[]{0x02}), ByteBuffer.wrap(new byte[]{0x03})),
-                        0, Optional.absent(), Optional.absent()));
+                        0, Optional.empty(), Optional.empty()));
 
         List<ScanRangeStatus> activeTasks = ImmutableList.of(
                 new ScanRangeStatus(2, "p0", ScanRange.create(ByteBuffer.wrap(new byte[]{0x04}), ByteBuffer.wrap(new byte[]{0x05})),
-                        1, Optional.absent(), Optional.absent()),
+                        1, Optional.empty(), Optional.empty()),
                 new ScanRangeStatus(3, "p0", ScanRange.create(ByteBuffer.wrap(new byte[]{0x06}), ByteBuffer.wrap(new byte[]{0x07})),
-                        1, Optional.absent(), Optional.absent()));
+                        1, Optional.empty(), Optional.empty()));
 
         List<ScanRangeStatus> pendingTasks = ImmutableList.of(
                 new ScanRangeStatus(4, "p0", ScanRange.create(ByteBuffer.wrap(new byte[]{0x08}), ByteBuffer.wrap(new byte[]{0x09})),
-                        2, Optional.absent(), Optional.absent()),
+                        2, Optional.empty(), Optional.empty()),
                 new ScanRangeStatus(5, "p0", ScanRange.create(ByteBuffer.wrap(new byte[]{0x0a}), ByteBuffer.wrap(new byte[]{0x0b})),
-                        2, Optional.absent(), Optional.absent()));
+                        2, Optional.empty(), Optional.empty()));
 
 
         for (ScanRangeStatus status : Iterables.concat(completeTasks, activeTasks)) {
@@ -775,7 +775,7 @@ public class ScanUploaderTest {
     @Test
     public void testWorkflowRecoveryForFullyCompleteScan() {
         ScanOptions options = new ScanOptions(ImmutableList.of("p0"));
-        ScanRangeStatus status = new ScanRangeStatus(0, "p0", ScanRange.all(), 0, Optional.absent(), Optional.absent());
+        ScanRangeStatus status = new ScanRangeStatus(0, "p0", ScanRange.all(), 0, Optional.empty(), Optional.empty());
         status.setScanQueuedTime(new Date());
         status.setScanCompleteTime(new Date());
 
@@ -819,7 +819,7 @@ public class ScanUploaderTest {
         ScanWorkflow scanWorkflow = mock(ScanWorkflow.class);
 
         ScanOptions options = new ScanOptions("p0");
-        ScanRangeStatus status = new ScanRangeStatus(0, "'0", ScanRange.all(), 0, Optional.absent(), Optional.absent());
+        ScanRangeStatus status = new ScanRangeStatus(0, "'0", ScanRange.all(), 0, Optional.empty(), Optional.empty());
         status.setScanQueuedTime(Date.from(Instant.now().minus(Duration.ofMinutes(1))));
         status.setScanStartTime(Date.from(Instant.now().minus(Duration.ofMinutes(1))));
 
@@ -935,7 +935,7 @@ public class ScanUploaderTest {
                             .build();
                 });
 
-        ScanWriter scanWriter = new DiscardingScanWriter(123, Optional.absent(), metricRegistry, new ObjectMapper());
+        ScanWriter scanWriter = new DiscardingScanWriter(123, Optional.empty(), metricRegistry, new ObjectMapper());
         ScanWriterGenerator scanWriterGenerator = mock(ScanWriterGenerator.class);
         when(scanWriterGenerator.createScanWriter(eq(123), anySet()))
                 .thenReturn(scanWriter);
@@ -987,7 +987,7 @@ public class ScanUploaderTest {
         ScanOptions options = new ScanOptions(placement);
 
         List<ScanRangeStatus> statuses = ImmutableList.of(
-                new ScanRangeStatus(123, placement, originalRange, 15, Optional.absent(), Optional.absent()));
+                new ScanRangeStatus(123, placement, originalRange, 15, Optional.empty(), Optional.empty()));
 
         ScanStatus scanStatus = new ScanStatus(id, options, true, false, new Date(), statuses,
                 Lists.newArrayList(), Lists.newArrayList());
@@ -1023,7 +1023,7 @@ public class ScanUploaderTest {
 
         ScanOptions options = new ScanOptions(placement);
 
-        ScanRangeStatus status = new ScanRangeStatus(0, placement, completeRange, 15, Optional.absent(), Optional.absent());
+        ScanRangeStatus status = new ScanRangeStatus(0, placement, completeRange, 15, Optional.empty(), Optional.empty());
         status.setScanQueuedTime(new Date());
         status.setScanStartTime(new Date());
         status.setScanCompleteTime(new Date());
@@ -1061,12 +1061,12 @@ public class ScanUploaderTest {
         ScanRangeStatus rangeStatus = scanStatus.getCompleteScanRanges().get(0);
         assertEquals(rangeStatus.getTaskId(), 0);
         assertEquals(rangeStatus.getScanRange(), completeRange);
-        assertEquals(rangeStatus.getResplitRange(), Optional.<ScanRange>absent());
+        assertEquals(rangeStatus.getResplitRange(), Optional.<ScanRange>empty());
 
         Set<ScanRangeStatus> expectedPendingStatuses = ImmutableSet.of(
-                new ScanRangeStatus(1, placement, ScanRange.create(asByteBuffer(5, 50), asByteBuffer(6, 60)), 15, Optional.absent(), Optional.absent()),
-                new ScanRangeStatus(2, placement, ScanRange.create(asByteBuffer(6, 60), asByteBuffer(7, 70)), 15, Optional.absent(), Optional.absent()),
-                new ScanRangeStatus(3, placement, ScanRange.create(asByteBuffer(7, 70), asByteBuffer(10, 100)), 15, Optional.absent(), Optional.absent()));
+                new ScanRangeStatus(1, placement, ScanRange.create(asByteBuffer(5, 50), asByteBuffer(6, 60)), 15, Optional.empty(), Optional.empty()),
+                new ScanRangeStatus(2, placement, ScanRange.create(asByteBuffer(6, 60), asByteBuffer(7, 70)), 15, Optional.empty(), Optional.empty()),
+                new ScanRangeStatus(3, placement, ScanRange.create(asByteBuffer(7, 70), asByteBuffer(10, 100)), 15, Optional.empty(), Optional.empty()));
 
         // Ensure queued time for the pending scan ranges was set, then remove it to make the subsequent equality assertion valid.
         for (ScanRangeStatus pendingScanRange : scanStatus.getPendingScanRanges()) {
@@ -1180,7 +1180,7 @@ public class ScanUploaderTest {
 
         S3ScanWriter scanWriter = mock(S3ScanWriter.class);
         when(scanWriter.writeShardRows(anyString(), anyString(), anyInt(), anyLong()))
-                .thenReturn(new DiscardingScanWriter(0, Optional.absent(), metricRegistry, new ObjectMapper()).writeShardRows("test:table", "p0", 0, 0));
+                .thenReturn(new DiscardingScanWriter(0, Optional.empty(), metricRegistry, new ObjectMapper()).writeShardRows("test:table", "p0", 0, 0));
         when(scanWriter.waitForAllTransfersComplete(any(Duration.class)))
                 .thenAnswer((Answer<WaitForAllTransfersCompleteResult>) invocation -> {
                     Duration duration = (Duration) invocation.getArguments()[0];
@@ -1247,7 +1247,7 @@ public class ScanUploaderTest {
 
         S3ScanWriter scanWriter = mock(S3ScanWriter.class);
         when(scanWriter.writeShardRows(anyString(), anyString(), anyInt(), anyLong()))
-                .thenReturn(new DiscardingScanWriter(0, Optional.absent(), metricRegistry, new ObjectMapper()).writeShardRows("test:table", "p0", 0, 0));
+                .thenReturn(new DiscardingScanWriter(0, Optional.empty(), metricRegistry, new ObjectMapper()).writeShardRows("test:table", "p0", 0, 0));
         when(scanWriter.waitForAllTransfersComplete(any(Duration.class)))
                 .thenAnswer(new Answer<WaitForAllTransfersCompleteResult>() {
                     int _call = -1;

@@ -5,11 +5,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
-import com.google.common.base.Optional;
 
 import javax.annotation.Nullable;
 import java.util.Date;
+import java.util.Objects;
+import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
@@ -27,7 +27,7 @@ public class ScanRangeStatus {
     private Date _scanQueuedTime;
     private Date _scanStartTime;
     private Date _scanCompleteTime;
-    private Optional<ScanRange> _resplitRange = Optional.absent();
+    private Optional<ScanRange> _resplitRange = Optional.empty();
 
     @JsonCreator
     public ScanRangeStatus(@JsonProperty ("taskId") int taskId,
@@ -36,7 +36,7 @@ public class ScanRangeStatus {
                            @JsonProperty ("batchId") int batchId,
                            @Nullable @JsonProperty ("blockedByBatchId") Integer blockedByBatchId,
                            @Nullable @JsonProperty ("concurrencyId") Integer concurrencyId) {
-        this(taskId, placement, scanRange, batchId, Optional.fromNullable(blockedByBatchId), Optional.fromNullable(concurrencyId));
+        this(taskId, placement, scanRange, batchId, Optional.ofNullable(blockedByBatchId), Optional.ofNullable(concurrencyId));
     }
 
     public ScanRangeStatus(int taskId, String placement, ScanRange scanRange, int batchId,
@@ -72,7 +72,7 @@ public class ScanRangeStatus {
 
     @JsonProperty ("blockedByBatchId")
     Integer getBlockedByBatchIdOrNull() {
-        return _blockedByBatchId.orNull();
+        return _blockedByBatchId.orElse(null);
     }
 
     @JsonIgnore
@@ -82,7 +82,7 @@ public class ScanRangeStatus {
 
     @JsonProperty ("concurrencyId")
     Integer getConcurrencyIdOrNull() {
-        return _concurrencyId.orNull();
+        return _concurrencyId.orElse(null);
     }
 
     public Date getScanQueuedTime() {
@@ -112,7 +112,7 @@ public class ScanRangeStatus {
     @JsonProperty ("resplitRange")
     @JsonInclude (JsonInclude.Include.NON_NULL)
     public ScanRange getResplitRangeOrNull() {
-        return _resplitRange.orNull();
+        return _resplitRange.orElse(null);
     }
 
     @JsonIgnore
@@ -122,7 +122,7 @@ public class ScanRangeStatus {
 
     @JsonProperty ("resplitRange")
     public void setResplitRange(@Nullable ScanRange resplitRange) {
-        _resplitRange = Optional.fromNullable(resplitRange);
+        _resplitRange = Optional.ofNullable(resplitRange);
     }
 
     @Override
@@ -141,11 +141,11 @@ public class ScanRangeStatus {
                 _blockedByBatchId.equals(that._blockedByBatchId) &&
                 _concurrencyId.equals(that._concurrencyId) &&
                 _placement.equals(that._placement) &&
-                Objects.equal(_scanStartTime, that._scanStartTime) &&
-                Objects.equal(_scanQueuedTime, that._scanQueuedTime) &&
-                Objects.equal(_scanCompleteTime, that._scanCompleteTime) &&
+                Objects.equals(_scanStartTime, that._scanStartTime) &&
+                Objects.equals(_scanQueuedTime, that._scanQueuedTime) &&
+                Objects.equals(_scanCompleteTime, that._scanCompleteTime) &&
                 _scanRange.equals(that._scanRange) &&
-                Objects.equal(_resplitRange, that._resplitRange);
+                Objects.equals(_resplitRange, that._resplitRange);
     }
 
     @Override

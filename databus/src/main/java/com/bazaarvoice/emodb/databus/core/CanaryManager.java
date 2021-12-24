@@ -17,7 +17,6 @@ import com.bazaarvoice.emodb.table.db.consistency.DatabusClusterInfo;
 import com.bazaarvoice.ostrich.PartitionContext;
 import com.bazaarvoice.ostrich.PartitionContextBuilder;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Optional;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
@@ -29,6 +28,7 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;

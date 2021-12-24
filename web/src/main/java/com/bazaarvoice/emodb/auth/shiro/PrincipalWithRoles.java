@@ -1,6 +1,5 @@
 package com.bazaarvoice.emodb.auth.shiro;
 
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableSet;
 import org.apache.http.auth.BasicUserPrincipal;
 import org.eclipse.jetty.security.DefaultUserIdentity;
@@ -9,6 +8,7 @@ import org.eclipse.jetty.server.UserIdentity;
 import java.security.Principal;
 import java.util.Set;
 
+import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 
 public class PrincipalWithRoles implements Principal {
@@ -73,6 +73,6 @@ public class PrincipalWithRoles implements Principal {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_authenticationId, _id);
+        return hash(_authenticationId, _id);
     }
 }

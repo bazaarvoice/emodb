@@ -16,10 +16,10 @@ import com.bazaarvoice.emodb.sor.condition.NotCondition;
 import com.bazaarvoice.emodb.sor.condition.OrCondition;
 import com.bazaarvoice.emodb.sor.condition.PartitionCondition;
 import com.bazaarvoice.emodb.sor.condition.State;
-import com.google.common.base.Objects;
 import com.google.common.collect.Sets;
 
 import java.util.Map;
+import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 
@@ -61,7 +61,7 @@ public class SubsetEvaluator implements ConditionVisitor<Condition, Boolean> {
             @Override
             public Boolean visit(EqualCondition right, Void context) {
                 // Example: "value" subset? "value"
-                return Objects.equal(_left.getValue(), right.getValue());
+                return Objects.equals(_left.getValue(), right.getValue());
             }
 
             @Override

@@ -4,6 +4,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 
 public class DeltaClusteringKey {
@@ -35,7 +36,7 @@ public class DeltaClusteringKey {
 
     @Override
     public int hashCode() {
-        return Objects.hash(_changeId, _numBlocks);
+        return hash(_changeId, _numBlocks);
     }
 
     @Override

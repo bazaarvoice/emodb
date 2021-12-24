@@ -1,12 +1,10 @@
 package com.bazaarvoice.emodb.web.jersey;
 
 import com.bazaarvoice.emodb.sor.api.AuditsUnavailableException;
-import com.google.common.base.Objects;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
-import javax.ws.rs.ext.Provider;
 
 public class AuditsUnavailableExceptionMapper implements ExceptionMapper<AuditsUnavailableException> {
     @Override

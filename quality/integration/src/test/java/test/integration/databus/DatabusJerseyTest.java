@@ -38,7 +38,6 @@ import com.bazaarvoice.ostrich.pool.OstrichAccessors;
 import com.bazaarvoice.ostrich.pool.PartitionContextValidator;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
@@ -70,14 +69,15 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -109,7 +109,7 @@ public class DatabusJerseyTest extends ResourceTest {
 
     @Rule
     public ResourceTestRule _resourceTestRule = setupResourceTestRule(
-            Collections.<Object>singletonList(new DatabusResource1(_local, _client, mock(DatabusEventStore.class),
+            Collections.singletonList(new DatabusResource1(_local, _client, mock(DatabusEventStore.class),
                     new DatabusResourcePoller(new MetricRegistry()))),
             ImmutableMap.of(
                     APIKEY_DATABUS, new ApiKey(INTERNAL_ID_DATABUS, ImmutableSet.of("databus-role")),
@@ -174,7 +174,7 @@ public class DatabusJerseyTest extends ResourceTest {
 
     @Test
     public void testListSubscriptions1() {
-        when(_local.listSubscriptions(isSubject(), nullable(String.class), eq(Long.MAX_VALUE))).thenReturn(Collections.<Subscription>emptyIterator());
+        when(_local.listSubscriptions(isSubject(), nullable(String.class), eq(Long.MAX_VALUE))).thenReturn(Collections.emptyIterator());
 
         Iterator<Subscription> actual = databusClient().listSubscriptions(null, Long.MAX_VALUE);
 
@@ -186,7 +186,7 @@ public class DatabusJerseyTest extends ResourceTest {
     @Test
     public void testListSubscriptions2() {
         Date now = new Date();
-        List<Subscription> expected = ImmutableList.<Subscription>of(
+        List<Subscription> expected = ImmutableList.of(
                 new DefaultSubscription("queue-name1", Conditions.alwaysTrue(), now, Duration.ofHours(48)),
                 new DefaultSubscription("queue-name2", Conditions.intrinsic(Intrinsic.TABLE, "test"), now, Duration.ofDays(7)));
         when(_local.listSubscriptions(isSubject(), eq("queue-name"), eq(123L))).thenReturn(expected.iterator());
@@ -436,8 +436,8 @@ public class DatabusJerseyTest extends ResourceTest {
 
     private void testPeek(boolean includeTags) {
         List<Event> peekResults = ImmutableList.of(
-                new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-1"))),
-                new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-2"))));
+                new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.of(ImmutableList.of("tag-1"))),
+                new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.of(ImmutableList.of("tag-2"))));
         when(_client.peek(isSubject(), eq("queue-name"), eq(123))).thenReturn(peekResults.iterator());
 
         List<Event> expected;
@@ -450,8 +450,8 @@ public class DatabusJerseyTest extends ResourceTest {
         } else {
             // Tags won't be returned
             expected = ImmutableList.of(
-                    new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of()),
-                    new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of()));
+                    new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.of()),
+                    new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.of()));
 
             // Must make API call directly since only older databus clients don't automatically include tags
             // and the current databus client always does.
@@ -485,8 +485,8 @@ public class DatabusJerseyTest extends ResourceTest {
 
     private void testPoll(boolean includeTags) {
         List<Event> pollResults = ImmutableList.of(
-                new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-1"))),
-                new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-2"))));
+                new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.of(ImmutableList.of("tag-1"))),
+                new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.of(ImmutableList.of("tag-2"))));
         when(_client.poll(isSubject(), eq("queue-name"), eq(Duration.ofSeconds(15)), eq(123)))
                 .thenReturn(new PollResult(pollResults.iterator(), 2, false));
 
@@ -502,8 +502,8 @@ public class DatabusJerseyTest extends ResourceTest {
         } else {
             // Tags won't be returned
             expected = ImmutableList.of(
-                    new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of()),
-                    new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of()));
+                    new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.of()),
+                    new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.of()));
 
             // Must make API call directly since only older databus clients don't automatically include tags
             // and the current databus client always does.
@@ -543,8 +543,8 @@ public class DatabusJerseyTest extends ResourceTest {
 
             SubjectDatabus databus = mock(SubjectDatabus.class);
             List<Event> pollResults = ImmutableList.of(
-                    new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-1"))),
-                    new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-2"))));
+                    new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.of(ImmutableList.of("tag-1"))),
+                    new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.of(ImmutableList.of("tag-2"))));
             //noinspection unchecked
             when(databus.poll(isSubject(), eq("queue-name"), eq(Duration.ofSeconds(10)), eq(100)))
                     .thenReturn(new PollResult(Collections.emptyIterator(), 0, false))
@@ -560,8 +560,8 @@ public class DatabusJerseyTest extends ResourceTest {
             } else {
                 // Tags won't be returned
                 expected = ImmutableList.of(
-                        new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of()),
-                        new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of()));
+                        new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.of()),
+                        new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.of()));
                 view = EventViews.ContentOnly.class;
             }
 
@@ -743,8 +743,8 @@ public class DatabusJerseyTest extends ResourceTest {
     @Test
     public void testPollPartitioned() {
         List<Event> expected = ImmutableList.of(
-                new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of()),
-                new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of()));
+                new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.of()),
+                new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.of()));
         when(_local.poll(isSubject(), eq("queue-name"), eq(Duration.ofSeconds(15)), eq(123)))
                 .thenReturn(new PollResult(expected.iterator(), 2, true));
 

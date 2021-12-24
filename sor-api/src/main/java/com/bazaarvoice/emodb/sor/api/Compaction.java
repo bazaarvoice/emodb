@@ -7,14 +7,15 @@ import com.bazaarvoice.emodb.sor.delta.deser.DeltaParser;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableSet;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.hash;
 
 /**
  * Placeholder for adjacent deltas that have been consolidated into a single
@@ -199,15 +200,15 @@ public final class Compaction {
         }
         Compaction that = (Compaction) o;
         return _count == that._count &&
-                Objects.equal(_first, that.getFirst()) &&
-                Objects.equal(_cutoff, that.getCutoff()) &&
-                Objects.equal(_cutoffSignature, that.getCutoffSignature()) &&
-                Objects.equal(_lastMutation, that.getLastMutation()) &&
-                Objects.equal(_lastContentMutation, that.getLastContentMutation());
+                Objects.equals(_first, that.getFirst()) &&
+                Objects.equals(_cutoff, that.getCutoff()) &&
+                Objects.equals(_cutoffSignature, that.getCutoffSignature()) &&
+                Objects.equals(_lastMutation, that.getLastMutation()) &&
+                Objects.equals(_lastContentMutation, that.getLastContentMutation());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_count, _first, _cutoff, _cutoffSignature, _lastMutation, _lastContentMutation);
+        return hash(_count, _first, _cutoff, _cutoffSignature, _lastMutation, _lastContentMutation);
     }
 }

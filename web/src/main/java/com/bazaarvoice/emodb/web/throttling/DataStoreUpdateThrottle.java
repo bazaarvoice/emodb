@@ -3,6 +3,8 @@ package com.bazaarvoice.emodb.web.throttling;
 import java.time.Instant;
 import java.util.Objects;
 
+import static java.util.Objects.hash;
+
 /**
  * Throttle for updates to the DataStore.  This consists of two attributes:
  * <ol>
@@ -43,7 +45,6 @@ public class DataStoreUpdateThrottle {
 
     @Override
     public int hashCode() {
-
-        return Objects.hash(_rateLimit, _expirationTime);
+        return hash(_rateLimit, _expirationTime);
     }
 }

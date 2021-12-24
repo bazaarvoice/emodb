@@ -29,7 +29,6 @@ import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.test.InMemoryTableDAO;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
@@ -39,13 +38,13 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import org.testng.annotations.Test;
 
-import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -65,11 +64,11 @@ public class RedundantDeltaTest {
         InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
         DefaultDataStore store = new DefaultDataStore(new DatabusEventWriterRegistry(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
-                Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
+                Optional.empty(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
                 new DiscardingAuditWriter(), new InMemoryMapStore<>(), new MetricRegistry(), Clock.systemUTC());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
-        store.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));
+        store.createTable(TABLE, options, Collections.emptyMap(), newAudit("create table"));
 
         UUID uuid0 = TimeUUIDs.newUUID();
         UUID uuid1 = TimeUUIDs.newUUID();
@@ -122,11 +121,11 @@ public class RedundantDeltaTest {
         InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
         DefaultDataStore store = new DefaultDataStore(new DatabusEventWriterRegistry(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
-                Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
+                Optional.empty(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
                 new DiscardingAuditWriter(), new InMemoryMapStore<>(), new MetricRegistry(), Clock.systemUTC());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
-        store.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));
+        store.createTable(TABLE, options, Collections.emptyMap(), newAudit("create table"));
 
         UUID uuid1 = TimeUUIDs.newUUID();
         UUID uuid2 = TimeUUIDs.minimumUuid();
@@ -159,11 +158,11 @@ public class RedundantDeltaTest {
         InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
         DefaultDataStore store = new DefaultDataStore(new DatabusEventWriterRegistry(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
-                Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
+                Optional.empty(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
                 new DiscardingAuditWriter(), new InMemoryMapStore<>(), new MetricRegistry(), Clock.systemUTC());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
-        store.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));
+        store.createTable(TABLE, options, Collections.emptyMap(), newAudit("create table"));
 
         UUID uuid0 = TimeUUIDs.newUUID();
         UUID uuid1 = TimeUUIDs.newUUID();
@@ -200,7 +199,7 @@ public class RedundantDeltaTest {
         // uuid10 is redundant
         store.updateAll(Collections.singleton(new Update(TABLE, KEY, uuid10, Deltas.fromString("{..,\"name\":\"Tom\"}"),
                 newAudit("resubmit"), WriteConsistency.STRONG)), ImmutableSet.of("etl"));
-        Map<String, Object> expectedFinalState = ImmutableMap.<String, Object>of("name", "Tom");
+        Map<String, Object> expectedFinalState = ImmutableMap.of("name", "Tom");
 
         assertUnknownDelta(store, TABLE, KEY, uuid0);
         assertChange(store, TABLE, KEY, uuid1, expectedFinalState);
@@ -240,18 +239,18 @@ public class RedundantDeltaTest {
         InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
         DefaultDataStore store = new DefaultDataStore(new DatabusEventWriterRegistry(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
-                Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
+                Optional.empty(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
                 new DiscardingAuditWriter(), new InMemoryMapStore<>(), new MetricRegistry(), Clock.systemUTC());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
-        store.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));
+        store.createTable(TABLE, options, Collections.emptyMap(), newAudit("create table"));
 
         // Nested deltas should only get one top-level "~tags" attribute
         store.updateAll(Collections.singleton(new Update(TABLE, KEY, TimeUUIDs.newUUID(), Deltas.fromString("{..,\"name\":\"Bob\",\"map\":{..,\"x\":1}}"),
                 newAudit("submit"), WriteConsistency.STRONG)), ImmutableSet.of("tag1","tag2"));
         store.updateAll(Collections.singleton(new Update(TABLE, KEY, TimeUUIDs.newUUID(), Deltas.fromString("{..,\"name\":\"Bob\",\"map\":{..,\"y\":1}}"),
                 newAudit("submit"), WriteConsistency.STRONG)), ImmutableSet.of("tag1","tag3"));
-        Map<String, Object> expectedFinalState = ImmutableMap.<String, Object>of("name", "Bob", "map", ImmutableMap.<String, Object>of("x", 1, "y", 1));
+        Map<String, Object> expectedFinalState = ImmutableMap.of("name", "Bob", "map", ImmutableMap.<String, Object>of("x", 1, "y", 1));
         assertEquals(excludeKeys(store.get(TABLE, KEY), Intrinsic.DATA_FIELDS), expectedFinalState);
     }
 
@@ -260,11 +259,11 @@ public class RedundantDeltaTest {
         InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
         DefaultDataStore store = new DefaultDataStore(new DatabusEventWriterRegistry(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
-                Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
+                Optional.empty(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
                 new DiscardingAuditWriter(), new InMemoryMapStore<>(), new MetricRegistry(), Clock.systemUTC());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
-        store.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));
+        store.createTable(TABLE, options, Collections.emptyMap(), newAudit("create table"));
 
         // First delta
         UUID uuid0 = TimeUUIDs.newUUID();
@@ -337,11 +336,11 @@ public class RedundantDeltaTest {
 
         DefaultDataStore store = new DefaultDataStore(new DatabusEventWriterRegistry(), tableDao, dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
-                Optional.<URI>absent(),  new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
+                Optional.empty(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
                 new DiscardingAuditWriter(), new InMemoryMapStore<>(), new MetricRegistry(), Clock.systemUTC());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
-        store.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));
+        store.createTable(TABLE, options, Collections.emptyMap(), newAudit("create table"));
         Table table = tableDao.get(TABLE);
 
         // Set the full consistency timestamp before the first delta
@@ -409,11 +408,11 @@ public class RedundantDeltaTest {
 
         DefaultDataStore store = new DefaultDataStore(new DatabusEventWriterRegistry(), tableDao, dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
-                Optional.<URI>absent(),  new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
+                Optional.empty(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
                 new DiscardingAuditWriter(), new InMemoryMapStore<>(), new MetricRegistry(), Clock.systemUTC());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
-        store.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));
+        store.createTable(TABLE, options, Collections.emptyMap(), newAudit("create table"));
         Table table = tableDao.get(TABLE);
 
         // Set the full consistency timestamp before the first delta
@@ -535,6 +534,6 @@ public class RedundantDeltaTest {
     }
 
     private <K, V> Map<K, V> excludeKeys(Map<K, V> map, Set<String> keys) {
-        return Maps.filterKeys(map, Predicates.not(Predicates.<Object>in(keys)));
+        return Maps.filterKeys(map, Predicates.not(Predicates.in(keys)));
     }
 }

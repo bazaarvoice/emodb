@@ -28,7 +28,6 @@ import com.bazaarvoice.emodb.web.scanner.control.ScanWorkflow;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.InMemoryScanStatusDAO;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatus;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusDAO;
-import com.google.common.base.Optional;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -41,6 +40,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.mockito.ArgumentMatchers.any;
@@ -173,7 +173,7 @@ public class ScanOperationsTimeUpdateTest {
         // Mock out a DataTools that will return scan results spread consistently across 8 shards
         DataTools dataTools = mock(DataTools.class);
         when(dataTools.getTablePlacements(true, true)).thenReturn(ImmutableList.of("placement1"));
-        when(dataTools.getScanRangeSplits(eq("placement1"), anyInt(), eq(Optional.absent()))).thenReturn(
+        when(dataTools.getScanRangeSplits(eq("placement1"), anyInt(), eq(Optional.empty()))).thenReturn(
                 ScanRangeSplits.builder()
                         .addScanRange("dummy", "dummy", ScanRange.all())
                         .build());

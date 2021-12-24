@@ -1,6 +1,5 @@
 package com.bazaarvoice.emodb.table.db.consistency;
 
-import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -8,13 +7,14 @@ import com.google.common.collect.Sets;
 import java.net.InetAddress;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkState;
 
 public class HintsPollerResult {
     private final Map<InetAddress, Optional<Long>> _hintsInfo;
-    private Set<InetAddress> _hostFailure = Sets.newHashSet();
+    private final Set<InetAddress> _hostFailure = Sets.newHashSet();
 
     public HintsPollerResult() {
         _hintsInfo = Maps.newHashMap();
@@ -44,7 +44,7 @@ public class HintsPollerResult {
         Map<InetAddress, Long> hostsWithHints = getHostsWithHints(_hintsInfo);
         if (hostsWithHints.isEmpty()) {
             // No hints found in the ring
-            return Optional.absent();
+            return Optional.empty();
         }
         return Optional.of(Collections.min(hostsWithHints.values()));
     }

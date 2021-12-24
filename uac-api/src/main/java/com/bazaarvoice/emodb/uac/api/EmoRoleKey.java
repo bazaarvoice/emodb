@@ -2,10 +2,10 @@ package com.bazaarvoice.emodb.uac.api;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 
 import java.util.Optional;
 
+import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -62,7 +62,7 @@ public class EmoRoleKey {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_group, _id);
+        return hash(_group, _id);
     }
 
     public String toString() {
