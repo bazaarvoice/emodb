@@ -33,7 +33,8 @@ public class DataCenterSynchronizer {
                 throw new TimeoutException();
             }
         } catch (Exception e) {
-            throw Throwables.propagate(e);
+            Throwables.throwIfUnchecked(e);
+            throw new RuntimeException(e);
         }
 
         Exception exception = null;
@@ -54,7 +55,8 @@ public class DataCenterSynchronizer {
         }
 
         if (exception != null) {
-            throw Throwables.propagate(exception);
+            Throwables.throwIfUnchecked(exception);
+            throw new RuntimeException(exception);
         }
 
         return result;

@@ -19,7 +19,8 @@ public abstract class AbstractCondition implements Condition {
         try {
             appendTo(buf);
         } catch (IOException e) {
-            throw Throwables.propagate(e);
+            Throwables.throwIfUnchecked(e);
+            throw new RuntimeException(e);
         }
         return buf.toString();
     }

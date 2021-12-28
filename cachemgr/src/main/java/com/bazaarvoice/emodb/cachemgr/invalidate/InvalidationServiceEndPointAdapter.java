@@ -37,7 +37,7 @@ public class InvalidationServiceEndPointAdapter {
         URI invalidateUri = UriBuilder
                 .fromPath(getInvalidationTaskPath())
                 .scheme("http")
-                .host(_selfAdmin.getHostText())
+                .host(_selfAdmin.getHost())
                 .port(_selfAdmin.getPort())
                 .build();
         Map<String, String> payload = ImmutableMap.of("invalidateUrl", invalidateUri.toString());
