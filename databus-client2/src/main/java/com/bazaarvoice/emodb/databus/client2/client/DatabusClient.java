@@ -39,7 +39,7 @@ import java.util.Map;
 import java.util.TimeZone;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 
 /**
@@ -117,7 +117,7 @@ public class DatabusClient implements Databus, Closeable {
 
     @Override
     public void unsubscribe(String subscription) {
-        checkNotNull(subscription, "subscription");
+        requireNonNull(subscription, "subscription");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
                     .path("bus")
@@ -139,7 +139,7 @@ public class DatabusClient implements Databus, Closeable {
 
     @Override
     public Subscription getSubscription(String subscription) throws UnknownSubscriptionException {
-        checkNotNull(subscription, "subscription");
+        requireNonNull(subscription, "subscription");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
                     .path("bus")
@@ -165,7 +165,7 @@ public class DatabusClient implements Databus, Closeable {
 
     @Override
     public long getEventCountUpTo(String subscription, long limit) {
-        checkNotNull(subscription, "subscription");
+        requireNonNull(subscription, "subscription");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
                     .path("bus")
@@ -189,7 +189,7 @@ public class DatabusClient implements Databus, Closeable {
 
     @Override
     public long getClaimCount(String subscription) {
-        checkNotNull(subscription, "subscription");
+        requireNonNull(subscription, "subscription");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
                     .path("bus")
@@ -213,7 +213,7 @@ public class DatabusClient implements Databus, Closeable {
 
     @Override
     public Iterator<Event> peek(String subscription, int limit) {
-        checkNotNull(subscription, "subscription");
+        requireNonNull(subscription, "subscription");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
                     .path("bus")
@@ -239,8 +239,8 @@ public class DatabusClient implements Databus, Closeable {
 
     @Override
     public PollResult poll(String subscription, Duration claimTtl, int limit) {
-        checkNotNull(subscription, "subscription");
-        checkNotNull(claimTtl, "claimTtl");
+        requireNonNull(subscription, "subscription");
+        requireNonNull(claimTtl, "claimTtl");
 
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
@@ -289,9 +289,9 @@ public class DatabusClient implements Databus, Closeable {
 
     @Override
     public void renew(String subscription, Collection<String> eventKeys, Duration claimTtl) {
-        checkNotNull(subscription, "subscription");
-        checkNotNull(eventKeys, "eventKeys");
-        checkNotNull(claimTtl, "claimTtl");
+        requireNonNull(subscription, "subscription");
+        requireNonNull(eventKeys, "eventKeys");
+        requireNonNull(claimTtl, "claimTtl");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
                     .path("bus")
@@ -317,8 +317,8 @@ public class DatabusClient implements Databus, Closeable {
 
     @Override
     public void acknowledge(String subscription, Collection<String> eventKeys) {
-        checkNotNull(subscription, "subscription");
-        checkNotNull(eventKeys, "eventKeys");
+        requireNonNull(subscription, "subscription");
+        requireNonNull(eventKeys, "eventKeys");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
                     .path("bus")
@@ -347,7 +347,7 @@ public class DatabusClient implements Databus, Closeable {
 
     @Override
     public String replayAsyncSince(String subscription, Date since) {
-        checkNotNull(subscription, "subscription");
+        requireNonNull(subscription, "subscription");
         try {
             UriBuilder uriBuilder = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
                     .path("bus")
@@ -377,7 +377,7 @@ public class DatabusClient implements Databus, Closeable {
 
     @Override
     public ReplaySubscriptionStatus getReplayStatus(String reference) {
-        checkNotNull(reference, "reference");
+        requireNonNull(reference, "reference");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
                     .path("bus")
@@ -399,8 +399,8 @@ public class DatabusClient implements Databus, Closeable {
 
     @Override
     public String moveAsync(String from, String to) {
-        checkNotNull(from, "from");
-        checkNotNull(to, "to");
+        requireNonNull(from, "from");
+        requireNonNull(to, "to");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
                     .path("bus")
@@ -425,7 +425,7 @@ public class DatabusClient implements Databus, Closeable {
 
     @Override
     public MoveSubscriptionStatus getMoveStatus(String reference) {
-        checkNotNull(reference, "reference");
+        requireNonNull(reference, "reference");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
                     .path("bus")
@@ -447,9 +447,9 @@ public class DatabusClient implements Databus, Closeable {
 
     @Override
     public void injectEvent(String subscription, String table, String key) {
-        checkNotNull(subscription, "subscription");
-        checkNotNull(table, "table");
-        checkNotNull(key, "key");
+        requireNonNull(subscription, "subscription");
+        requireNonNull(table, "table");
+        requireNonNull(key, "key");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
                     .path("bus")
@@ -473,7 +473,7 @@ public class DatabusClient implements Databus, Closeable {
 
     @Override
     public void unclaimAll(String subscription) {
-        checkNotNull(subscription, "subscription");
+        requireNonNull(subscription, "subscription");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
                     .path("bus")
@@ -496,7 +496,7 @@ public class DatabusClient implements Databus, Closeable {
 
     @Override
     public void purge(String subscription) {
-        checkNotNull(subscription, "subscription");
+        requireNonNull(subscription, "subscription");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
                     .path("bus")
