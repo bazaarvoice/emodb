@@ -367,7 +367,7 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
         // to be converted into host names only.
         for (String seed : seeds) {
             HostAndPort hostAndPort = HostAndPort.fromString(seed);
-            seed = hostAndPort.getHostText();
+            seed = hostAndPort.getHost();
             if (hostAndPort.hasPort()) {
                 if (hostAndPort.getPort() == _thriftPort) {
                     _log.debug("Seed {} found using RPC port; swapping for native port {}", seed, _cqlPort);

@@ -37,7 +37,8 @@ public class LoggingIterator<T> extends AbstractIterator<T> {
             // Propagate the exception.  Unfortunately ObjectMapper will close the JsonGenerator anyway such that
             // clients receive a well-formed json array response but with elements missing.  There doesn't seem to
             // be a good way from here to communicate to the client that something went wrong.
-            throw Throwables.propagate(e);
+            Throwables.throwIfUnchecked(e);
+            throw new RuntimeException(e);
         }
     }
 }
