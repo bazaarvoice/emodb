@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.databus.client2.factory;
 
-import com.bazaarvoice.emodb.client.EmoClient;
+import com.bazaarvoice.emodb.client2.EmoClient;
 import com.bazaarvoice.emodb.common.jersey2.Jersey2EmoClient;
 import com.bazaarvoice.emodb.databus.client2.client.DatabusClient;
 import com.bazaarvoice.emodb.databus.client2.discovery.EmoServiceDiscovery;

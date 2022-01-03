@@ -1,9 +1,9 @@
 package com.bazaarvoice.emodb.databus.client2.client;
 
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest;
-import com.bazaarvoice.emodb.client.EmoClient;
-import com.bazaarvoice.emodb.client.EmoClientException;
-import com.bazaarvoice.emodb.client.EmoResponse;
+import com.bazaarvoice.emodb.client2.EmoClient;
+import com.bazaarvoice.emodb.client2.EmoClientException;
+import com.bazaarvoice.emodb.client2.EmoResponse;
 import com.bazaarvoice.emodb.common.api.ServiceUnavailableException;
 import com.bazaarvoice.emodb.common.api.Ttls;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
