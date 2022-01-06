@@ -3,7 +3,7 @@ set -o errexit
 set -o nounset
 
 #List of prefixes used in DTQ emo integration test
-table_prefixes=("gatekeeper_")
+table_prefixes=("gatekeeper_","table_","postman_")
 
 #-------------------------------------------------------------------------------
 # Main entry point
@@ -34,13 +34,14 @@ function main() {
   fi
 
   api_key_header="X-BV-API-Key: ${api_key}"
-  tables=$(curl -H "${api_key_header}" "${url}/sor/1/_table?limit=2147483647" | jq .[].name)
+  tables=$(curl -s -H "${api_key_header}" "${url}/sor/1/_table?limit=2147483647" | jq .[].name)
 
   # Go through each prefix
   for table_prefix in ${table_prefixes[*]}; do
     log "Deleting tables for $table_prefix prefix"
     # And get the tables that match the prefix
-    for table in $(echo "$tables"| grep "${table_prefix}" | tr -d '"'); do
+    filtered_tables=$(echo "${tables}" | tr -d '"' | grep "^${table_prefix}*")
+    for table in ${filtered_tables}; do
       if [[ "${table}" == *"blob"* ]]; then
         service_endpoint="blob"
       else
@@ -56,7 +57,7 @@ function main() {
       else
         curl -XPOST -H "${api_key_header}" "${purge_url}"
         log ""
-        curl -XPOST -H "${api_key_header}" "${delete_url}"
+        curl -XDELETE -H "${api_key_header}" "${delete_url}"
         log ""
       fi
     done
