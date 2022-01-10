@@ -42,7 +42,8 @@ public class AdHocThrottleManager {
             }
             _throttleMap.set(key, throttle);
         } catch (Exception e) {
-            throw Throwables.propagate(e);
+            Throwables.throwIfUnchecked(e);
+            throw new RuntimeException(e);
         }
     }
 

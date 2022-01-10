@@ -749,7 +749,8 @@ public class PersistentSortedQueueTest {
         try {
             Thread.sleep(millis);
         } catch (InterruptedException e) {
-            throw Throwables.propagate(e);
+            Throwables.throwIfUnchecked(e);
+            throw new RuntimeException(e);
         }
     }
 }
