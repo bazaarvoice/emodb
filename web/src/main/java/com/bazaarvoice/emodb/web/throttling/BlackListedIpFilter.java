@@ -19,7 +19,7 @@ public class BlackListedIpFilter implements Filter {
     private static final Logger _log = LoggerFactory.getLogger(BlackListedIpFilter.class);
 
     private static final CharMatcher IP_CHARS =
-            CharMatcher.DIGIT.or(CharMatcher.anyOf(".:%")).precomputed();  // allow ipv4 and ipv6
+            CharMatcher.digit().or(CharMatcher.anyOf(".:%")).precomputed();  // allow ipv4 and ipv6
 
     private final MapStore<Long> _blackListIpStore;
 

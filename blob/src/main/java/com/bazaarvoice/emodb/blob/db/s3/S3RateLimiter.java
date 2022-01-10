@@ -152,9 +152,10 @@ public class S3RateLimiter {
             // Do our best to re-throw the exception as it is declared
             for (Class<?> declaredException : method.getExceptionTypes()) {
                 // noinspection unchecked
-                Throwables.propagateIfInstanceOf(t, (Class<? extends Throwable>) declaredException);
+                Throwables.throwIfInstanceOf(t, (Class<? extends Throwable>) declaredException);
             }
-            throw Throwables.propagate(t);
+            Throwables.throwIfUnchecked(t);
+            throw new RuntimeException(t);
         }
     }
 }

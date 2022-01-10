@@ -358,7 +358,7 @@ public class LocalSubjectUserAccessControl implements SubjectUserAccessControl {
         SecureRandom random = new SecureRandom();
         random.setSeed(System.currentTimeMillis());
         random.setSeed(Thread.currentThread().getId());
-        random.setSeed(_hostAndPort.getHostText().getBytes());
+        random.setSeed(_hostAndPort.getHost().getBytes());
         random.setSeed(_hostAndPort.getPort());
 
         // Use base64 encoding but keep the keys alphanumeric (we could use base64URL() to make them at least URL-safe
@@ -630,7 +630,8 @@ public class LocalSubjectUserAccessControl implements SubjectUserAccessControl {
             _lockTimeoutMeter.mark();
             throw new ServiceUnavailableException("Failed to acquire update lock, try again later", new Random().nextInt(5) + 1);
         }
-        throw Throwables.propagate(e);
+        Throwables.throwIfUnchecked(e);
+        throw new RuntimeException(e);
     }
 
     // The following methods are helpful converters for transforming UAC and Auth representations of roles and keys.
