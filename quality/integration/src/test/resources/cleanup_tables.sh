@@ -2,8 +2,8 @@
 set -o errexit
 set -o nounset
 
-#List of prefixes used in DTQ emo integration test
-table_prefix=("gatekeeper")
+#Table prefix for searching tables and table removal execution
+table_prefix=("gatekeeper_")
 
 #-------------------------------------------------------------------------------
 # Main entry point
