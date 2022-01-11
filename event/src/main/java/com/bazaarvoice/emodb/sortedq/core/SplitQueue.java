@@ -1,9 +1,9 @@
 package com.bazaarvoice.emodb.sortedq.core;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Set;
 
@@ -63,7 +63,7 @@ class SplitQueue<T> {
     // For debugging
     @Override
     public String toString() {
-        Set<T> prioritized = Optional.fromNullable(_prioritize).asSet();
+        Set<T> prioritized = _prioritize != null ? Collections.singleton(_prioritize) : Collections.emptySet();
         return "SplitQueue[" + Joiner.on(',').join(Sets.union(prioritized, _queue.keySet())) + "]";
     }
 }

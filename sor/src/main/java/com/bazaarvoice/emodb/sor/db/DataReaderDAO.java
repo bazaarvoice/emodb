@@ -5,15 +5,15 @@ import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableSet;
-import com.google.common.base.Optional;
 
-import java.util.concurrent.TimeoutException;
 import javax.annotation.Nullable;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 
 public interface DataReaderDAO {
     /** Returns the number of non-deleted rows in the specified table. */

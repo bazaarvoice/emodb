@@ -61,7 +61,6 @@ import com.google.common.base.CaseFormat;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -116,6 +115,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.Spliterators;
@@ -197,7 +197,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     private final Map<String, String> _placementsUnderMove;
     private final ObjectMapper _objectMapper;
     private CQLStashTableDAO _stashTableDao;
-    private Clock _clock;
+    private final Clock _clock;
 
     @Inject
     public AstyanaxTableDAO(LifeCycleRegistry lifeCycle,
@@ -282,7 +282,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         for (String table : new String[] {_systemTable, _systemTableUuid, _systemTableUnPublishedDatabusEvents, _systemTableEventRegistry}) {
             TableOptions options = new TableOptionsBuilder().setPlacement(_systemTablePlacement).build();
             Audit audit = new AuditBuilder().setComment("initial startup").setLocalHost().build();
-            _backingStore.createTable(table, options, ImmutableMap.<String, Object>of(), audit);
+            _backingStore.createTable(table, options, ImmutableMap.of(), audit);
         }
     }
 
@@ -422,7 +422,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
                     public void run(Runnable ignored) {
                         // Retry mirror creation.
                         moveStart(json, storage.getPrimary(), storage.getUuidString(), storage.getPlacement(),
-                                storage.getShardsLog2(), "doMoveCreateMirror", Optional.<Audit>absent(),
+                                storage.getShardsLog2(), "doMoveCreateMirror", Optional.empty(),
                                 (storage.isPlacementMove()) ? MoveType.FULL_PLACEMENT : MoveType.SINGLE_TABLE);
 
                         // No exceptions?  That means every data center knows about the new mirror.
@@ -1603,7 +1603,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
 
         // Forcing millisecond precision for the Zoned date time value,
         // as zero milli second or second case omission will lead to parsing errors when deserializing the UnpublishedDatabusEvents POJO.
-        Delta delta = newUnpublishedDatabusEventUpdate(name, attribute.toString(), getMillisecondPrecisionZonedDateTime(dateTime).toString());
+        Delta delta = newUnpublishedDatabusEventUpdate(name, attribute.toString(), getMillisecondPrecisionZonedDateTime(dateTime));
         Audit augmentedAudit = new AuditBuilder()
                 .set("_unpublished-databus-event-update", attribute.toString())
                 .build();

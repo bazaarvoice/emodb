@@ -29,7 +29,8 @@ class DeltaStreamSplitter extends UnmodifiableIterator<String> {
                 setFirstCharOfNextValue(ch);
             }
         } catch (IOException e) {
-            throw Throwables.propagate(e);
+            Throwables.throwIfUnchecked(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -95,7 +96,8 @@ class DeltaStreamSplitter extends UnmodifiableIterator<String> {
             setFirstCharOfNextValue(ch);
             return buf.toString();
         } catch (IOException e) {
-            throw Throwables.propagate(e);
+            Throwables.throwIfUnchecked(e);
+            throw new RuntimeException(e);
         }
     }
 

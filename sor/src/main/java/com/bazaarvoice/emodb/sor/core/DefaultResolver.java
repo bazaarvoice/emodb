@@ -120,7 +120,8 @@ public class DefaultResolver implements Resolver {
         try {
             return HashCode.fromBytes(Hex.decodeHex(string.toCharArray()));
         } catch (DecoderException e) {
-            throw Throwables.propagate(e);
+            Throwables.throwIfUnchecked(e);
+            throw new RuntimeException(e);
         }
     }
 

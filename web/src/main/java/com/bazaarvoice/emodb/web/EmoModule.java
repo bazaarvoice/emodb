@@ -142,7 +142,6 @@ import com.bazaarvoice.ostrich.registry.zookeeper.ZooKeeperServiceRegistry;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.HostAndPort;
@@ -166,6 +165,7 @@ import org.slf4j.LoggerFactory;
 import java.net.URI;
 import java.time.Clock;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -448,15 +448,15 @@ public class EmoModule extends AbstractModule {
         @Provides
         @Singleton
         Optional<LongPollingExecutorServices> provideLongPollingExecutorServices(DatabusConfiguration databusConfiguration) {
-            int numPollingThreads = databusConfiguration.getLongPollPollingThreadCount().or(DatabusResourcePoller.DEFAULT_NUM_POLLING_THREADS);
+            int numPollingThreads = databusConfiguration.getLongPollPollingThreadCount().orElse(DatabusResourcePoller.DEFAULT_NUM_POLLING_THREADS);
             if (numPollingThreads == 0) {
-                return Optional.absent();
+                return Optional.empty();
             }
             ScheduledExecutorService pollerService = _environment.lifecycle()
                     .scheduledExecutorService("databus-poll-poller-%d")
                     .threads(numPollingThreads)
                     .build();
-            numPollingThreads = databusConfiguration.getLongPollKeepAliveThreadCount().or(DatabusResourcePoller.DEFAULT_NUM_KEEP_ALIVE_THREADS);
+            numPollingThreads = databusConfiguration.getLongPollKeepAliveThreadCount().orElse(DatabusResourcePoller.DEFAULT_NUM_KEEP_ALIVE_THREADS);
             ScheduledExecutorService keepAliveService = _environment.lifecycle()
                     .scheduledExecutorService("databus-poll-keepAlive-%d")
                     .threads(numPollingThreads)

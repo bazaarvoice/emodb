@@ -89,7 +89,8 @@ class Segment {
         try {
             _distinctAdds = HyperLogLog.Builder.build(requireNonNull(snapshot.distinctAddsHll, "distinctAddsHll"));
         } catch (IOException e) {
-            throw Throwables.propagate(e);
+            Throwables.throwIfUnchecked(e);
+            throw new RuntimeException(e);
         }
         _deletes = snapshot.deletes;
         _bytesUntilSplitCheckSize = snapshot.bytesUntilSplitCheckSize;
@@ -116,7 +117,8 @@ class Segment {
             snapshot.splitTargetRemaining = _splitTargetRemaining;
             return snapshot;
         } catch (IOException e) {
-            throw Throwables.propagate(e);
+            Throwables.throwIfUnchecked(e);
+            throw new RuntimeException(e);
         }
     }
 

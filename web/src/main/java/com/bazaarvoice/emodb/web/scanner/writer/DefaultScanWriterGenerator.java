@@ -1,9 +1,10 @@
 package com.bazaarvoice.emodb.web.scanner.writer;
 
 import com.bazaarvoice.emodb.web.scanner.ScanDestination;
-import com.google.common.base.Optional;
 import com.google.inject.Inject;
+
 import java.net.URI;
+import java.util.Optional;
 
 public class DefaultScanWriterGenerator extends ScanWriterGenerator {
     private final ScanWriterFactory _scanWriterFactory;
@@ -18,18 +19,18 @@ public class DefaultScanWriterGenerator extends ScanWriterGenerator {
      */
     public ScanWriter createScanWriter(int taskId, ScanDestination destination) {
         if (destination.isDiscarding()) {
-            return _scanWriterFactory.createDiscardingScanWriter(taskId, Optional.<Integer>absent());
+            return _scanWriterFactory.createDiscardingScanWriter(taskId, Optional.empty());
         }
 
         URI uri = destination.getUri();
         String scheme = uri.getScheme();
 
         if ("file".equals(scheme)) {
-            return _scanWriterFactory.createFileScanWriter(taskId, uri, Optional.<Integer>absent());
+            return _scanWriterFactory.createFileScanWriter(taskId, uri, Optional.empty());
         }
 
         if ("s3".equals(scheme)) {
-            return _scanWriterFactory.createS3ScanWriter(taskId, uri, Optional.<Integer>absent());
+            return _scanWriterFactory.createS3ScanWriter(taskId, uri, Optional.empty());
         }
 
         throw new IllegalArgumentException("Unsupported destination: " + destination);

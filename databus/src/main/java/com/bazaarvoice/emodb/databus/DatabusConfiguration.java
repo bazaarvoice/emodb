@@ -3,10 +3,10 @@ package com.bazaarvoice.emodb.databus;
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.bazaarvoice.emodb.databus.db.generic.CachingSubscriptionDAO;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
+import java.util.Optional;
 
 public class DatabusConfiguration {
 
@@ -21,12 +21,12 @@ public class DatabusConfiguration {
     @Valid
     @NotNull
     @JsonProperty("longPollKeepAliveThreadCount")
-    private Optional<Integer> _longPollKeepAliveThreadCount = Optional.absent();
+    private Optional<Integer> _longPollKeepAliveThreadCount = Optional.empty();
 
     @Valid
     @NotNull
     @JsonProperty("longPollPollingThreadCount")
-    private Optional<Integer> _longPollPollingThreadCount = Optional.absent();
+    private Optional<Integer> _longPollPollingThreadCount = Optional.empty();
 
     /**
      * The following is only necessary during the period while the legacy subscription cache is upgraded to the current

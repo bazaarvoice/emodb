@@ -117,7 +117,8 @@ public class JsonStreamingArrayParserTest {
         } catch (Exception e) {
             if (!exceptionClass.isInstance(e)) {
                 // Unexpected exception
-                throw Throwables.propagate(e);
+                Throwables.throwIfUnchecked(e);
+                throw new RuntimeException(e);
             }
         }
     }
@@ -134,8 +135,9 @@ public class JsonStreamingArrayParserTest {
         return new InputStream() {
             @Override
             public int read() throws IOException {
-                Throwables.propagateIfInstanceOf(t, IOException.class);
-                throw Throwables.propagate(t);
+                Throwables.throwIfInstanceOf(t, IOException.class);
+                Throwables.throwIfUnchecked(t);
+                throw new RuntimeException(t);
             }
         };
     }

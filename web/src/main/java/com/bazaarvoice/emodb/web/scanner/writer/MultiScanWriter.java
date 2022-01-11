@@ -1,6 +1,5 @@
 package com.bazaarvoice.emodb.web.scanner.writer;
 
-import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -10,6 +9,7 @@ import java.time.Duration;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
@@ -102,7 +102,8 @@ public class MultiScanWriter implements ScanWriter {
         }
 
         if (exception != null) {
-            throw Throwables.propagate(exception);
+            Throwables.throwIfUnchecked(exception);
+            throw new RuntimeException(exception);
         }
     }
 }

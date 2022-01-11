@@ -181,7 +181,8 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
         } catch (NotFoundException e) {
             return null;
         } catch (ConnectionException e) {
-            throw Throwables.propagate(e);
+            Throwables.throwIfUnchecked(e);
+            throw new RuntimeException(e);
         }
         Column<Composite> column = operationResult.getResult();
         if (column.getTimestamp() != timestamp) {
@@ -462,7 +463,8 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
                         } catch (NotFoundException e) {
                             continue;  // Unusual, but possible if racing a delete.
                         } catch (ConnectionException e) {
-                            throw Throwables.propagate(e);
+                            Throwables.throwIfUnchecked(e);
+                            throw new RuntimeException(e);
                         }
 
                         // Write two columns: one small one and one big one with the binary data.  Readers can query on
@@ -673,7 +675,8 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
         try {
             operationResult = execution.execute();
         } catch (ConnectionException e) {
-            throw Throwables.propagate(e);
+            Throwables.throwIfUnchecked(e);
+            throw new RuntimeException(e);
         }
         return operationResult.getResult();
     }
