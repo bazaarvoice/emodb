@@ -3,7 +3,7 @@ set -o errexit
 set -o nounset
 
 #Table prefix for searching tables and table removal execution
-table_prefix=("gatekeeper_")
+table_prefix="gatekeeper_"
 
 #-------------------------------------------------------------------------------
 # Main entry point
