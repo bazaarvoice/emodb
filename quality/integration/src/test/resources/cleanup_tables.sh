@@ -38,7 +38,7 @@ function main() {
 
   log "Deleting tables for $table_prefix prefix"
     # And get the tables that match the prefix
-    filtered_tables=$(echo "${tables}" | tr -d '"' | grep "^${table_prefix}*")
+    filtered_tables=$(echo "${tables}" | grep "^\\\"${table_prefix}" | tr -d '"' )
     for table in ${filtered_tables}; do
       if [[ "${table}" == *"blob"* ]]; then
         service_endpoint="blob"
