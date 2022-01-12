@@ -48,7 +48,7 @@
         <jersey.version>1.19.4</jersey.version>
         <jersey2.version>2.21</jersey2.version>
         <shiro.version>1.8.0</shiro.version>
-        <cassandra.driver.version>3.2.0</cassandra.driver.version>
+        <cassandra.driver.version>3.11.0</cassandra.driver.version>
         <kafka.version>2.8.0</kafka.version>
         <swagger.version>1.5.8</swagger.version>
         <jaxb.version>2.3.1</jaxb.version>
@@ -604,11 +604,6 @@
                         <artifactId>metrics-core</artifactId>
                     </exclusion>
                 </exclusions>
-            </dependency>
-            <dependency>
-                <groupId>com.datastax.cassandra</groupId>
-                <artifactId>cassandra-driver-mapping</artifactId>
-                <version>${cassandra.driver.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.ow2.asm</groupId>
