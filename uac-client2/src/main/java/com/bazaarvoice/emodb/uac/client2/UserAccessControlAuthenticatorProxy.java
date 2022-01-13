@@ -1,6 +1,19 @@
 package com.bazaarvoice.emodb.uac.client2;
 
-import com.bazaarvoice.emodb.uac.api.*;
+import com.bazaarvoice.emodb.uac.api.AuthUserAccessControl;
+import com.bazaarvoice.emodb.uac.api.CreateEmoApiKeyRequest;
+import com.bazaarvoice.emodb.uac.api.CreateEmoApiKeyResponse;
+import com.bazaarvoice.emodb.uac.api.CreateEmoRoleRequest;
+import com.bazaarvoice.emodb.uac.api.EmoApiKey;
+import com.bazaarvoice.emodb.uac.api.EmoApiKeyNotFoundException;
+import com.bazaarvoice.emodb.uac.api.EmoRole;
+import com.bazaarvoice.emodb.uac.api.EmoRoleExistsException;
+import com.bazaarvoice.emodb.uac.api.EmoRoleKey;
+import com.bazaarvoice.emodb.uac.api.EmoRoleNotFoundException;
+import com.bazaarvoice.emodb.uac.api.MigrateEmoApiKeyRequest;
+import com.bazaarvoice.emodb.uac.api.UpdateEmoApiKeyRequest;
+import com.bazaarvoice.emodb.uac.api.UpdateEmoRoleRequest;
+import com.bazaarvoice.emodb.uac.api.UserAccessControl;
 
 import java.util.Iterator;
 
