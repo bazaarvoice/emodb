@@ -27,7 +27,7 @@ import com.bazaarvoice.emodb.uac.api.MigrateEmoApiKeyRequest;
 import com.bazaarvoice.emodb.uac.api.UpdateEmoApiKeyRequest;
 import com.bazaarvoice.emodb.uac.api.UpdateEmoRoleRequest;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Strings;
+
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -37,7 +37,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.google.common.base.Preconditions.checkArgument;
+
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -237,8 +237,9 @@ public class UserAccessControlClient implements AuthUserAccessControl {
     public CreateEmoApiKeyResponse createApiKey(String apiKey, CreateEmoApiKeyRequest request)
             throws EmoApiKeyNotFoundException {
         requireNonNull(request, "request");
-        checkArgument(!Strings.isNullOrEmpty(request.getOwner()), "Non-empty owner is required");
-
+        if(isBlankString(request.getOwner())){
+            throw new IllegalArgumentException("Non-empty owner is required");
+        }
         try {
             URI uri = _uac.clone()
                     .segment("api-key")
@@ -265,7 +266,10 @@ public class UserAccessControlClient implements AuthUserAccessControl {
             throws EmoApiKeyNotFoundException {
         requireNonNull(request, "request");
         String id = requireNonNull(request.getId(), "id");
-        checkArgument(!request.isOwnerPresent() || !Strings.isNullOrEmpty(request.getOwner()), "Non-empty owner is required");
+        requireNonNull(request.getOwner(), "owner is required");
+        if(isBlankString(request.getOwner()) || !request.isOwnerPresent()){
+            throw new IllegalArgumentException("Non-empty owner is required");
+        }
 
         try {
             URI uri = _uac.clone()
@@ -428,5 +432,9 @@ public class UserAccessControlClient implements AuthUserAccessControl {
         }
 
         return e;
+    }
+
+    private boolean isBlankString(String string) {
+        return string == null || string.trim().isEmpty();
     }
 }
