@@ -63,6 +63,7 @@
         <module>blob-clients/blob-jersey2-client</module>
         <module>blob</module>
         <module>uac-client</module>
+        <module>uac-client2</module>
         <module>plugins</module>
         <module>web</module>
         <module>web-local</module>
