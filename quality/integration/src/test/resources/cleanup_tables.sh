@@ -2,8 +2,8 @@
 set -o errexit
 set -o nounset
 
-#Table prefix for searching tables and table removal execution
-table_prefix="gatekeeper_"
+#List of prefixes used in DTQ emo integration test
+table_prefixes=("gatekeeper_")
 
 #-------------------------------------------------------------------------------
 # Main entry point
@@ -34,9 +34,11 @@ function main() {
   fi
 
   api_key_header="X-BV-API-Key: ${api_key}"
-  tables=$(curl -s -H "${api_key_header}" "${url}/sor/1/_table?limit=2147483647" | jq .[].name)
+  tables=$(curl -H "${api_key_header}" "${url}/sor/1/_table?limit=2147483647" | jq .[].name)
 
-  log "Deleting tables for $table_prefix prefix"
+  # Go through each prefix
+  for table_prefix in ${table_prefixes[*]}; do
+    log "Deleting tables for $table_prefix prefix"
     # And get the tables that match the prefix
     filtered_tables=$(echo "${tables}" | grep "^\\\"${table_prefix}" | tr -d '"' )
     for table in ${filtered_tables}; do
@@ -59,6 +61,7 @@ function main() {
         log ""
       fi
     done
+  done
 }
 
 #-------------------------------------------------------------------------------
