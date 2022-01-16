@@ -65,8 +65,7 @@ public class DropwizardInvalidationClient implements RemoteInvalidationClient {
             try {
                 Thread.sleep(SLEEP_BETWEEN_RETRY.toMillis());
             } catch (InterruptedException e) {
-                Throwables.throwIfUnchecked(e);
-                throw new RuntimeException(e);
+                throw Throwables.propagate(e);
             }
         }
     }

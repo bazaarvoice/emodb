@@ -28,6 +28,7 @@ import com.datastax.driver.core.Session;
 import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.common.base.Charsets;
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.StringUtils;
 
@@ -36,6 +37,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.ttl;
@@ -227,6 +229,12 @@ public class CqlDataWriterDAO implements DataWriterDAO, DataCopyWriterDAO {
     @Override
     public void purgeUnsafe(Table table) {
         _astyanaxWriterDAO.purgeUnsafe(table);
+    }
+
+    private void checkError(AtomicReference<Throwable> t) {
+        if (t.get() != null) {
+            throw Throwables.propagate(t.get());
+        }
     }
 
     private BatchStatement executeAndReplaceIfNotEmpty(BatchStatement batchStatement, Session session,

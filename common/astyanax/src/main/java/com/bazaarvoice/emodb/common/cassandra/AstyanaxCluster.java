@@ -34,8 +34,7 @@ public class AstyanaxCluster extends AbstractCassandraCluster<Keyspace> implemen
         try {
             return _astyanaxContext.getClient().getKeyspace(keyspaceName);
         } catch (ConnectionException e) {
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 }

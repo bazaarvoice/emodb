@@ -95,8 +95,7 @@ public class DistributedTableSerializer implements TableSerializer, Closeable {
         } catch (KeeperException.NoNodeException e) {
             // Ok, we'll read it from the source and write it to ZooKeeper
         } catch (Exception e) {
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
 
         try {
@@ -109,8 +108,7 @@ public class DistributedTableSerializer implements TableSerializer, Closeable {
             return loadFromNode(path, out);
         } catch (KeeperException.NoNodeException e) {
             // This shouldn't happen, we only got this far because there was a conflict when we tried to write the node.
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 
@@ -147,10 +145,9 @@ public class DistributedTableSerializer implements TableSerializer, Closeable {
             ByteStreams.copy(in, out);
             return uuids;
         } catch (Throwable t) {
-            Throwables.throwIfInstanceOf(t, KeeperException.NoNodeException.class);
-            Throwables.throwIfUnchecked(t);
-            throw new RuntimeException(t);
-        }
+            Throwables.propagateIfInstanceOf(t, KeeperException.NoNodeException.class);
+            throw Throwables.propagate(t);
+       }
     }
 
     /**
@@ -201,16 +198,14 @@ public class DistributedTableSerializer implements TableSerializer, Closeable {
         } catch (Throwable t) {
             // If the node exists then there was a race condition with another server caching the same table.  Pass
             // to the caller so they can retry reading the value.
-            Throwables.throwIfInstanceOf(t, KeeperException.NodeExistsException.class);
-            Throwables.throwIfInstanceOf(t, IOException.class);
-            Throwables.throwIfUnchecked(t);
-            throw new RuntimeException(t);
+            Throwables.propagateIfInstanceOf(t, KeeperException.NodeExistsException.class);
+            Throwables.propagateIfInstanceOf(t, IOException.class);
+            throw Throwables.propagate(t);
         }
 
         if (exception != null) {
             // This will always raise the exception
-            Throwables.throwIfInstanceOf(exception, UnknownTableException.class);
-            Throwables.propagateIfPossible(exception, DroppedTableException.class);
+            Throwables.propagateIfPossible(exception, UnknownTableException.class, DroppedTableException.class);
         }
 
         out.write(tableContent);
@@ -239,8 +234,7 @@ public class DistributedTableSerializer implements TableSerializer, Closeable {
             // Node was never read nor written to, or another server has already deleted it
             return;
         } catch (Exception e) {
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
 
         // Delete all children
@@ -263,8 +257,7 @@ public class DistributedTableSerializer implements TableSerializer, Closeable {
         } catch (KeeperException.NotEmptyException e) {
             _log.info("Node not deleted because it is not empty: {}", basePath);
         } catch (Exception e) {
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 }

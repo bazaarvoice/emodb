@@ -109,9 +109,7 @@ public class PartitionAwareServiceFactory<S> implements MultiThreadedServiceFact
                     Throwable targetException = e.getTargetException();
                     for (Class<?> declaredException : method.getExceptionTypes()) {
                         // noinspection unchecked
-                        if (targetException != null) {
-                            Throwables.throwIfInstanceOf(targetException, (Class<? extends Throwable>) declaredException);
-                        }
+                        Throwables.propagateIfInstanceOf(targetException, (Class<? extends Throwable>) declaredException);
                     }
                     // If the exception was due to connection issues and not necessarily the target let the caller know.
                     // It's possible the connection timed out due to a problem on the target, but from our perspective
@@ -120,8 +118,7 @@ public class PartitionAwareServiceFactory<S> implements MultiThreadedServiceFact
                         _errorMeter.mark();
                         throw new PartitionForwardingException("Failed to handle request at endpoint", targetException.getCause());
                     }
-                    Throwables.throwIfUnchecked(targetException);
-                    throw new RuntimeException(targetException);
+                    throw Throwables.propagate(targetException);
                 }
             }
         });
