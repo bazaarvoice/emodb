@@ -3,7 +3,7 @@ set -o errexit
 set -o nounset
 
 #List of prefixes used in DTQ emo integration test
-table_prefixes=("gatekeeper_")
+table_prefixes=(gatekeeper_ postman_ table_)
 
 #-------------------------------------------------------------------------------
 # Main entry point
