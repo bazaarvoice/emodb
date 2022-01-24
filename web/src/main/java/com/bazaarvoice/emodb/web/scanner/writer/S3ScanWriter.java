@@ -14,6 +14,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -31,7 +32,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
@@ -54,7 +54,7 @@ public class S3ScanWriter extends TemporaryFileScanWriter {
 
     private final AmazonS3 _amazonS3;
     private final ScheduledExecutorService _uploadService;
-    private final Set<ActiveUpload> _activeUploads = Collections.newSetFromMap(Maps.newConcurrentMap());
+    private final Set<ActiveUpload> _activeUploads = Sets.newSetFromMap(Maps.newConcurrentMap());
     private Duration _retryDelay = DEFAULT_RETRY_DELAY;
 
     @Inject

@@ -92,8 +92,7 @@ public class DefaultInvalidationProvider implements RemoteInvalidationProvider {
             } catch (Exception e) {
                 // Ignore hosts that go down while we're waiting for a response.
                 if (endPoint.isValid()) {
-                    Throwables.throwIfUnchecked(e);
-                    throw new RuntimeException(e);
+                    throw Throwables.propagate(e);
                 }
             }
         }

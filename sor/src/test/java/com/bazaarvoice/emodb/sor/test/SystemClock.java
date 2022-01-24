@@ -14,8 +14,7 @@ public class SystemClock {
             try {
                 Thread.sleep(1);
             } catch (InterruptedException e) {
-                Throwables.throwIfUnchecked(e);
-                throw new RuntimeException(e);
+                throw Throwables.propagate(e);
             }
             end = System.currentTimeMillis();
         } while (start == end);

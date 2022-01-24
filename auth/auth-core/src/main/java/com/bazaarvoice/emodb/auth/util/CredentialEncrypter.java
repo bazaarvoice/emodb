@@ -65,8 +65,7 @@ public class CredentialEncrypter {
             return new SecretKeySpec(keyBytes, ALGORITHM);
         } catch (NoSuchAlgorithmException e) {
             // This shouldn't happen since SHA1PRNG is supported by all JVMs.
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 
@@ -100,8 +99,7 @@ public class CredentialEncrypter {
             return BaseEncoding.base64().omitPadding().encode(encryptedApiKey);
         } catch (Throwable t) {
             // This shouldn't happen since AES is supported by all JVMs.
-            Throwables.throwIfUnchecked(t);
-            throw new RuntimeException(t);
+            throw Throwables.propagate(t);
         }
     }
 
@@ -131,8 +129,7 @@ public class CredentialEncrypter {
             return apiKey;
         } catch (Throwable t) {
             // This shouldn't happen since AES is supported by all JVMs.
-            Throwables.throwIfUnchecked(t);
-            throw new RuntimeException(t);
+            throw Throwables.propagate(t);
         }
     }
 
@@ -156,8 +153,7 @@ public class CredentialEncrypter {
             return bytes.length != 0 && bytes.length % Cipher.getInstance(CIPHER).getBlockSize() == 0;
         } catch (Throwable t) {
             // This shouldn't happen since AES is supported by all JVMs.
-            Throwables.throwIfUnchecked(t);
-            throw new RuntimeException(t);
+            throw Throwables.propagate(t);
         }
     }
 

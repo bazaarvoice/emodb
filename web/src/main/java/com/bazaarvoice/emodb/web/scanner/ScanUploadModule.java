@@ -216,7 +216,7 @@ public class ScanUploadModule extends PrivateModule {
                     .withRegion(region.getName())
                     .build();
             s3CredentialsProvider = new STSAssumeRoleSessionCredentialsProvider
-                    .Builder(_config.getS3AssumeRole().get(), "stash-" + hostAndPort.getHost())
+                            .Builder(_config.getS3AssumeRole().get(),"stash-" + hostAndPort.getHostText())
                             .withStsClient(sts)
                             .build();
 

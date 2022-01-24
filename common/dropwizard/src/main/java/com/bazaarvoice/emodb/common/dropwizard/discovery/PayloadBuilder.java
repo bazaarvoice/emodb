@@ -47,7 +47,7 @@ public class PayloadBuilder implements Cloneable {
     }
 
     public PayloadBuilder withHostAndPort(HostAndPort host) {
-        withHost(host.getHost());
+        withHost(host.getHostText());
         if (host.hasPort()) {
             withPort(host.getPort());
             withAdminPort(host.getPort() + 1);

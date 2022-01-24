@@ -468,8 +468,7 @@ public class CompactorTest {
                     try {
                         addCompactionLatch.await();
                     } catch (InterruptedException e) {
-                        Throwables.throwIfUnchecked(e);
-                        throw new RuntimeException(e);
+                        throw Throwables.propagate(e);
                     }
                 }
 
@@ -562,8 +561,7 @@ public class CompactorTest {
                     try {
                         returnRecord.await();
                     } catch (InterruptedException e) {
-                        Throwables.throwIfUnchecked(e);
-                        throw new RuntimeException(e);
+                        throw Throwables.propagate(e);
                     }
                 }
                 return record;

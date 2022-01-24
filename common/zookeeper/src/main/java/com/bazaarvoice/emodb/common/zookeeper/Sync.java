@@ -33,8 +33,7 @@ public class Sync {
         } catch (InterruptedException e) {
             return false;
         } catch (Exception e) {
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 }

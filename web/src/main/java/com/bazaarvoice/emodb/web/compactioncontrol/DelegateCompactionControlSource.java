@@ -42,8 +42,7 @@ public class DelegateCompactionControlSource implements CompactionControlSource 
             }
         } catch (Exception e) {
             _log.error("Failed to update stash timestamp info for id: {}", id, e);
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 
@@ -55,8 +54,7 @@ public class DelegateCompactionControlSource implements CompactionControlSource 
             }
         } catch (Exception e) {
             _log.error("Failed to delete stash timestamp info for id: {}", id, e);
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 
@@ -66,8 +64,7 @@ public class DelegateCompactionControlSource implements CompactionControlSource 
             return _localCompactionControl.getStashTime(id, dataCenter);
         } catch (Exception e) {
             _log.error("Failed to get stash timestamp info for id: {}", id, e);
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 
@@ -77,8 +74,7 @@ public class DelegateCompactionControlSource implements CompactionControlSource 
             return _localCompactionControl.getAllStashTimes();
         } catch (Exception e) {
             _log.error("Failed to get all stash timestamps info", e);
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 
@@ -88,8 +84,7 @@ public class DelegateCompactionControlSource implements CompactionControlSource 
             return _localCompactionControl.getStashTimesForPlacement(placement);
         } catch (Exception e) {
             _log.error("Failed to get all stash timestamps info for placement: {}", placement, e);
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 }

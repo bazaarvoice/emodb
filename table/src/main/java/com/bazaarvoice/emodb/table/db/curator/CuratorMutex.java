@@ -40,8 +40,7 @@ public class CuratorMutex implements Mutex {
                 throw new TimeoutException();
             }
         } catch (Exception e) {
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
         return mutex;
     }
@@ -50,8 +49,7 @@ public class CuratorMutex implements Mutex {
         try {
             mutex.release();
         } catch (Exception e) {
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 }

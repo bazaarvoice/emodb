@@ -16,8 +16,7 @@ class MessageSerializer {
             return ByteBuffer.wrap(JSON.writeValueAsBytes(json));
         } catch (IOException e) {
             // Shouldn't get I/O errors writing to a byte buffer.
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 
