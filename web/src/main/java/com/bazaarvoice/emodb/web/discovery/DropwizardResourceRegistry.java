@@ -34,7 +34,7 @@ public class DropwizardResourceRegistry implements ResourceRegistry {
         _serviceRegistry = requireNonNull(serviceRegistry, "serviceRegistry");
         _self = requireNonNull(self, "self");
         _selfAdmin = requireNonNull(selfAdmin, "selfAdmin");
-        checkArgument(self.getHost().equals(selfAdmin.getHost()));
+        checkArgument(self.getHostText().equals(selfAdmin.getHostText()));
     }
 
     /**

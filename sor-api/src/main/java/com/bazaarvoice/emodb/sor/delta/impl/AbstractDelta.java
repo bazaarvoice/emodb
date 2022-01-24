@@ -13,8 +13,7 @@ public abstract class AbstractDelta implements Delta {
         try {
             appendTo(buf);
         } catch (IOException e) {
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
         return buf.toString();
     }

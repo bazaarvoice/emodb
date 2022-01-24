@@ -13,7 +13,7 @@ public class ZkDurationSerializer implements ZkValueSerializer<Duration> {
 
     @Override
     public Duration fromString(String string) {
-        if (CharMatcher.digit().matchesAllOf(string)) {
+        if (CharMatcher.DIGIT.matchesAllOf(string)) {
             // Milliseconds value (eg. "600000" for 10 minutes)
             return Duration.ofMillis(Long.parseLong(string));
         } else {

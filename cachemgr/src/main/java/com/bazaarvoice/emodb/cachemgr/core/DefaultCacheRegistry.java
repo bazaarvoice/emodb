@@ -94,8 +94,7 @@ public class DefaultCacheRegistry implements CacheRegistry, Closeable {
             }
         }
         if (first != null) {
-            Throwables.throwIfUnchecked(first);
-            throw new RuntimeException(first);
+            throw Throwables.propagate(first);
         }
     }
 

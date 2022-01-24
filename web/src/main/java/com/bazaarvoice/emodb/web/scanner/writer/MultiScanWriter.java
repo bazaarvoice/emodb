@@ -102,8 +102,7 @@ public class MultiScanWriter implements ScanWriter {
         }
 
         if (exception != null) {
-            Throwables.throwIfUnchecked(exception);
-            throw new RuntimeException(exception);
+            throw Throwables.propagate(exception);
         }
     }
 }

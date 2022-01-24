@@ -36,8 +36,7 @@ abstract public class StashRowIterable implements Iterable<Map<String, Object>>,
             } catch (IOException e2) {
                 // Already caught and logged
             }
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 

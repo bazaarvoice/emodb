@@ -84,8 +84,7 @@ public class BatchUpdate {
         try {
             return execution.executeAsync();
         } catch (ConnectionException e) {
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 

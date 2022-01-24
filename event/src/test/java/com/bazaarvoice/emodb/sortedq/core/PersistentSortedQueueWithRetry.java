@@ -155,8 +155,7 @@ class PersistentSortedQueueWithRetry implements SortedQueue {
                     _q = reload();
                 }
             } catch (Exception e) {
-                Throwables.throwIfUnchecked(e);
-                throw new RuntimeException(e);
+                throw Throwables.propagate(e);
             }
         }
     }

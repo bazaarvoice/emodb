@@ -420,8 +420,7 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyRead
             if (isTimeoutException(e)) {
                 throw new TimeoutException();
             } else {
-                Throwables.throwIfUnchecked(e);
-                throw new RuntimeException(e);
+                throw Throwables.propagate(e);
             }
         }
     }
@@ -484,8 +483,7 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyRead
                     } catch (ConnectionException e) {
                         // If there is another host to try then do so, otherwise raise the exception
                         if (!hosts.hasNext()) {
-                            Throwables.throwIfUnchecked(e);
-                            throw new RuntimeException(e);
+                            throw Throwables.propagate(e);
                         }
                     }
                 }
@@ -566,8 +564,7 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyRead
                     },
                     keyspace.getConfig().getRetryPolicy().duplicate()).getResult();
         } catch (ConnectionException e) {
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 
@@ -667,8 +664,7 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyRead
                                 splitWork.desiredRecordsPerSplit, keyspace.getName(), splitWork.range);
                     }
                 } else {
-                    Throwables.throwIfUnchecked(e);
-                    throw new RuntimeException(e);
+                    throw Throwables.propagate(e);
                 }
             }
         }
