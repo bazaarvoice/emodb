@@ -1,6 +1,20 @@
 package com.bazaarvoice.emodb.sor.client;
 
-import com.bazaarvoice.emodb.sor.api.*;
+import com.bazaarvoice.emodb.sor.api.Audit;
+import com.bazaarvoice.emodb.sor.api.AuthDataStore;
+import com.bazaarvoice.emodb.sor.api.Change;
+import com.bazaarvoice.emodb.sor.api.Coordinate;
+import com.bazaarvoice.emodb.sor.api.DataStore;
+import com.bazaarvoice.emodb.sor.api.FacadeOptions;
+import com.bazaarvoice.emodb.sor.api.ReadConsistency;
+import com.bazaarvoice.emodb.sor.api.StashNotAvailableException;
+import com.bazaarvoice.emodb.sor.api.Table;
+import com.bazaarvoice.emodb.sor.api.TableExistsException;
+import com.bazaarvoice.emodb.sor.api.TableOptions;
+import com.bazaarvoice.emodb.sor.api.UnknownTableException;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
+import com.bazaarvoice.emodb.sor.api.Update;
+import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 
 import javax.annotation.Nullable;

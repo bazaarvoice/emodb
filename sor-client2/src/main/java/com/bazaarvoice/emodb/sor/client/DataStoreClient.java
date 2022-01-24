@@ -286,7 +286,7 @@ public class DataStoreClient implements AuthDataStore {
     @Override
     public long getTableApproximateSize(String apiKey, String table, int limit) throws UnknownTableException {
         requireNonNull(table, "table");
-        requireNonNull(limit);
+
         checkArgument(limit > 0, "limit must be greater than 0");
         try {
             URI uri = _dataStore.clone()
