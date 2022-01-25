@@ -53,6 +53,7 @@
         <module>job</module>
         <module>sor-client-common</module>
         <module>sor-client</module>
+        <module>sor-client2</module>
         <module>sor</module>
         <module>databus-client-common</module>
         <module>databus-client</module>
