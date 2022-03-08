@@ -62,6 +62,7 @@ public class ApiKeyResource1 {
     @GET
     @Path("_key/{key}")
     public EmoApiKey getApiKeyByKey(@PathParam("key") String key, @Authenticated Subject subject) {
+        System.out.println("VALUE OF KEY...@GET "+key);
         return _uac.getApiKeyByKey(subject, key);
     }
 
@@ -72,10 +73,13 @@ public class ApiKeyResource1 {
     @Consumes("application/x.json-create-api-key")
     public Response createApiKey(CreateEmoApiKeyRequest request, @QueryParam("key") String key,
                                  @Authenticated Subject subject) {
+        System.out.println("******** ApiKeyResource1.createApiKey() *********");
         if (key != null) {
+            System.out.println("VALUE OF KEY...@POST "+key);
             request.setCustomRequestParameter("key", key);
         }
         CreateEmoApiKeyResponse response = _uac.createApiKey(subject, request);
+        System.out.println("RESPONSE CREATED FOR CREATEAPIKEY......"+response.getKey());
 
         return Response.created(URI.create(response.getId()))
                 .entity(response)

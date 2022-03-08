@@ -123,6 +123,7 @@ public class UserAccessControlClient implements AuthUserAccessControl {
         requireNonNull(request, "request");
         EmoRoleKey roleKey = requireNonNull(request.getRoleKey(), "roleKey");
         try {
+            System.out.println("Create role request for the apiKey: "+roleKey);
             URI uri = _uac.clone()
                     .segment("role")
                     .segment(roleKey.getGroup())
@@ -242,6 +243,7 @@ public class UserAccessControlClient implements AuthUserAccessControl {
     @Override
     public CreateEmoApiKeyResponse createApiKey(String apiKey, CreateEmoApiKeyRequest request)
             throws EmoApiKeyNotFoundException {
+        System.out.println("*********** Request to createApiKey() *************");
         requireNonNull(request, "request");
         checkArgument(!Strings.isNullOrEmpty(request.getOwner()), "Non-empty owner is required");
 

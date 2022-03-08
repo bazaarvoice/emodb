@@ -311,8 +311,10 @@ public class LocalSubjectUserAccessControl implements SubjectUserAccessControl {
 
     @Override
     public CreateEmoApiKeyResponse createApiKey(Subject subject, CreateEmoApiKeyRequest request) {
+        System.out.println("LocalSubjectUserAccessControl.createApiKey() for roles: "+request.getRoles());
         verifyPermission(subject, Permissions.createApiKey());
         String exactKey = request.getCustomRequestParameters().get("key").stream().findFirst().orElse(null);
+        System.out.println("exact key: "+exactKey);
 
         if (exactKey != null) {
             // Typically the system creates a random API key for the caller, so the caller has no a-priori knowledge of what
@@ -320,6 +322,7 @@ public class LocalSubjectUserAccessControl implements SubjectUserAccessControl {
             // the caller.  This creates a higher security risk and therefore requires a distinct permission from creating
             // random keys.
             verifyPermission(subject, Permissions.createExactApiKey());
+            System.out.println("returned from verifyPermission");
         }
 
         Set<RoleIdentifier> roleIds = convert(request.getRoles());
@@ -349,6 +352,7 @@ public class LocalSubjectUserAccessControl implements SubjectUserAccessControl {
     }
 
     private void verifyProvidedKeyIsValid(String apiKey) {
+        System.out.println("verifyProvidedKeyIsValid");
         checkArgument(Pattern.matches("[a-zA-Z0-9]{48}", apiKey), "API key must be exactly 48 alpha-numeric characters");
     }
 
@@ -379,20 +383,23 @@ public class LocalSubjectUserAccessControl implements SubjectUserAccessControl {
 
     private CreateEmoApiKeyResponse createRandomApiKey(AuthIdentityModification<ApiKey> modification) {
         // Since the API key is randomly generated call create in a loop to ensure we don't grab one that is already picked
-
+        System.out.println("LocalSubjectUserAccessControl.createRandomApiKey()..");
         String key = null;
         String internalId = null;
         int attempt = 0;
 
         while (key == null && ++attempt < 10) {
             key = generateRandomApiKey();
+            System.out.println("generated key received: "+key);
             try {
                 internalId = _authIdentityManager.createIdentity(key, modification);
             } catch (IdentityExistsException e) {
                 // API keys are randomly generated, so this should be exceptionally rare.  Try again with
                 // a new randomly-generated key
+                System.out.println("Identity exception received...."+e);
                 key = null;
             } catch (Exception e) {
+                System.out.println("Exception...."+e);
                 throw convertUncheckedException(e);
             }
         }
@@ -405,6 +412,7 @@ public class LocalSubjectUserAccessControl implements SubjectUserAccessControl {
 
     private CreateEmoApiKeyResponse createExactApiKey(String key, AuthIdentityModification<ApiKey> modification) {
         try {
+            System.out.println("createExactApiKey: "+key);
             String internalId = _authIdentityManager.createIdentity(key, modification);
             return new CreateEmoApiKeyResponse(key, internalId);
         } catch (IdentityExistsException e) {

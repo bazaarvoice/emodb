@@ -11,6 +11,7 @@ import com.bazaarvoice.emodb.uac.api.MigrateEmoApiKeyRequest;
 import com.bazaarvoice.emodb.uac.api.UpdateEmoApiKeyRequest;
 import com.bazaarvoice.emodb.uac.api.UpdateEmoRoleRequest;
 
+import java.util.Arrays;
 import java.util.Iterator;
 
 import static java.util.Objects.requireNonNull;
@@ -81,6 +82,8 @@ public class ReadWriteDelegatingSubjectUserAccessControl implements SubjectUserA
 
     @Override
     public CreateEmoApiKeyResponse createApiKey(Subject subject, CreateEmoApiKeyRequest request) {
+        System.out.println("ReadWriteDelegatingSubjectUserAccessControl.createApiKey() for roles: "
+        +Arrays.asList(request.getRoles()));
         return _write.createApiKey(subject, request);
     }
 
