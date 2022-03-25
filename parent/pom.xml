@@ -33,14 +33,14 @@
         <dropwizard.version>0.7.1</dropwizard.version>
         <guava.version>20.0</guava.version>
         <guice.version>4.0</guice.version>
-        <jackson.version>2.6.7.4</jackson.version>
+        <jackson.version>2.7.9</jackson.version>
         <jetty.version>9.0.7.v20131107</jetty.version>
-        <jna.version>4.1.0</jna.version>
+        <jna.version>5.3.1</jna.version>
         <org.codehaus.jackson.version>1.9.13</org.codehaus.jackson.version>
         <metrics.version>3.0.2</metrics.version>
         <ostrich.version>1.9.3</ostrich.version>
         <rison.version>2.6.3</rison.version>
-        <slf4j.version>1.7.29</slf4j.version>
+        <slf4j.version>1.7.32</slf4j.version>
         <commons-io.version>2.7</commons-io.version>
         <commons-compress.version>1.21</commons-compress.version>
         <aws-sdk.version>1.11.551</aws-sdk.version>
@@ -48,7 +48,7 @@
         <jersey.version>1.18.1</jersey.version>
         <jersey2.version>2.21</jersey2.version>
         <shiro.version>1.8.0</shiro.version>
-        <cassandra.driver.version>3.11.0</cassandra.driver.version>
+        <cassandra.driver.version>3.11.1</cassandra.driver.version>
         <kafka.version>2.8.0</kafka.version>
         <swagger.version>1.5.8</swagger.version>
         <jaxb.version>2.3.1</jaxb.version>
@@ -58,16 +58,17 @@
         <yumrepo.s3RepositoryPath>s3://bv-emodb-artifacts/emodb/yum-repo</yumrepo.s3RepositoryPath>
         <!-- maven properties recognized by the bv-super-pom -->
         <java.minimum.version>1.8</java.minimum.version>
+        <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
 
         <!-- For yum-deploy profile in emodb-rpms. This way we can deploy snapshots to yum repo-->
         <!-- If the 'yum*' variables are changed, please change the options in emodb-deploy-snapshot jenkins build-->
         <yumArtifactName>emodb-web-${project.version}</yumArtifactName>
         <yumArtifactId>emodb-web</yumArtifactId>
 
-        <jacoco.version>0.8.6</jacoco.version>
+        <jacoco.version>0.8.7</jacoco.version>
         <skipCC>true</skipCC>
 
-        <sonar.version>3.8.0.2131</sonar.version>
+        <sonar.version>3.9.1.2184</sonar.version>
         <sonar.sources>src/main</sonar.sources>
         <sonar.test.sources>src/test</sonar.test.sources>
 
@@ -295,6 +296,34 @@
                 <version>${dropwizard.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.glassfish.web</groupId>
+                <artifactId>javax.el</artifactId>
+                <version>2.2.6</version>
+            </dependency>
+            <dependency>
+                <groupId>javax.enterprise</groupId>
+                <artifactId>cdi-api</artifactId>
+                <version>1.0-SP4</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>javax.el</groupId>
+                <artifactId>javax.el-api</artifactId>
+                <version>2.2.5</version>
+            </dependency>
+            <dependency>
+                <groupId>javax.servlet</groupId>
+                <artifactId>javax.servlet-api</artifactId>
+                <version>3.1.0</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>javax.servlet</groupId>
+                <artifactId>servlet-api</artifactId>
+                <version>2.5</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
                 <groupId>io.dropwizard</groupId>
                 <artifactId>dropwizard-jetty</artifactId>
                 <version>${dropwizard.version}</version>
@@ -393,12 +422,12 @@
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpcore</artifactId>
-                <version>4.4.9</version>
+                <version>4.4.13</version>
             </dependency>
             <dependency>
                 <groupId>commons-codec</groupId>
                 <artifactId>commons-codec</artifactId>
-                <version>1.10</version>
+                <version>1.11</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -524,6 +553,11 @@
                 <version>${logback.version}</version>
             </dependency>
             <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}.3</version>
+            </dependency>
+            <dependency>
                 <groupId>com.fasterxml.jackson</groupId>
                 <artifactId>jackson-bom</artifactId>
                 <version>${jackson.version}</version>
@@ -553,7 +587,13 @@
             <dependency>
                 <groupId>org.xerial.snappy</groupId>
                 <artifactId>snappy-java</artifactId>
-                <version>1.1.7.3</version>
+                <version>1.1.8.1</version>
+            </dependency>
+            <dependency>
+                <groupId>org.osgi</groupId>
+                <artifactId>org.osgi.core</artifactId>
+                <version>6.0.0</version>
+                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>commons-io</groupId>
@@ -666,12 +706,26 @@
                         <groupId>javax.ws.rs</groupId>
                         <artifactId>javax.ws.rs-api</artifactId>
                     </exclusion>
+                    <exclusion>
+                        <groupId>com.fasterxml.jackson.core</groupId>
+                        <artifactId>jackson-databind</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>com.fasterxml.jackson.datatype</groupId>
+                        <artifactId>jackson-datatype-jdk8</artifactId>
+                    </exclusion>
                 </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.kafka</groupId>
                 <artifactId>kafka-clients</artifactId>
                 <version>${kafka.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.fasterxml.jackson.core</groupId>
+                        <artifactId>jackson-databind</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.kafka</groupId>
@@ -863,7 +917,7 @@
             <plugin>
                 <groupId>org.sonatype.plugins</groupId>
                 <artifactId>nexus-staging-maven-plugin</artifactId>
-                <version>1.6.8</version>
+                <version>1.6.12</version>
                 <extensions>true</extensions>
                 <configuration>
                     <serverId>sonatype-nexus-staging</serverId>
@@ -898,20 +952,21 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.0.0</version>
                 <executions>
                     <execution>
                         <id>enforce</id>
                         <configuration>
                             <rules>
                                 <requireMavenVersion>
-                                    <!--Any 3.6 version - See http://maven.apache.org/enforcer/enforcer-rules/versionRanges.html for an explanation of version ranges-->
-                                    <version>[3.6,)</version>
-                                    <message>requires maven 3.6.x</message>
+                                    <!-- See http://maven.apache.org/enforcer/enforcer-rules/versionRanges.html for an explanation of version ranges-->
+                                    <version>[${maven.version},)</version>
+                                    <message>requires maven ${maven.version}+</message>
                                 </requireMavenVersion>
                                 <requireJavaVersion>
-                                    <!--Any 1.8 version - See http://maven.apache.org/enforcer/enforcer-rules/versionRanges.html for an explanation of version ranges-->
-                                    <version>[1.8,)</version>
-                                    <message>requires Java 1.8</message>
+                                    <!-- See http://maven.apache.org/enforcer/enforcer-rules/versionRanges.html for an explanation of version ranges-->
+                                    <version>[${java.minimum.version},)</version>
+                                    <message>requires ${java.minimum.version}+</message>
                                 </requireJavaVersion>
                                 <dependencyConvergence />
                                 <requireUpperBoundDeps />
@@ -956,8 +1011,15 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-javadoc-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                            </execution>
+                        </executions>
                         <configuration>
-                            <additionalparam>-Xdoclint:none</additionalparam>
+                            <additionalJOptions>
+                                <additionalJOption>-Xdoclint:none</additionalJOption>
+                            </additionalJOptions>
                         </configuration>
                     </plugin>
                 </plugins>

@@ -45,10 +45,6 @@
             <groupId>com.bazaarvoice.ostrich.zookeeper</groupId>
             <artifactId>ostrich-zookeeper-discovery</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.bazaarvoice.ostrich.zookeeper</groupId>
-            <artifactId>ostrich-zookeeper-registry</artifactId>
-        </dependency>
 
         <!-- 3rd-party dependencies -->
         <dependency>
@@ -58,10 +54,6 @@
         <dependency>
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.google.code.findbugs</groupId>
-            <artifactId>jsr305</artifactId>
         </dependency>
         <dependency>
             <groupId>com.codahale.metrics</groupId>
@@ -99,14 +91,7 @@
             <groupId>org.apache.curator</groupId>
             <artifactId>curator-framework</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.apache.curator</groupId>
-            <artifactId>curator-client</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.curator</groupId>
-            <artifactId>curator-test</artifactId>
-        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.mockito</groupId>
@@ -116,6 +101,26 @@
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.curator</groupId>
+            <artifactId>curator-client</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.curator</groupId>
+            <artifactId>curator-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.bazaarvoice.ostrich.zookeeper</groupId>
+            <artifactId>ostrich-zookeeper-registry</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
