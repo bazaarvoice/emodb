@@ -33,7 +33,7 @@
         <dropwizard.version>0.7.1</dropwizard.version>
         <guava.version>20.0</guava.version>
         <guice.version>4.0</guice.version>
-        <jackson.version>2.7.9</jackson.version>
+        <jackson.version>2.6.7.5</jackson.version>
         <jetty.version>9.0.7.v20131107</jetty.version>
         <jna.version>5.3.1</jna.version>
         <org.codehaus.jackson.version>1.9.13</org.codehaus.jackson.version>
@@ -553,11 +553,6 @@
                 <version>${logback.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-databind</artifactId>
-                <version>${jackson.version}.3</version>
-            </dependency>
-            <dependency>
                 <groupId>com.fasterxml.jackson</groupId>
                 <artifactId>jackson-bom</artifactId>
                 <version>${jackson.version}</version>
@@ -643,6 +638,10 @@
                     <exclusion>
                         <groupId>io.dropwizard.metrics</groupId>
                         <artifactId>metrics-core</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>com.fasterxml.jackson.core</groupId>
+                        <artifactId>jackson-databind</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>
