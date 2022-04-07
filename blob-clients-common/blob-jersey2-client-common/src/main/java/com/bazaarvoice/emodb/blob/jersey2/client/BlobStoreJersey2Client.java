@@ -214,19 +214,21 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
         URI uri = _blobStore.clone()
                 .segment("_table", table)
                 .build();
-        EmoResponse response = Failsafe.with(_retryPolicy)
-                .get(() -> _client.resource(uri)
-                .accept(MediaType.APPLICATION_JSON_TYPE)
-                .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                .head());
-        if (response.getStatus() == Response.Status.OK.getStatusCode()) {
-            return true;
-        } else if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode() &&
-                UnknownTableException.class.getName().equals(response.getFirstHeader("X-BV-Exception"))) {
-            return false;
-        } else {
-            throw convertException(new EmoClientException(response));
-        }
+
+        boolean exists = Failsafe.with(_retryPolicy)
+                .get(() -> { EmoResponse response = _client.resource(uri)
+                          .accept(MediaType.APPLICATION_JSON_TYPE)
+                          .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                          .head();
+                    if (response.getStatus() == Response.Status.OK.getStatusCode()) {
+                        return true;
+                    } else if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode() &&
+                            UnknownTableException.class.getName().equals(response.getFirstHeader("X-BV-Exception"))) {
+                        return false;
+                    } else {
+                        throw convertException(new EmoClientException(response));
+                    }});
+        return exists;
     }
 
     @Override
@@ -308,23 +310,21 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
     public BlobMetadata getMetadata(String apiKey, String table, String blobId) throws BlobNotFoundException {
         requireNonNull(table, "table");
         requireNonNull(blobId, "blobId");
-        try {
-            EmoResponse response = Failsafe.with(_retryPolicy)
-                    .get(() ->_client.resource(toUri(table, blobId))
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .head());
-            if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode() &&
-                    BlobNotFoundException.class.getName().equals(response.getFirstHeader("X-BV-Exception"))) {
-                throw new BlobNotFoundException(blobId, new EmoClientException(response));
+        BlobMetadata result = Failsafe.with(_retryPolicy)
+                .get(() -> { EmoResponse response = _client.resource(toUri(table, blobId))
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                            .head();
+                    if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode() &&
+                            BlobNotFoundException.class.getName().equals(response.getFirstHeader("X-BV-Exception"))) {
+                        throw new BlobNotFoundException(blobId, new EmoClientException(response));
 
-            } else if (response.getStatus() != Response.Status.OK.getStatusCode()) {
-                throw new EmoClientException(response);
+                    } else if (response.getStatus() != Response.Status.OK.getStatusCode()) {
+                        throw new EmoClientException(response);
 
-            }
-            return parseMetadataHeaders(blobId, response);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    }
+                    return parseMetadataHeaders(blobId, response);
+                });
+        return result;
     }
 
     @Override
@@ -387,51 +387,49 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
         RangeSpecification rangeSpec = blobRequest.getRangeSpecification();
         String apiKey = blobRequest.getApiKey();
 
-        try {
             EmoResource request = _client.resource(toUri(table, blobId));
             if (rangeSpec != null) {
                 request.header(HttpHeaders.RANGE, rangeSpec);
             }
-            EmoResponse response = Failsafe.with(_retryPolicy)
-                    .get(() -> request
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(EmoResponse.class));
+            BlobResponse blobResponse = Failsafe.with(_retryPolicy)
+                    .get(() -> { EmoResponse response =  request
+                                .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                                .get(EmoResponse.class);
 
-            int status = response.getStatus();
-            if (status != Response.Status.OK.getStatusCode() && status != HTTP_PARTIAL_CONTENT) {
-                throw new EmoClientException(response);
-            }
+                        int status = response.getStatus();
+                        if (status != Response.Status.OK.getStatusCode() && status != HTTP_PARTIAL_CONTENT) {
+                            throw new EmoClientException(response);
+                        }
 
-            BlobMetadata metadata = parseMetadataHeaders(blobId, response);
-            InputStream input = response.getEntityInputStream();
-            boolean rangeApplied = true;
+                        BlobMetadata metadata = parseMetadataHeaders(blobId, response);
+                        InputStream input = response.getEntityInputStream();
+                        boolean rangeApplied = true;
 
-            // Parse range-related data.
-            Range range;
-            String contentRange = response.getFirstHeader(HttpHeaders.CONTENT_RANGE);
-            if (status == Response.Status.OK.getStatusCode()) {
-                checkState(contentRange == null, "Unexpected HTTP 200 response with Content-Range header.");
-                if (rangeSpec == null) {
-                    // Normal GET request without a Range header
-                    range = new Range(0, metadata.getLength());
-                } else {
-                    // Server ignored the Range header.  Maybe a proxy stripped it out?
-                    range = rangeSpec.getRange(metadata.getLength());
-                    rangeApplied = false;
-                }
-            } else if (status == HTTP_PARTIAL_CONTENT) {
-                // Normal GET request with a Range header and a 206 Partial Content response
-                checkState(rangeSpec != null, "Unexpected HTTP 206 response to request w/out a Range header.");
-                checkState(contentRange != null, "Unexpected HTTP 206 response w/out Content-Range header.");
-                range = parseContentRange(contentRange);
-            } else {
-                throw new IllegalStateException();  // Shouldn't get here
-            }
+                        // Parse range-related data.
+                        Range range;
+                        String contentRange = response.getFirstHeader(HttpHeaders.CONTENT_RANGE);
+                        if (status == Response.Status.OK.getStatusCode()) {
+                            checkState(contentRange == null, "Unexpected HTTP 200 response with Content-Range header.");
+                            if (rangeSpec == null) {
+                                // Normal GET request without a Range header
+                                range = new Range(0, metadata.getLength());
+                            } else {
+                                // Server ignored the Range header.  Maybe a proxy stripped it out?
+                                range = rangeSpec.getRange(metadata.getLength());
+                                rangeApplied = false;
+                            }
+                        } else if (status == HTTP_PARTIAL_CONTENT) {
+                            // Normal GET request with a Range header and a 206 Partial Content response
+                            checkState(rangeSpec != null, "Unexpected HTTP 206 response to request w/out a Range header.");
+                            checkState(contentRange != null, "Unexpected HTTP 206 response w/out Content-Range header.");
+                            range = parseContentRange(contentRange);
+                        } else {
+                            throw new IllegalStateException();  // Shouldn't get here
+                        }
 
-            return new BlobResponse(metadata, range, rangeApplied, input);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                        return new BlobResponse(metadata, range, rangeApplied, input);
+                    });
+            return blobResponse;
     }
 
     /**
