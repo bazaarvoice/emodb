@@ -27,7 +27,7 @@
         <astyanax.version>3.8.0-bv13</astyanax.version>
         <dropwizard-metrics-datadog.version>1.1.13</dropwizard-metrics-datadog.version>
         <cassandra.version>3.11.12</cassandra.version>
-        <cassandra-maven-plugin.version>3.0.25.1</cassandra-maven-plugin.version>
+        <cassandra-maven-plugin.version>${cassandra.version}.1</cassandra-maven-plugin.version>
         <curator.version>2.4.2</curator.version>
         <curator-extensions.version>1.4.2</curator-extensions.version>
         <dropwizard.version>0.7.1</dropwizard.version>

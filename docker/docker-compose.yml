@@ -20,7 +20,7 @@ services:
       interval: 10s
 
   cassandra-dc1:
-    image: 'bazaarvoice/cassandra:3.0.25'
+    image: 'bazaarvoice/cassandra:3.11.12'
     build:
       context: .
       dockerfile: cassandra-Dockerfile
@@ -41,7 +41,7 @@ services:
       test: ["CMD-SHELL", "nodetool status | grep UN || exit 1"]
 
   kafka:
-    image: 'confluentinc/cp-kafka:5.3.1'
+    image: 'confluentinc/cp-kafka:6.2.0'
     networks:
       - emodb
     ports:
