@@ -34,4 +34,10 @@ public class BlobStoreJersey2ClientFactory extends AbstractBlobStoreJersey2Clien
                         ((WebApplicationException) e).getResponse().getStatus() >= 500) ||
                 Iterables.any(Throwables.getCausalChain(e), Predicates.instanceOf(ProcessingException.class));
     }
+
+    public BlobStoreJersey2ClientFactory withRetry(int maxNumberofAttempts, long baseSleepTime, long maxSleepTime) {
+        super.withRetry(maxNumberofAttempts, baseSleepTime, maxSleepTime);
+        return this;
+
+    }
 }

@@ -31,8 +31,12 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
 import com.google.common.net.HttpHeaders;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
@@ -96,11 +100,16 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
     private final EmoClient _client;
     private final UriBuilder _blobStore;
     private final ScheduledExecutorService _connectionManagementService;
+    private  RetryPolicy<Object> _retryPolicy;
+    private static final Logger _log = LoggerFactory.getLogger(BlobStoreJersey2Client.class);
+
 
     public BlobStoreJersey2Client(URI endPoint, EmoClient client,
-                           @Nullable ScheduledExecutorService connectionManagementService) {
+                                  @Nullable ScheduledExecutorService connectionManagementService,
+                                  RetryPolicy<Object> retryPolicy) {
         _client = requireNonNull(client, "client");
         _blobStore = EmoUriBuilder.fromUri(endPoint);
+        requireNonNull(retryPolicy);
 
         if (connectionManagementService != null) {
             _connectionManagementService = connectionManagementService;
@@ -109,24 +118,43 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
             _connectionManagementService = Executors.newSingleThreadScheduledExecutor(
                     new ThreadFactoryBuilder().setNameFormat("blob-store-client-connection-reaper-%d").build());
         }
+
+        _log.info("creating retry policy with {},{},{}", retryPolicy.getConfig().getMaxRetries(),
+                retryPolicy.getConfig().getDelay().toMillis(),
+                retryPolicy.getConfig().getMaxDelay().toMillis());
+
+        _retryPolicy = RetryPolicy.builder()
+                .handle(RuntimeException.class)
+                .withMaxRetries(retryPolicy.getConfig().getMaxRetries())
+                .withBackoff(retryPolicy.getConfig().getDelay(), retryPolicy.getConfig().getMaxDelay())
+                .onRetry(e -> {
+                    Throwable ex = e.getLastException();
+                    _log.warn("Exception occurred: "+ex.getMessage()+ " Applying retry policy");
+                })
+                .onFailure(e -> {
+                    Throwable ex = e.getException();
+                    _log.error("Failed to execute the request due to the exception: " +ex);
+                    convertException((EmoClientException) e.getException());
+                })
+                .build();
     }
 
     @Override
     public Iterator<Table> listTables(String apiKey, @Nullable String fromTableExclusive, long limit) {
         checkArgument(limit > 0, "Limit must be >0");
-        try {
-            URI uri = _blobStore.clone()
-                    .segment("_table")
-                    .queryParam("from", (fromTableExclusive != null) ? new Object[]{fromTableExclusive} : new Object[0])
-                    .queryParam("limit", limit)
-                    .build();
-            return _client.resource(uri)
-                    .accept(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<Iterator<Table>>(){});
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+
+        URI uri = _blobStore.clone()
+                .segment("_table")
+                .queryParam("from", (fromTableExclusive != null) ? new Object[]{fromTableExclusive} : new Object[0])
+                .queryParam("limit", limit)
+                .build();
+
+        return Failsafe.with(_retryPolicy)
+                .get(() -> _client.resource(uri)
+                .accept(MediaType.APPLICATION_JSON_TYPE)
+                .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                .get(new TypeReference<Iterator<Table>>(){}));
+
     }
 
     @Override
@@ -141,14 +169,12 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
                 .queryParam("options", RisonHelper.asORison(options))
                 .queryParam("audit", RisonHelper.asORison(audit))
                 .build();
-        try {
-            _client.resource(uri)
-                    .type(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .put(attributes);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+
+        Failsafe.with(_retryPolicy)
+                .run(() -> _client.resource(uri)
+                .type(MediaType.APPLICATION_JSON_TYPE)
+                .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                .put(attributes));
     }
 
     @Override
@@ -159,14 +185,12 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
                 .segment("_table", table)
                 .queryParam("audit", RisonHelper.asORison(audit))
                 .build();
-        try {
-            _client.resource(uri)
+
+        Failsafe.with(_retryPolicy)
+                .run(() -> _client.resource(uri)
                     .type(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .delete();
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .delete());
     }
 
     @Override
@@ -177,14 +201,11 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
                 .segment("_table", table, "purge")
                 .queryParam("audit", RisonHelper.asORison(audit))
                 .build();
-        try {
-            _client.resource(uri)
+        Failsafe.with(_retryPolicy)
+                .run(() -> _client.resource(uri)
                     .type(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .post();
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .post());
     }
 
     @Override
@@ -193,10 +214,11 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
         URI uri = _blobStore.clone()
                 .segment("_table", table)
                 .build();
-        EmoResponse response = _client.resource(uri)
+        EmoResponse response = Failsafe.with(_retryPolicy)
+                .get(() -> _client.resource(uri)
                 .accept(MediaType.APPLICATION_JSON_TYPE)
                 .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                .head();
+                .head());
         if (response.getStatus() == Response.Status.OK.getStatusCode()) {
             return true;
         } else if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode() &&
@@ -216,33 +238,28 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
     @Override
     public Table getTableMetadata(String apiKey, String table) {
         requireNonNull(table, "table");
-        try {
+
             URI uri = _blobStore.clone()
                     .segment("_table", table, "metadata")
                     .build();
-            return _client.resource(uri)
+            return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(Table.class);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .get(Table.class));
     }
 
     @Override
     public Map<String, String> getTableAttributes(String apiKey, String table) throws UnknownTableException {
         requireNonNull(table, "table");
-        try {
             URI uri = _blobStore.clone()
                     .segment("_table", table)
                     .build();
-            return _client.resource(uri)
+            return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<Map<String, String>>(){});
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .get(new TypeReference<Map<String, String>>(){}));
     }
 
     @Override
@@ -254,46 +271,37 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
                 .segment("_table", table, "attributes")
                 .queryParam("audit", RisonHelper.asORison(audit))
                 .build();
-        try {
-            _client.resource(uri)
+        Failsafe.with(_retryPolicy)
+                .run(() -> _client.resource(uri)
                     .type(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .put(attributes);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .put(attributes));
     }
 
     @Override
     public TableOptions getTableOptions(String apiKey, String table) throws UnknownTableException {
         requireNonNull(table, "table");
-        try {
-            URI uri = _blobStore.clone()
+        URI uri = _blobStore.clone()
                     .segment("_table", table, "options")
                     .build();
-            return _client.resource(uri)
+            return  Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(TableOptions.class);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .get(TableOptions.class));
     }
 
     @Override
     public long getTableApproximateSize(String apiKey, String table) {
         requireNonNull(table, "table");
-        try {
             URI uri = _blobStore.clone()
                     .segment("_table", table, "size")
                     .build();
-            return _client.resource(uri)
+            return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(Long.class);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .get(Long.class));
     }
 
     @Override
@@ -301,9 +309,10 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
         requireNonNull(table, "table");
         requireNonNull(blobId, "blobId");
         try {
-            EmoResponse response = _client.resource(toUri(table, blobId))
+            EmoResponse response = Failsafe.with(_retryPolicy)
+                    .get(() ->_client.resource(toUri(table, blobId))
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .head();
+                    .head());
             if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode() &&
                     BlobNotFoundException.class.getName().equals(response.getFirstHeader("X-BV-Exception"))) {
                 throw new BlobNotFoundException(blobId, new EmoClientException(response));
@@ -322,19 +331,17 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
     public Iterator<BlobMetadata> scanMetadata(String apiKey, String table, @Nullable String fromBlobIdExclusive, long limit) {
         requireNonNull(table, "table");
         checkArgument(limit > 0, "Limit must be >0");
-        try {
+
             URI uri = _blobStore.clone()
                     .segment(table)
                     .queryParam("from", (fromBlobIdExclusive != null) ? new Object[]{fromBlobIdExclusive} : new Object[0])
                     .queryParam("limit", limit)
                     .build();
-            return _client.resource(uri)
+            return Failsafe.with(_retryPolicy)
+                    .get(() ->_client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<Iterator<BlobMetadata>>(){});
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .get(new TypeReference<Iterator<BlobMetadata>>(){}));
     }
 
     @Override
@@ -385,9 +392,10 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
             if (rangeSpec != null) {
                 request.header(HttpHeaders.RANGE, rangeSpec);
             }
-            EmoResponse response = request
+            EmoResponse response = Failsafe.with(_retryPolicy)
+                    .get(() -> request
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(EmoResponse.class);
+                    .get(EmoResponse.class));
 
             int status = response.getStatus();
             if (status != Response.Status.OK.getStatusCode() && status != HTTP_PARTIAL_CONTENT) {
@@ -493,7 +501,7 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
         requireNonNull(blobId, "blobId");
         requireNonNull(in, "in");
         requireNonNull(attributes, "attributes");
-        try {
+
             // Encode the ttl as a URL query parameter
             URI uri = _blobStore.clone()
                     .segment(table, blobId)
@@ -504,40 +512,32 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
                 request.header(X_BVA_PREFIX + entry.getKey(), entry.getValue());
             }
             // Upload the object
-            request.type(MediaType.APPLICATION_OCTET_STREAM_TYPE)
+            Failsafe.with(_retryPolicy)
+                    .run(() -> request.type(MediaType.APPLICATION_OCTET_STREAM_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .put(in.get());
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .put(in.get()));
     }
 
     @Override
     public void delete(String apiKey, String table, String blobId) {
         requireNonNull(table, "table");
         requireNonNull(blobId, "blobId");
-        try {
-            _client.resource(toUri(table, blobId))
+        Failsafe.with(_retryPolicy)
+                .run(() -> _client.resource(toUri(table, blobId))
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .delete();
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .delete());
     }
 
     @Override
     public Collection<String> getTablePlacements(String apiKey) {
-        try {
             URI uri = _blobStore.clone()
                     .segment("_tableplacement")
                     .build();
-            return _client.resource(uri)
+            return Failsafe.with(_retryPolicy)
+                    .get(() ->_client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<List<String>>(){});
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .get(new TypeReference<List<String>>(){}));
     }
 
     private URI toUri(String table, String blobId) {

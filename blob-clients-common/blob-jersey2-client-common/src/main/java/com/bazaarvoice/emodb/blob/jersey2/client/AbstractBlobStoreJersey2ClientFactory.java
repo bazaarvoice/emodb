@@ -5,9 +5,12 @@ import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.client2.EmoClient;
 import com.bazaarvoice.emodb.client2.EmoClientException;
 import com.bazaarvoice.emodb.common.json.JsonStreamingEOFException;
+import com.google.common.base.Preconditions;
+import dev.failsafe.RetryPolicy;
 
 import java.io.Serializable;
 import java.net.URI;
+import java.time.Duration;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -19,6 +22,7 @@ abstract public class AbstractBlobStoreJersey2ClientFactory implements Serializa
     private final EmoClient _client;
     private URI _endPoint;
     private ScheduledExecutorService _connectionManagementService;
+    private RetryPolicy<Object> _retryPolicy;
 
     protected AbstractBlobStoreJersey2ClientFactory(EmoClient client, URI endPoint) {
         _client = client;
@@ -35,7 +39,32 @@ abstract public class AbstractBlobStoreJersey2ClientFactory implements Serializa
                 e instanceof JsonStreamingEOFException;
     }
     public BlobStore usingCredentials(final String apiKey) {
-        AuthBlobStore authBlobStore = new BlobStoreJersey2Client(_endPoint, _client, _connectionManagementService);
+        if (_retryPolicy == null)
+            createdDefaultRetryPolicy();
+        AuthBlobStore authBlobStore = new BlobStoreJersey2Client(_endPoint, _client,
+                _connectionManagementService, _retryPolicy);
         return new BlobStoreJersey2AuthenticatorProxy(authBlobStore, apiKey);
+    }
+
+    private void createdDefaultRetryPolicy() {
+        _retryPolicy = RetryPolicy.builder()
+                .withMaxRetries(3)
+                .withBackoff( Duration.ofMillis(500), Duration.ofMillis(1000))
+                .build();
+    }
+
+    protected <T extends AbstractBlobStoreJersey2ClientFactory> T withRetry(int maximumNumberOfRetry,
+                                                                            long baseSleepTime, long maxSleepTime) {
+
+        Preconditions.checkArgument(maximumNumberOfRetry <=5 && maximumNumberOfRetry > 0);
+        Preconditions.checkArgument(baseSleepTime <= 1000L && baseSleepTime >= 100L);
+        Preconditions.checkArgument(maxSleepTime <= 1000L && maxSleepTime >= 100L);
+
+        _retryPolicy= RetryPolicy.builder()
+                .withMaxRetries(maximumNumberOfRetry)
+                .withBackoff((Duration.ofMillis(baseSleepTime)), (Duration.ofMillis(maxSleepTime)))
+                .build();
+
+        return (T) this;
     }
 }
