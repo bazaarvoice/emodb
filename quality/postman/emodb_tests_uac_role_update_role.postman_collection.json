@@ -1,7 +1,7 @@
 {
 	"info": {
 		"_postman_id": "ddb923af-f9b0-4903-8999-dbe58e4fd4d2",
-		"name": "emodb_tests_uac_role_update_role",
+		"name": "EmoDB_Tests_uac_role_update_role",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -99,7 +99,7 @@
 																"header": [],
 																"body": {
 																	"mode": "raw",
-																	"raw": ""
+																	"raw": "{\n    \"permissions\": [\n        \"et eu amet eiusmod\",\n        \"velit an\"\n    ],\n    \"description\": \"ex ut cupidatat quis\",\n    \"name\": \"quis elit amet\"\n}"
 																},
 																"url": {
 																	"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}",
@@ -273,7 +273,7 @@
 														],
 														"body": {
 															"mode": "raw",
-															"raw": "{\n    \n}"
+															"raw": "{\n    \"id\":\"{{id}}\",\n    \"group\":\"{{group}}\"\n}"
 														},
 														"url": {
 															"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}?APIKey={{api_key_no_rights}}",
@@ -625,7 +625,7 @@
 																"header": [],
 																"body": {
 																	"mode": "raw",
-																	"raw": ""
+																	"raw": "{\n    \"permissions\": [\n        \"et eu amet eiusmod\",\n        \"velit an\"\n    ],\n    \"description\": \"ex ut cupidatat quis\",\n    \"name\": \"quis elit amet\"\n}"
 																},
 																"url": {
 																	"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}",
@@ -1151,7 +1151,7 @@
 																"header": [],
 																"body": {
 																	"mode": "raw",
-																	"raw": ""
+																	"raw": "{\n    \"permissions\": [\n        \"et eu amet eiusmod\",\n        \"velit an\"\n    ],\n    \"description\": \"ex ut cupidatat quis\",\n    \"name\": \"quis elit amet\"\n}"
 																},
 																"url": {
 																	"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}",
@@ -1418,8 +1418,6 @@
 																	"    pm.expect(jsonData.group, \"group is not as expected\").to.eql(pm.environment.get(\"group\"));",
 																	"    pm.expect(jsonData.id, \"id is not as expected\").to.eql(pm.environment.get(\"id\"));",
 																	"    pm.expect(jsonData.description, \"description is not as expected\").to.eql(pm.environment.get(\"description\"));",
-																	"    console.log(\"jsonData\", jsonData.permissions);",
-																	"    console.log(\"expectedPermissions \", expectedPermissions);",
 																	"    pm.expect(_.isEqual(_.sortBy(jsonData.permissions), _.sortBy(expectedPermissions)), \"permissions are not as expected\").to.be.true;",
 																	"    pm.expect(jsonData.name, \"name is not as expected\").to.eql(pm.environment.get(\"name\")); ",
 																	"});",
@@ -1690,7 +1688,7 @@
 																"header": [],
 																"body": {
 																	"mode": "raw",
-																	"raw": ""
+																	"raw": "{\n    \"permissions\": [\n        \"et eu amet eiusmod\",\n        \"velit an\"\n    ],\n    \"description\": \"ex ut cupidatat quis\",\n    \"name\": \"quis elit amet\"\n}"
 																},
 																"url": {
 																	"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}",
@@ -2229,7 +2227,7 @@
 																"header": [],
 																"body": {
 																	"mode": "raw",
-																	"raw": ""
+																	"raw": "{\n    \"permissions\": [\n        \"et eu amet eiusmod\",\n        \"velit an\"\n    ],\n    \"description\": \"ex ut cupidatat quis\",\n    \"name\": \"quis elit amet\"\n}"
 																},
 																"url": {
 																	"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}",
@@ -2489,7 +2487,6 @@
 																	"",
 																	"pm.test(\"Assert response\", function () {",
 																	"    var jsonData = pm.response.json();",
-																	"    console.log(\"jsonData \", jsonData);",
 																	"    var expectedResponseProperties = [\"group\",\"id\",\"permissions\",\"description\",\"name\"];",
 																	"    ",
 																	"    pm.expect(jsonData).to.have.keys(expectedResponseProperties);",
@@ -2761,7 +2758,7 @@
 																"header": [],
 																"body": {
 																	"mode": "raw",
-																	"raw": ""
+																	"raw": "{\n    \"permissions\": [\n        \"et eu amet eiusmod\",\n        \"velit an\"\n    ],\n    \"description\": \"ex ut cupidatat quis\",\n    \"name\": \"quis elit amet\"\n}"
 																},
 																"url": {
 																	"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}",
@@ -3027,8 +3024,6 @@
 																	"    pm.expect(jsonData.group).to.eql(pm.environment.get(\"group\"));",
 																	"    pm.expect(jsonData.id).to.eql(pm.environment.get(\"id\"));",
 																	"    pm.expect(jsonData.description).to.eql(pm.environment.get(\"description\"));",
-																	"    console.log(\"jsonData.permissions \", _.sortBy(jsonData.permissions));",
-																	"    console.log(\"expectedPermissions \", _.sortBy(expectedPermissions));",
 																	"",
 																	"    pm.expect(_.isEqual(_.sortBy(jsonData.permissions), _.sortBy(expectedPermissions)), \"permissions are not as expected\").to.be.true;",
 																	"    pm.expect(jsonData.name).to.eql(pm.environment.get(\"name\")); ",
@@ -3300,7 +3295,7 @@
 																"header": [],
 																"body": {
 																	"mode": "raw",
-																	"raw": ""
+																	"raw": "{\n    \"permissions\": [\n        \"et eu amet eiusmod\",\n        \"velit an\"\n    ],\n    \"description\": \"ex ut cupidatat quis\",\n    \"name\": \"quis elit amet\"\n}"
 																},
 																"url": {
 																	"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}",
@@ -3834,7 +3829,7 @@
 																"header": [],
 																"body": {
 																	"mode": "raw",
-																	"raw": ""
+																	"raw": "{\n    \"permissions\": [\n        \"et eu amet eiusmod\",\n        \"velit an\"\n    ],\n    \"description\": \"ex ut cupidatat quis\",\n    \"name\": \"quis elit amet\"\n}"
 																},
 																"url": {
 																	"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}",
@@ -4369,7 +4364,7 @@
 																"header": [],
 																"body": {
 																	"mode": "raw",
-																	"raw": ""
+																	"raw": "{\n    \"permissions\": [\n        \"et eu amet eiusmod\",\n        \"velit an\"\n    ],\n    \"description\": \"ex ut cupidatat quis\",\n    \"name\": \"quis elit amet\"\n}"
 																},
 																"url": {
 																	"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}",
@@ -4901,7 +4896,7 @@
 																"header": [],
 																"body": {
 																	"mode": "raw",
-																	"raw": ""
+																	"raw": "{\n    \"permissions\": [\n        \"et eu amet eiusmod\",\n        \"velit an\"\n    ],\n    \"description\": \"ex ut cupidatat quis\",\n    \"name\": \"quis elit amet\"\n}"
 																},
 																"url": {
 																	"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}",
@@ -5433,7 +5428,7 @@
 																"header": [],
 																"body": {
 																	"mode": "raw",
-																	"raw": ""
+																	"raw": "{\n    \"permissions\": [\n        \"et eu amet eiusmod\",\n        \"velit an\"\n    ],\n    \"description\": \"ex ut cupidatat quis\",\n    \"name\": \"quis elit amet\"\n}"
 																},
 																"url": {
 																	"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}",
@@ -5963,7 +5958,7 @@
 																"header": [],
 																"body": {
 																	"mode": "raw",
-																	"raw": ""
+																	"raw": "{\n    \"permissions\": [\n        \"et eu amet eiusmod\",\n        \"velit an\"\n    ],\n    \"description\": \"ex ut cupidatat quis\",\n    \"name\": \"quis elit amet\"\n}"
 																},
 																"url": {
 																	"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}",
