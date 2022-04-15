@@ -3,7 +3,6 @@ package com.bazaarvoice.emodb.blob.jersey2.client;
 import com.bazaarvoice.emodb.common.jersey2.Jersey2EmoClient;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Iterables;
 import org.glassfish.jersey.client.ClientProperties;
 
 import javax.ws.rs.ProcessingException;
@@ -32,12 +31,7 @@ public class BlobStoreJersey2ClientFactory extends AbstractBlobStoreJersey2Clien
         return super.isRetriableException(e) ||
                 (e instanceof WebApplicationException &&
                         ((WebApplicationException) e).getResponse().getStatus() >= 500) ||
-                Iterables.any(Throwables.getCausalChain(e), Predicates.instanceOf(ProcessingException.class));
-    }
-
-    public BlobStoreJersey2ClientFactory withRetry(int maxNumberofAttempts, long baseSleepTime, long maxSleepTime) {
-        super.withRetry(maxNumberofAttempts, baseSleepTime, maxSleepTime);
-        return this;
-
+                Throwables.getCausalChain(e).stream()
+                        .anyMatch(Predicates.instanceOf(ProcessingException.class)::apply);
     }
 }

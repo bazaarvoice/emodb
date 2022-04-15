@@ -35,8 +35,6 @@ import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
@@ -101,7 +99,6 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
     private final UriBuilder _blobStore;
     private final ScheduledExecutorService _connectionManagementService;
     private  RetryPolicy<Object> _retryPolicy;
-    private static final Logger _log = LoggerFactory.getLogger(BlobStoreJersey2Client.class);
 
 
     public BlobStoreJersey2Client(URI endPoint, EmoClient client,
@@ -109,7 +106,7 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
                                   RetryPolicy<Object> retryPolicy) {
         _client = requireNonNull(client, "client");
         _blobStore = EmoUriBuilder.fromUri(endPoint);
-        requireNonNull(retryPolicy);
+
 
         if (connectionManagementService != null) {
             _connectionManagementService = connectionManagementService;
@@ -119,24 +116,7 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
                     new ThreadFactoryBuilder().setNameFormat("blob-store-client-connection-reaper-%d").build());
         }
 
-        _log.info("creating retry policy with {},{},{}", retryPolicy.getConfig().getMaxRetries(),
-                retryPolicy.getConfig().getDelay().toMillis(),
-                retryPolicy.getConfig().getMaxDelay().toMillis());
-
-        _retryPolicy = RetryPolicy.builder()
-                .handle(RuntimeException.class)
-                .withMaxRetries(retryPolicy.getConfig().getMaxRetries())
-                .withBackoff(retryPolicy.getConfig().getDelay(), retryPolicy.getConfig().getMaxDelay())
-                .onRetry(e -> {
-                    Throwable ex = e.getLastException();
-                    _log.warn("Exception occurred: "+ex.getMessage()+ " Applying retry policy");
-                })
-                .onFailure(e -> {
-                    Throwable ex = e.getException();
-                    _log.error("Failed to execute the request due to the exception: " +ex);
-                    convertException((EmoClientException) e.getException());
-                })
-                .build();
+        _retryPolicy = requireNonNull(retryPolicy);
     }
 
     @Override

@@ -5,12 +5,12 @@ import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.client2.EmoClient;
 import com.bazaarvoice.emodb.client2.EmoClientException;
 import com.bazaarvoice.emodb.common.json.JsonStreamingEOFException;
-import com.google.common.base.Preconditions;
 import dev.failsafe.RetryPolicy;
 
 import java.io.Serializable;
 import java.net.URI;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -21,16 +21,40 @@ abstract public class AbstractBlobStoreJersey2ClientFactory implements Serializa
 
     private final EmoClient _client;
     private URI _endPoint;
+
     private ScheduledExecutorService _connectionManagementService;
-    private RetryPolicy<Object> _retryPolicy;
 
     protected AbstractBlobStoreJersey2ClientFactory(EmoClient client, URI endPoint) {
-        _client = client;
-        _endPoint = endPoint;
+        _client = Objects.requireNonNull(client);
+        _endPoint = Objects.requireNonNull(endPoint);
     }
 
-    protected void setConnectionManagementService(ScheduledExecutorService connectionManagementService) {
-        _connectionManagementService = connectionManagementService;
+    public BlobStore usingCredentials(final String apiKey) {
+        AuthBlobStore authBlobStore = new BlobStoreJersey2Client(_endPoint, _client,
+                _connectionManagementService, createRetryPolicy());
+        return new BlobStoreJersey2AuthenticatorProxy(authBlobStore, apiKey);
+    }
+
+    public RetryPolicy<Object> createRetryPolicy() {
+//  FIXME      isRetriableException(Exception e) or it's variation should be used in handleIf or another method
+//        RetryPolicy.builder()
+//                .handle(RuntimeException.class)
+//                .withMaxRetries(retryPolicy.getConfig().getMaxRetries())
+//                .withBackoff(retryPolicy.getConfig().getDelay(), retryPolicy.getConfig().getMaxDelay())
+//                .onRetry(e -> {
+//                    Throwable ex = e.getLastException();
+//                    _log.warn("Exception occurred: "+ex.getMessage()+ " Applying retry policy");
+//                })
+//                .onFailure(e -> {
+//                    Throwable ex = e.getException();
+//                    _log.error("Failed to execute the request due to the exception: " +ex);
+//                    convertException((EmoClientException) e.getException());
+//                })
+//                .build();
+        return RetryPolicy.builder()
+                .withMaxRetries(3)
+                .withBackoff(Duration.ofMillis(500), Duration.ofMillis(1000))
+                .build();
     }
 
     public boolean isRetriableException(Exception e) {
@@ -38,33 +62,8 @@ abstract public class AbstractBlobStoreJersey2ClientFactory implements Serializa
                 ((EmoClientException) e).getResponse().getStatus() >= 500) ||
                 e instanceof JsonStreamingEOFException;
     }
-    public BlobStore usingCredentials(final String apiKey) {
-        if (_retryPolicy == null)
-            createdDefaultRetryPolicy();
-        AuthBlobStore authBlobStore = new BlobStoreJersey2Client(_endPoint, _client,
-                _connectionManagementService, _retryPolicy);
-        return new BlobStoreJersey2AuthenticatorProxy(authBlobStore, apiKey);
-    }
 
-    private void createdDefaultRetryPolicy() {
-        _retryPolicy = RetryPolicy.builder()
-                .withMaxRetries(3)
-                .withBackoff( Duration.ofMillis(500), Duration.ofMillis(1000))
-                .build();
-    }
-
-    protected <T extends AbstractBlobStoreJersey2ClientFactory> T withRetry(int maximumNumberOfRetry,
-                                                                            long baseSleepTime, long maxSleepTime) {
-
-        Preconditions.checkArgument(maximumNumberOfRetry <=5 && maximumNumberOfRetry > 0);
-        Preconditions.checkArgument(baseSleepTime <= 1000L && baseSleepTime >= 100L);
-        Preconditions.checkArgument(maxSleepTime <= 1000L && maxSleepTime >= 100L);
-
-        _retryPolicy= RetryPolicy.builder()
-                .withMaxRetries(maximumNumberOfRetry)
-                .withBackoff((Duration.ofMillis(baseSleepTime)), (Duration.ofMillis(maxSleepTime)))
-                .build();
-
-        return (T) this;
+    protected void setConnectionManagementService(ScheduledExecutorService connectionManagementService) {
+        _connectionManagementService = connectionManagementService;
     }
 }
