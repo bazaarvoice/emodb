@@ -17,13 +17,10 @@ import com.bazaarvoice.emodb.client2.EmoClientException;
 import com.bazaarvoice.emodb.client2.EmoResource;
 import com.bazaarvoice.emodb.client2.EmoResponse;
 import com.bazaarvoice.emodb.client2.uri.EmoUriBuilder;
-import com.bazaarvoice.emodb.common.api.ServiceUnavailableException;
-import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 import com.bazaarvoice.emodb.common.json.RisonHelper;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.TableExistsException;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
-import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.Maps;
@@ -206,7 +203,7 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
                             UnknownTableException.class.getName().equals(response.getFirstHeader("X-BV-Exception"))) {
                         return false;
                     } else {
-                        throw convertException(new EmoClientException(response));
+                        throw new EmoClientException(response);
                     }});
         return exists;
     }
@@ -522,76 +519,6 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
         return _blobStore.clone().segment(table, blobId).build();
     }
 
-    @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
-    private RuntimeException convertException(EmoClientException e) {
-        EmoResponse response = e.getResponse();
-        String exceptionType = response.getFirstHeader("X-BV-Exception");
-
-        if (response.getStatus() == Response.Status.BAD_REQUEST.getStatusCode() &&
-                IllegalArgumentException.class.getName().equals(exceptionType)) {
-            return new IllegalArgumentException(response.getEntity(String.class), e);
-
-        } else if (response.getStatus() == Response.Status.CONFLICT.getStatusCode() &&
-                TableExistsException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(TableExistsException.class).initCause(e);
-            } else {
-                return (RuntimeException) new TableExistsException().initCause(e);
-            }
-
-        } else if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode() &&
-                UnknownTableException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(UnknownTableException.class).initCause(e);
-            } else {
-                return (RuntimeException) new UnknownTableException().initCause(e);
-            }
-
-        } else if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode() &&
-                BlobNotFoundException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(BlobNotFoundException.class).initCause(e);
-            } else {
-                return (RuntimeException) new BlobNotFoundException().initCause(e);
-            }
-        } else if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode() &&
-                UnknownPlacementException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(UnknownPlacementException.class).initCause(e);
-            } else {
-                return (RuntimeException) new UnknownPlacementException().initCause(e);
-            }
-
-        } else if (response.getStatus() == 416 /* REQUESTED_RANGE_NOT_SATIFIABLE */ &&
-                RangeNotSatisfiableException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(RangeNotSatisfiableException.class).initCause(e);
-            } else {
-                return (RuntimeException) new RangeNotSatisfiableException(null, -1, -1).initCause(e);
-            }
-
-        } else if (response.getStatus() == Response.Status.MOVED_PERMANENTLY.getStatusCode() &&
-                UnsupportedOperationException.class.getName().equals(exceptionType)) {
-            return new UnsupportedOperationException("Permanent redirect: " + response.getLocation(), e);
-
-        } else if (response.getStatus() == Response.Status.FORBIDDEN.getStatusCode() &&
-                UnauthorizedException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(UnauthorizedException.class).initCause(e);
-            } else {
-                return (RuntimeException) new UnauthorizedException().initCause(e);
-            }
-        } else if (response.getStatus() == Response.Status.SERVICE_UNAVAILABLE.getStatusCode() &&
-                ServiceUnavailableException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(ServiceUnavailableException.class).initCause(e);
-            } else {
-                return (RuntimeException) new ServiceUnavailableException().initCause(e);
-            }
-        }
-
-        return e;
-    }
 
     /**
      * Helper object to encapsulate the parameters for a read blob request.
