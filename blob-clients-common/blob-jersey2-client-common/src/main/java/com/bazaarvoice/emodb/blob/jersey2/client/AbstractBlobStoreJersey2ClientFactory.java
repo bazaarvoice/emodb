@@ -33,9 +33,9 @@ abstract public class AbstractBlobStoreJersey2ClientFactory implements Serializa
     private final EmoClient _client;
     private URI _endPoint;
     private ScheduledExecutorService _connectionManagementService;
-    private static final int maxRetries = 3;
-    private static final long minDelay = 500;
-    private static final long maxDelay = 1000;
+    private static final int MAX_RETRIES = 3;
+    private static final long MIN_DELAY = 500;
+    private static final long MAX_DELAY = 1000;
     private final Logger _log = LoggerFactory.getLogger(getClass());
 
     protected AbstractBlobStoreJersey2ClientFactory(EmoClient client, URI endPoint) {
@@ -53,8 +53,8 @@ abstract public class AbstractBlobStoreJersey2ClientFactory implements Serializa
         return RetryPolicy.builder()
                 .handle(RuntimeException.class)
                 .abortOn(exception -> !isRetriableException((Exception) exception))
-                .withMaxRetries(maxRetries)
-                .withBackoff(Duration.ofMillis(minDelay), Duration.ofMillis(maxDelay))
+                .withMaxRetries(MAX_RETRIES)
+                .withBackoff(Duration.ofMillis(MIN_DELAY), Duration.ofMillis(MAX_DELAY))
                 .onRetry(e -> {
                     Throwable ex = e.getLastException();
                     _log.warn("Exception occurred: " + ex.getMessage() + " Applying retry policy");
@@ -78,7 +78,7 @@ abstract public class AbstractBlobStoreJersey2ClientFactory implements Serializa
     }
 
     @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
-    private RuntimeException convertException(EmoClientException e) {
+    private static RuntimeException convertException(EmoClientException e) {
         EmoResponse response = e.getResponse();
         String exceptionType = response.getFirstHeader("X-BV-Exception");
 
