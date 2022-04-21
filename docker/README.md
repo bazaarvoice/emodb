@@ -22,13 +22,13 @@ Docker is now included with mvn and docker image will be built if we select prof
 
 Also, to speed things up, you can try skipping tests. I usually do ` -DskipTests -DskipITs` and then watch in awe as Maven proceeds to run all of the tests anyway.
 
-### build Cassandra 3.0.25
+### build Cassandra
 
 It's based on the official image, but in order to supply our own `cassandra.yml` configuration, we have to "inherit" the official build. Again, running from `$GITROOT`:
 
 ```bash
   cd docker/
-  docker build . -f ./cassandra-Dockerfile -t bazaarvoice/cassandra:3.0.25
+  docker build . -f ./cassandra-Dockerfile -t bazaarvoice/cassandra:3.11.12
 ```
 
 Note that `docker-compose up` will build this for you if you skip this step and  the image hasn't been built before. If you make changes and want to rebuild, you can also skip this step and just include  the `--build` argument to `docker-compose up`, which will force rebuilding the Cassandra image.
