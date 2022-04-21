@@ -17,13 +17,10 @@ import com.bazaarvoice.emodb.client2.EmoClientException;
 import com.bazaarvoice.emodb.client2.EmoResource;
 import com.bazaarvoice.emodb.client2.EmoResponse;
 import com.bazaarvoice.emodb.client2.uri.EmoUriBuilder;
-import com.bazaarvoice.emodb.common.api.ServiceUnavailableException;
-import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 import com.bazaarvoice.emodb.common.json.RisonHelper;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.TableExistsException;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
-import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.Maps;
@@ -31,6 +28,8 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
 import com.google.common.net.HttpHeaders;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 
@@ -96,11 +95,15 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
     private final EmoClient _client;
     private final UriBuilder _blobStore;
     private final ScheduledExecutorService _connectionManagementService;
+    private  RetryPolicy<Object> _retryPolicy;
+
 
     public BlobStoreJersey2Client(URI endPoint, EmoClient client,
-                           @Nullable ScheduledExecutorService connectionManagementService) {
+                                  @Nullable ScheduledExecutorService connectionManagementService,
+                                  RetryPolicy<Object> retryPolicy) {
         _client = requireNonNull(client, "client");
         _blobStore = EmoUriBuilder.fromUri(endPoint);
+
 
         if (connectionManagementService != null) {
             _connectionManagementService = connectionManagementService;
@@ -109,24 +112,26 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
             _connectionManagementService = Executors.newSingleThreadScheduledExecutor(
                     new ThreadFactoryBuilder().setNameFormat("blob-store-client-connection-reaper-%d").build());
         }
+
+        _retryPolicy = requireNonNull(retryPolicy);
     }
 
     @Override
     public Iterator<Table> listTables(String apiKey, @Nullable String fromTableExclusive, long limit) {
         checkArgument(limit > 0, "Limit must be >0");
-        try {
-            URI uri = _blobStore.clone()
-                    .segment("_table")
-                    .queryParam("from", (fromTableExclusive != null) ? new Object[]{fromTableExclusive} : new Object[0])
-                    .queryParam("limit", limit)
-                    .build();
-            return _client.resource(uri)
-                    .accept(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<Iterator<Table>>(){});
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+
+        URI uri = _blobStore.clone()
+                .segment("_table")
+                .queryParam("from", (fromTableExclusive != null) ? new Object[]{fromTableExclusive} : new Object[0])
+                .queryParam("limit", limit)
+                .build();
+
+        return Failsafe.with(_retryPolicy)
+                .get(() -> _client.resource(uri)
+                .accept(MediaType.APPLICATION_JSON_TYPE)
+                .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                .get(new TypeReference<Iterator<Table>>(){}));
+
     }
 
     @Override
@@ -141,14 +146,12 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
                 .queryParam("options", RisonHelper.asORison(options))
                 .queryParam("audit", RisonHelper.asORison(audit))
                 .build();
-        try {
-            _client.resource(uri)
-                    .type(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .put(attributes);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+
+        Failsafe.with(_retryPolicy)
+                .run(() -> _client.resource(uri)
+                .type(MediaType.APPLICATION_JSON_TYPE)
+                .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                .put(attributes));
     }
 
     @Override
@@ -159,14 +162,12 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
                 .segment("_table", table)
                 .queryParam("audit", RisonHelper.asORison(audit))
                 .build();
-        try {
-            _client.resource(uri)
+
+        Failsafe.with(_retryPolicy)
+                .run(() -> _client.resource(uri)
                     .type(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .delete();
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .delete());
     }
 
     @Override
@@ -177,14 +178,11 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
                 .segment("_table", table, "purge")
                 .queryParam("audit", RisonHelper.asORison(audit))
                 .build();
-        try {
-            _client.resource(uri)
+        Failsafe.with(_retryPolicy)
+                .run(() -> _client.resource(uri)
                     .type(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .post();
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .post());
     }
 
     @Override
@@ -193,18 +191,21 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
         URI uri = _blobStore.clone()
                 .segment("_table", table)
                 .build();
-        EmoResponse response = _client.resource(uri)
-                .accept(MediaType.APPLICATION_JSON_TYPE)
-                .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                .head();
-        if (response.getStatus() == Response.Status.OK.getStatusCode()) {
-            return true;
-        } else if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode() &&
-                UnknownTableException.class.getName().equals(response.getFirstHeader("X-BV-Exception"))) {
-            return false;
-        } else {
-            throw convertException(new EmoClientException(response));
-        }
+
+        boolean exists = Failsafe.with(_retryPolicy)
+                .get(() -> { EmoResponse response = _client.resource(uri)
+                          .accept(MediaType.APPLICATION_JSON_TYPE)
+                          .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                          .head();
+                    if (response.getStatus() == Response.Status.OK.getStatusCode()) {
+                        return true;
+                    } else if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode() &&
+                            UnknownTableException.class.getName().equals(response.getFirstHeader("X-BV-Exception"))) {
+                        return false;
+                    } else {
+                        throw new EmoClientException(response);
+                    }});
+        return exists;
     }
 
     @Override
@@ -216,33 +217,28 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
     @Override
     public Table getTableMetadata(String apiKey, String table) {
         requireNonNull(table, "table");
-        try {
+
             URI uri = _blobStore.clone()
                     .segment("_table", table, "metadata")
                     .build();
-            return _client.resource(uri)
+            return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(Table.class);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .get(Table.class));
     }
 
     @Override
     public Map<String, String> getTableAttributes(String apiKey, String table) throws UnknownTableException {
         requireNonNull(table, "table");
-        try {
             URI uri = _blobStore.clone()
                     .segment("_table", table)
                     .build();
-            return _client.resource(uri)
+            return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<Map<String, String>>(){});
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .get(new TypeReference<Map<String, String>>(){}));
     }
 
     @Override
@@ -254,87 +250,75 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
                 .segment("_table", table, "attributes")
                 .queryParam("audit", RisonHelper.asORison(audit))
                 .build();
-        try {
-            _client.resource(uri)
+        Failsafe.with(_retryPolicy)
+                .run(() -> _client.resource(uri)
                     .type(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .put(attributes);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .put(attributes));
     }
 
     @Override
     public TableOptions getTableOptions(String apiKey, String table) throws UnknownTableException {
         requireNonNull(table, "table");
-        try {
-            URI uri = _blobStore.clone()
+        URI uri = _blobStore.clone()
                     .segment("_table", table, "options")
                     .build();
-            return _client.resource(uri)
+            return  Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(TableOptions.class);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .get(TableOptions.class));
     }
 
     @Override
     public long getTableApproximateSize(String apiKey, String table) {
         requireNonNull(table, "table");
-        try {
             URI uri = _blobStore.clone()
                     .segment("_table", table, "size")
                     .build();
-            return _client.resource(uri)
+            return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(Long.class);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .get(Long.class));
     }
 
     @Override
     public BlobMetadata getMetadata(String apiKey, String table, String blobId) throws BlobNotFoundException {
         requireNonNull(table, "table");
         requireNonNull(blobId, "blobId");
-        try {
-            EmoResponse response = _client.resource(toUri(table, blobId))
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .head();
-            if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode() &&
-                    BlobNotFoundException.class.getName().equals(response.getFirstHeader("X-BV-Exception"))) {
-                throw new BlobNotFoundException(blobId, new EmoClientException(response));
+        BlobMetadata result = Failsafe.with(_retryPolicy)
+                .get(() -> { EmoResponse response = _client.resource(toUri(table, blobId))
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                            .head();
+                    if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode() &&
+                            BlobNotFoundException.class.getName().equals(response.getFirstHeader("X-BV-Exception"))) {
+                        throw new BlobNotFoundException(blobId, new EmoClientException(response));
 
-            } else if (response.getStatus() != Response.Status.OK.getStatusCode()) {
-                throw new EmoClientException(response);
+                    } else if (response.getStatus() != Response.Status.OK.getStatusCode()) {
+                        throw new EmoClientException(response);
 
-            }
-            return parseMetadataHeaders(blobId, response);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    }
+                    return parseMetadataHeaders(blobId, response);
+                });
+        return result;
     }
 
     @Override
     public Iterator<BlobMetadata> scanMetadata(String apiKey, String table, @Nullable String fromBlobIdExclusive, long limit) {
         requireNonNull(table, "table");
         checkArgument(limit > 0, "Limit must be >0");
-        try {
+
             URI uri = _blobStore.clone()
                     .segment(table)
                     .queryParam("from", (fromBlobIdExclusive != null) ? new Object[]{fromBlobIdExclusive} : new Object[0])
                     .queryParam("limit", limit)
                     .build();
-            return _client.resource(uri)
+            return Failsafe.with(_retryPolicy)
+                    .get(() ->_client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<Iterator<BlobMetadata>>(){});
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .get(new TypeReference<Iterator<BlobMetadata>>(){}));
     }
 
     @Override
@@ -380,50 +364,49 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
         RangeSpecification rangeSpec = blobRequest.getRangeSpecification();
         String apiKey = blobRequest.getApiKey();
 
-        try {
             EmoResource request = _client.resource(toUri(table, blobId));
             if (rangeSpec != null) {
                 request.header(HttpHeaders.RANGE, rangeSpec);
             }
-            EmoResponse response = request
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(EmoResponse.class);
+            BlobResponse blobResponse = Failsafe.with(_retryPolicy)
+                    .get(() -> { EmoResponse response =  request
+                                .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                                .get(EmoResponse.class);
 
-            int status = response.getStatus();
-            if (status != Response.Status.OK.getStatusCode() && status != HTTP_PARTIAL_CONTENT) {
-                throw new EmoClientException(response);
-            }
+                        int status = response.getStatus();
+                        if (status != Response.Status.OK.getStatusCode() && status != HTTP_PARTIAL_CONTENT) {
+                            throw new EmoClientException(response);
+                        }
 
-            BlobMetadata metadata = parseMetadataHeaders(blobId, response);
-            InputStream input = response.getEntityInputStream();
-            boolean rangeApplied = true;
+                        BlobMetadata metadata = parseMetadataHeaders(blobId, response);
+                        InputStream input = response.getEntityInputStream();
+                        boolean rangeApplied = true;
 
-            // Parse range-related data.
-            Range range;
-            String contentRange = response.getFirstHeader(HttpHeaders.CONTENT_RANGE);
-            if (status == Response.Status.OK.getStatusCode()) {
-                checkState(contentRange == null, "Unexpected HTTP 200 response with Content-Range header.");
-                if (rangeSpec == null) {
-                    // Normal GET request without a Range header
-                    range = new Range(0, metadata.getLength());
-                } else {
-                    // Server ignored the Range header.  Maybe a proxy stripped it out?
-                    range = rangeSpec.getRange(metadata.getLength());
-                    rangeApplied = false;
-                }
-            } else if (status == HTTP_PARTIAL_CONTENT) {
-                // Normal GET request with a Range header and a 206 Partial Content response
-                checkState(rangeSpec != null, "Unexpected HTTP 206 response to request w/out a Range header.");
-                checkState(contentRange != null, "Unexpected HTTP 206 response w/out Content-Range header.");
-                range = parseContentRange(contentRange);
-            } else {
-                throw new IllegalStateException();  // Shouldn't get here
-            }
+                        // Parse range-related data.
+                        Range range;
+                        String contentRange = response.getFirstHeader(HttpHeaders.CONTENT_RANGE);
+                        if (status == Response.Status.OK.getStatusCode()) {
+                            checkState(contentRange == null, "Unexpected HTTP 200 response with Content-Range header.");
+                            if (rangeSpec == null) {
+                                // Normal GET request without a Range header
+                                range = new Range(0, metadata.getLength());
+                            } else {
+                                // Server ignored the Range header.  Maybe a proxy stripped it out?
+                                range = rangeSpec.getRange(metadata.getLength());
+                                rangeApplied = false;
+                            }
+                        } else if (status == HTTP_PARTIAL_CONTENT) {
+                            // Normal GET request with a Range header and a 206 Partial Content response
+                            checkState(rangeSpec != null, "Unexpected HTTP 206 response to request w/out a Range header.");
+                            checkState(contentRange != null, "Unexpected HTTP 206 response w/out Content-Range header.");
+                            range = parseContentRange(contentRange);
+                        } else {
+                            throw new IllegalStateException();  // Shouldn't get here
+                        }
 
-            return new BlobResponse(metadata, range, rangeApplied, input);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                        return new BlobResponse(metadata, range, rangeApplied, input);
+                    });
+            return blobResponse;
     }
 
     /**
@@ -493,7 +476,7 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
         requireNonNull(blobId, "blobId");
         requireNonNull(in, "in");
         requireNonNull(attributes, "attributes");
-        try {
+
             // Encode the ttl as a URL query parameter
             URI uri = _blobStore.clone()
                     .segment(table, blobId)
@@ -504,116 +487,38 @@ public class BlobStoreJersey2Client implements AuthBlobStore {
                 request.header(X_BVA_PREFIX + entry.getKey(), entry.getValue());
             }
             // Upload the object
-            request.type(MediaType.APPLICATION_OCTET_STREAM_TYPE)
+            Failsafe.with(_retryPolicy)
+                    .run(() -> request.type(MediaType.APPLICATION_OCTET_STREAM_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .put(in.get());
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .put(in.get()));
     }
 
     @Override
     public void delete(String apiKey, String table, String blobId) {
         requireNonNull(table, "table");
         requireNonNull(blobId, "blobId");
-        try {
-            _client.resource(toUri(table, blobId))
+        Failsafe.with(_retryPolicy)
+                .run(() -> _client.resource(toUri(table, blobId))
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .delete();
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .delete());
     }
 
     @Override
     public Collection<String> getTablePlacements(String apiKey) {
-        try {
             URI uri = _blobStore.clone()
                     .segment("_tableplacement")
                     .build();
-            return _client.resource(uri)
+            return Failsafe.with(_retryPolicy)
+                    .get(() ->_client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<List<String>>(){});
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .get(new TypeReference<List<String>>(){}));
     }
 
     private URI toUri(String table, String blobId) {
         return _blobStore.clone().segment(table, blobId).build();
     }
 
-    @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
-    private RuntimeException convertException(EmoClientException e) {
-        EmoResponse response = e.getResponse();
-        String exceptionType = response.getFirstHeader("X-BV-Exception");
-
-        if (response.getStatus() == Response.Status.BAD_REQUEST.getStatusCode() &&
-                IllegalArgumentException.class.getName().equals(exceptionType)) {
-            return new IllegalArgumentException(response.getEntity(String.class), e);
-
-        } else if (response.getStatus() == Response.Status.CONFLICT.getStatusCode() &&
-                TableExistsException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(TableExistsException.class).initCause(e);
-            } else {
-                return (RuntimeException) new TableExistsException().initCause(e);
-            }
-
-        } else if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode() &&
-                UnknownTableException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(UnknownTableException.class).initCause(e);
-            } else {
-                return (RuntimeException) new UnknownTableException().initCause(e);
-            }
-
-        } else if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode() &&
-                BlobNotFoundException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(BlobNotFoundException.class).initCause(e);
-            } else {
-                return (RuntimeException) new BlobNotFoundException().initCause(e);
-            }
-        } else if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode() &&
-                UnknownPlacementException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(UnknownPlacementException.class).initCause(e);
-            } else {
-                return (RuntimeException) new UnknownPlacementException().initCause(e);
-            }
-
-        } else if (response.getStatus() == 416 /* REQUESTED_RANGE_NOT_SATIFIABLE */ &&
-                RangeNotSatisfiableException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(RangeNotSatisfiableException.class).initCause(e);
-            } else {
-                return (RuntimeException) new RangeNotSatisfiableException(null, -1, -1).initCause(e);
-            }
-
-        } else if (response.getStatus() == Response.Status.MOVED_PERMANENTLY.getStatusCode() &&
-                UnsupportedOperationException.class.getName().equals(exceptionType)) {
-            return new UnsupportedOperationException("Permanent redirect: " + response.getLocation(), e);
-
-        } else if (response.getStatus() == Response.Status.FORBIDDEN.getStatusCode() &&
-                UnauthorizedException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(UnauthorizedException.class).initCause(e);
-            } else {
-                return (RuntimeException) new UnauthorizedException().initCause(e);
-            }
-        } else if (response.getStatus() == Response.Status.SERVICE_UNAVAILABLE.getStatusCode() &&
-                ServiceUnavailableException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(ServiceUnavailableException.class).initCause(e);
-            } else {
-                return (RuntimeException) new ServiceUnavailableException().initCause(e);
-            }
-        }
-
-        return e;
-    }
 
     /**
      * Helper object to encapsulate the parameters for a read blob request.
