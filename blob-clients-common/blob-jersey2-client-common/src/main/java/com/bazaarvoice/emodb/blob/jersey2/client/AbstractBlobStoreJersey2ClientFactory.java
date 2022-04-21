@@ -52,7 +52,7 @@ abstract public class AbstractBlobStoreJersey2ClientFactory implements Serializa
     public RetryPolicy<Object> createRetryPolicy() {
         return RetryPolicy.builder()
                 .handle(RuntimeException.class)
-                .handleIf(exception -> isRetriableException((Exception) exception))
+                .abortOn(exception -> !isRetriableException((Exception) exception))
                 .withMaxRetries(maxRetries)
                 .withBackoff(Duration.ofMillis(minDelay), Duration.ofMillis(maxDelay))
                 .onRetry(e -> {
