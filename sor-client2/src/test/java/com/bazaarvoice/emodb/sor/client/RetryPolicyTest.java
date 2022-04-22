@@ -63,28 +63,25 @@ public class RetryPolicyTest {
         when(list.size()).thenThrow(new EmoClientException(response));
 
 
-        AtomicReference<URI> redirectURIResult =null;
-        RetryPolicy<Object> retryPolicy = factory.createRetryPolicy();
-        Failsafe.with(retryPolicy)
-                .onFailure(e -> {
-                    System.out.println("Failed..");
-                    Throwable ex = e.getException();
-                    if (ex instanceof EmoClientException){
-                        System.out.println("ex is instance of EmoClientException");
-                        // The SoR returns a 301 response when we need to make this request against a different data center.
-                        if(((EmoClientException) ex).getResponse().getStatus()
-                                == Response.Status.MOVED_PERMANENTLY.getStatusCode()){
-                            System.out.println("true");
-                            redirectURIResult.set(((EmoClientException) ex).getResponse().getLocation());
-                        }}})
-                .get(() ->list.size());
+        AtomicReference<URI> redirectURIResult = new AtomicReference<>();
+        RetryPolicy<Object>retryPolicy = factory.createRetryPolicy();
 
-        assertEquals(redirectURIResult, redirectURIExpected);
-        System.out.println("Redirected request to another datacenter");
+        try {
+            Failsafe.with(retryPolicy)
+                    .onFailure(ex -> {
+                        Throwable e = ex.getException();
+                        if (e instanceof  EmoClientException) {
+                            if(((EmoClientException) e).getResponse().getStatus()
+                                    == Response.Status.MOVED_PERMANENTLY.getStatusCode()){
+                        redirectURIResult.set(((EmoClientException) e).getResponse().getLocation());
+                            } else {
+                                throw e;
+                            }}})
+                    .run(() -> list.size());
 
-        when(list.size()).thenReturn(1);
-        int result = Failsafe.with(retryPolicy)
-                .get(() -> list.size());
-        assertEquals(result, 1);
+
+        } catch (EmoClientException e){
+            assertEquals(redirectURIResult.get(), redirectURIExpected);
+        }
     }
 }

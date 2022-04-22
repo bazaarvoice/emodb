@@ -118,46 +118,32 @@ public class DataStoreClient implements AuthDataStore {
                 .queryParam("options", RisonHelper.asORison(options))
                 .queryParam("audit", RisonHelper.asORison(audit))
                 .build();
-        AtomicReference<URI> redirectURI = null;
-        Failsafe.with(_retryPolicy)
-                .onFailure(e -> {
-                    Throwable ex = e.getException();
-                    if (ex instanceof EmoClientException){
-                        // The SoR returns a 301 response when we need to make this request against a different data center.
-                        if(((EmoClientException) ex).getResponse().getStatus()
-                                == Response.Status.MOVED_PERMANENTLY.getStatusCode()){
-                            redirectURI.set(((EmoClientException) ex).getResponse().getLocation());
-                        }}})
-                .run(() -> _client.resource(uri)
-                        .type(MediaType.APPLICATION_JSON_TYPE)
-                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                        .put(template));
-
-        if (redirectURI != null){
+        AtomicReference<URI> redirectURI = new AtomicReference<>();
+        try {
             Failsafe.with(_retryPolicy)
-                    .run(() -> _client.resource(redirectURI.get())
+                    .onFailure(e -> {
+                        Throwable ex = e.getException();
+                        if (ex instanceof EmoClientException){
+                            // The SoR returns a 301 response when we need to make this request against a different data center.
+                            if(((EmoClientException) ex).getResponse().getStatus()
+                                    == Response.Status.MOVED_PERMANENTLY.getStatusCode()){
+                                redirectURI.set(((EmoClientException) ex).getResponse().getLocation());
+                            }}})
+                    .run(() -> _client.resource(uri)
                             .type(MediaType.APPLICATION_JSON_TYPE)
                             .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
                             .put(template));
-        }
-
-        /*for (int attempt = 0; ; attempt++) {
-            try {
-                _client.resource(uri)
-                        .type(MediaType.APPLICATION_JSON_TYPE)
-                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                        .put(template);
-                return;
-            } catch (EmoClientException e) {
-                // The SoR returns a 301 response when we need to make this request against a different data center.
-                // Follow the redirect a few times but don't loop forever.
-                if (e.getResponse().getStatus() == Response.Status.MOVED_PERMANENTLY.getStatusCode() && attempt < 5) {
-                    uri = e.getResponse().getLocation();
-                    continue;
-                }
-                //throw convertException(e);
+        } catch (EmoClientException e){
+            if (redirectURI.get() != null){
+                Failsafe.with(_retryPolicy)
+                        .run(() -> _client.resource(redirectURI.get())
+                                .type(MediaType.APPLICATION_JSON_TYPE)
+                                .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                                .put(template));
+            } else {
+                throw new EmoClientException(e.getResponse());
             }
-        }*/
+        }
     }
 
     @Override
@@ -242,48 +228,35 @@ public class DataStoreClient implements AuthDataStore {
                 .segment("_table", table, "template")
                 .queryParam("audit", RisonHelper.asORison(audit))
                 .build();
-        AtomicReference<URI> redirectURI = null;
+        AtomicReference<URI> redirectURI = new AtomicReference<>();
 
-        Failsafe.with(_retryPolicy)
-                .onFailure(e -> {
-                    Throwable ex = e.getException();
-                    if (ex instanceof EmoClientException){
-                        // The SoR returns a 301 response when we need to make this request against a different data center.
-                        if(((EmoClientException) ex).getResponse().getStatus()
-                                == Response.Status.MOVED_PERMANENTLY.getStatusCode()){
-                            redirectURI.set(((EmoClientException) ex).getResponse().getLocation());
-                        }}})
-                .run(() -> {_client.resource(uri)
-                                .type(MediaType.APPLICATION_JSON_TYPE)
-                                .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                                .put(template);
-                        });
-        if (redirectURI != null ){
+        try {
             Failsafe.with(_retryPolicy)
-                    .run(() -> {_client.resource(uri)
+                    .onFailure(e -> {
+                        Throwable ex = e.getException();
+                        if (ex instanceof EmoClientException){
+                            // The SoR returns a 301 response when we need to make this request against a different data center.
+                            if(((EmoClientException) ex).getResponse().getStatus()
+                                    == Response.Status.MOVED_PERMANENTLY.getStatusCode()){
+                                redirectURI.set(((EmoClientException) ex).getResponse().getLocation());
+                            }}})
+                    .run(() -> { _client.resource(uri)
                             .type(MediaType.APPLICATION_JSON_TYPE)
                             .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
                             .put(template);
                     });
-        }
-
-        /*for (int attempt = 0; ; attempt++) {
-            try {
-                _client.resource(uri)
-                        .type(MediaType.APPLICATION_JSON_TYPE)
-                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                        .put(template);
-                return;
-            } catch (EmoClientException e) {
-                // The SoR returns a 301 response when we need to make this request against a different data center.
-                // Follow the redirect a few times but don't loop forever.
-                if (e.getResponse().getStatus() == Response.Status.MOVED_PERMANENTLY.getStatusCode() && attempt < 5) {
-                    uri = e.getResponse().getLocation();
-                    continue;
-                }
-                //throw convertException(e);
+        } catch (EmoClientException e){
+            if (redirectURI.get() != null ){
+                Failsafe.with(_retryPolicy)
+                        .run(() -> {_client.resource(redirectURI.get())
+                                .type(MediaType.APPLICATION_JSON_TYPE)
+                                .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                                .put(template);
+                        });
+            } else {
+                throw new EmoClientException(e.getResponse());
             }
-        }*/
+        }
     }
 
     @Override
@@ -554,49 +527,35 @@ public class DataStoreClient implements AuthDataStore {
                 .queryParam("audit", RisonHelper.asORison(audit))
                 .build();
 
-        AtomicReference<URI> redirectURI = null;
+        AtomicReference<URI> redirectURI = new AtomicReference<>();
 
-        Failsafe.with(_retryPolicy)
-                .onFailure(e -> {
-                    Throwable ex = e.getException();
-                    if (ex instanceof EmoClientException){
-                        // The SoR returns a 301 response when we need to make this request against a different data center.
-                        if(((EmoClientException) ex).getResponse().getStatus()
-                                == Response.Status.MOVED_PERMANENTLY.getStatusCode()){
-                            redirectURI.set(((EmoClientException) ex).getResponse().getLocation());
-                        }}})
-                .run(() -> {_client.resource(uri)
-                        .type(MediaType.APPLICATION_JSON_TYPE)
-                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                        .put();
-                });
-
-        if (redirectURI != null ){
+        try {
             Failsafe.with(_retryPolicy)
-                    .run(() -> {_client.resource(redirectURI.get())
+                    .onFailure(e -> {
+                        Throwable ex = e.getException();
+                        if (ex instanceof EmoClientException){
+                            // The SoR returns a 301 response when we need to make this request against a different data center.
+                            if(((EmoClientException) ex).getResponse().getStatus()
+                                    == Response.Status.MOVED_PERMANENTLY.getStatusCode()){
+                                redirectURI.set(((EmoClientException) ex).getResponse().getLocation());
+                            }}})
+                    .run(() -> {_client.resource(uri)
                             .type(MediaType.APPLICATION_JSON_TYPE)
                             .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
                             .put();
                     });
-        }
-
-        /*for (int attempt = 0; ; attempt++) {
-            try {
-                _client.resource(uri)
-                        .type(MediaType.APPLICATION_JSON_TYPE)
-                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                        .put();
-                return;
-            } catch (EmoClientException e) {
-                // The SoR returns a 301 response when we need to make this request against a different data center.
-                // Follow the redirect a few times but don't loop forever.
-                if (e.getResponse().getStatus() == Response.Status.MOVED_PERMANENTLY.getStatusCode() && attempt < 5) {
-                    uri = e.getResponse().getLocation();
-                    continue;
-                }
-                //throw convertException(e);
+        } catch (EmoClientException e) {
+            if (redirectURI.get() != null ){
+                Failsafe.with(_retryPolicy)
+                        .run(() -> {_client.resource(redirectURI.get())
+                                .type(MediaType.APPLICATION_JSON_TYPE)
+                                .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                                .put();
+                        });
+            } else {
+                throw new EmoClientException(e.getResponse());
             }
-        }*/
+        }
     }
 
     @Override
