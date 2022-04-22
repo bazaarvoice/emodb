@@ -49,6 +49,35 @@ public class RetryPolicyTest {
     }
 
     @Test
+    public void testRetryPolicyWhenRetriableExceptionFalse() throws InterruptedException {
+
+        URI endpoint = URI.create("http://test/endpoint");
+        Client client = ClientBuilder.newClient();
+        DataStoreClientFactory factory = DataStoreClientFactory.forClusterAndHttpClient(endpoint, client);
+
+        List list = Mockito.mock(List.class);
+        EmoResponse response = Mockito.mock(EmoResponse.class);
+        when(list.size()).thenThrow(new EmoClientException(response));
+        when(response.getStatus()).thenReturn(404);
+
+
+        RetryPolicy<Object> retryPolicy = factory.createRetryPolicy();
+
+        Execution<Object> execution = Execution.of(retryPolicy);
+        while (!execution.isComplete()) {
+
+            try {
+                execution.recordResult(list.size());
+            } catch (RuntimeException e) {
+                execution.recordFailure(e);
+                // Wait before retrying
+                Thread.sleep(execution.getDelay().toMillis());
+            }
+        }
+        assertEquals(execution.getAttemptCount(),1);
+    }
+
+    @Test
     public void testRedirectCall() {
         URI originalURI = URI.create("http://test.us.east.com/endpoint");
         URI redirectURIExpected = URI.create("http://test.eu.west.com/redirect/endpoint");
