@@ -6,25 +6,19 @@ import com.bazaarvoice.emodb.client2.EmoClient;
 import com.bazaarvoice.emodb.client2.EmoClientException;
 import com.bazaarvoice.emodb.client2.EmoResponse;
 import com.bazaarvoice.emodb.client2.uri.EmoUriBuilder;
-import com.bazaarvoice.emodb.common.api.ServiceUnavailableException;
 import com.bazaarvoice.emodb.common.api.Ttls;
-import com.bazaarvoice.emodb.common.api.UnauthorizedException;
-import com.bazaarvoice.emodb.common.json.JsonStreamProcessingException;
 import com.bazaarvoice.emodb.common.json.RisonHelper;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.sor.api.Audit;
-import com.bazaarvoice.emodb.sor.api.AuditSizeLimitException;
 import com.bazaarvoice.emodb.sor.api.AuthDataStore;
 import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
-import com.bazaarvoice.emodb.sor.api.DeltaSizeLimitException;
 import com.bazaarvoice.emodb.sor.api.FacadeOptions;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.StashNotAvailableException;
 import com.bazaarvoice.emodb.sor.api.Table;
 import com.bazaarvoice.emodb.sor.api.TableExistsException;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
-import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
 import com.bazaarvoice.emodb.sor.api.Update;
@@ -35,6 +29,8 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.PeekingIterator;
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
 import org.apache.commons.codec.binary.Base64;
 
 import javax.annotation.Nullable;
@@ -50,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
@@ -73,45 +70,41 @@ public class DataStoreClient implements AuthDataStore {
 
     private final EmoClient _client;
     private final UriBuilder _dataStore;
+    private final RetryPolicy<Object> _retryPolicy;
 
-    public DataStoreClient(URI endPoint, EmoClient client) {
+    public DataStoreClient(URI endPoint, EmoClient client, RetryPolicy<Object> retryPolicy) {
         _client = requireNonNull(client, "client");
         _dataStore = EmoUriBuilder.fromUri(endPoint);
+        _retryPolicy = requireNonNull(retryPolicy);
     }
 
     @Override
     public Iterator<Table> listTables(String apiKey, @Nullable String fromTableExclusive, long limit) {
         checkArgument(limit > 0, "Limit must be >0");
-        try {
             URI uri = _dataStore.clone()
                     .segment("_table")
                     .queryParam("from", optional(fromTableExclusive))
                     .queryParam("limit", limit)
                     .build();
-            return _client.resource(uri)
-                    .accept(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<Iterator<Table>>(){});
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+            return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
+                            .accept(MediaType.APPLICATION_JSON_TYPE)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                            .get(new TypeReference<Iterator<Table>>(){}));
     }
 
     @Override
     public Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(String apiKey, @Nullable Date fromInclusive, @Nullable Date toExclusive) {
-        try {
             URI uri = _dataStore.clone()
                     .segment("_unpublishedevents")
                     .queryParam("from", optional(fromInclusive))
                     .queryParam("to", optional(toExclusive))
                     .build();
-            return _client.resource(uri)
-                    .accept(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<Iterator<UnpublishedDatabusEvent>>(){});
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+            return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
+                            .accept(MediaType.APPLICATION_JSON_TYPE)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                            .get(new TypeReference<Iterator<UnpublishedDatabusEvent>>(){}));
     }
 
     @Override
@@ -120,12 +113,35 @@ public class DataStoreClient implements AuthDataStore {
         requireNonNull(options, "options");
         requireNonNull(template, "template");
         requireNonNull(audit, "audit");
-        URI uri = _dataStore.clone()
+         URI uri = _dataStore.clone()
                 .segment("_table", table)
                 .queryParam("options", RisonHelper.asORison(options))
                 .queryParam("audit", RisonHelper.asORison(audit))
                 .build();
-        for (int attempt = 0; ; attempt++) {
+        AtomicReference<URI> redirectURI = null;
+        Failsafe.with(_retryPolicy)
+                .onFailure(e -> {
+                    Throwable ex = e.getException();
+                    if (ex instanceof EmoClientException){
+                        // The SoR returns a 301 response when we need to make this request against a different data center.
+                        if(((EmoClientException) ex).getResponse().getStatus()
+                                == Response.Status.MOVED_PERMANENTLY.getStatusCode()){
+                            redirectURI.set(((EmoClientException) ex).getResponse().getLocation());
+                        }}})
+                .run(() -> _client.resource(uri)
+                        .type(MediaType.APPLICATION_JSON_TYPE)
+                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                        .put(template));
+
+        if (redirectURI != null){
+            Failsafe.with(_retryPolicy)
+                    .run(() -> _client.resource(redirectURI.get())
+                            .type(MediaType.APPLICATION_JSON_TYPE)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                            .put(template));
+        }
+
+        /*for (int attempt = 0; ; attempt++) {
             try {
                 _client.resource(uri)
                         .type(MediaType.APPLICATION_JSON_TYPE)
@@ -139,9 +155,9 @@ public class DataStoreClient implements AuthDataStore {
                     uri = e.getResponse().getLocation();
                     continue;
                 }
-                throw convertException(e);
+                //throw convertException(e);
             }
-        }
+        }*/
     }
 
     @Override
@@ -151,14 +167,12 @@ public class DataStoreClient implements AuthDataStore {
         URI uri = _dataStore.clone()
                 .segment("_table", table)
                 .build();
-        EmoResponse response = _client.resource(uri)
-                .queryParam("audit", RisonHelper.asORison(audit))
-                .accept(MediaType.APPLICATION_JSON_TYPE)
-                .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                .delete(EmoResponse.class);
-        if (response.getStatus() != Response.Status.OK.getStatusCode()) {
-            throw convertException(new EmoClientException(response));
-        }
+        Failsafe.with(_retryPolicy)
+                .run(() -> _client.resource(uri)
+                        .queryParam("audit", RisonHelper.asORison(audit))
+                        .accept(MediaType.APPLICATION_JSON_TYPE)
+                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                        .delete(EmoResponse.class));
     }
 
     @Override
@@ -172,18 +186,20 @@ public class DataStoreClient implements AuthDataStore {
         URI uri = _dataStore.clone()
                 .segment("_table", table)
                 .build();
-        EmoResponse response = _client.resource(uri)
-                .accept(MediaType.APPLICATION_JSON_TYPE)
-                .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                .head();
+        boolean tableExists = Failsafe.with(_retryPolicy)
+                .get(() -> { EmoResponse response = _client.resource(uri)
+                        .accept(MediaType.APPLICATION_JSON_TYPE)
+                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                        .head();
         if (response.getStatus() == Response.Status.OK.getStatusCode()) {
             return true;
         } else if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode() &&
                 UnknownTableException.class.getName().equals(response.getFirstHeader("X-BV-Exception"))) {
             return false;
-        } else {
-            throw convertException(new EmoClientException(response));
-        }
+        }  else {
+            throw new EmoClientException(response);
+        }});
+       return tableExists;
     }
 
     public boolean isTableAvailable(String apiKey, String table) {
@@ -194,33 +210,27 @@ public class DataStoreClient implements AuthDataStore {
     @Override
     public Table getTableMetadata(String apiKey, String table) {
         requireNonNull(table, "table");
-        try {
-            URI uri = _dataStore.clone()
+        URI uri = _dataStore.clone()
                     .segment("_table", table, "metadata")
                     .build();
-            return _client.resource(uri)
-                    .accept(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(Table.class);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+        return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
+                            .accept(MediaType.APPLICATION_JSON_TYPE)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                            .get(Table.class));
     }
 
     @Override
     public Map<String, Object> getTableTemplate(String apiKey, String table) {
         requireNonNull(table, "table");
-        try {
-            URI uri = _dataStore.clone()
+        URI uri = _dataStore.clone()
                     .segment("_table", table)
                     .build();
-            return _client.resource(uri)
+        return  Failsafe.with(_retryPolicy)
+                    .get(() ->_client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<Map<String,Object>>(){});
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .get(new TypeReference<Map<String,Object>>(){}));
     }
 
     @Override
@@ -228,11 +238,36 @@ public class DataStoreClient implements AuthDataStore {
         requireNonNull(table, "table");
         requireNonNull(template, "template");
         requireNonNull(audit, "audit");
-        URI uri = _dataStore.clone()
+         URI uri = _dataStore.clone()
                 .segment("_table", table, "template")
                 .queryParam("audit", RisonHelper.asORison(audit))
                 .build();
-        for (int attempt = 0; ; attempt++) {
+        AtomicReference<URI> redirectURI = null;
+
+        Failsafe.with(_retryPolicy)
+                .onFailure(e -> {
+                    Throwable ex = e.getException();
+                    if (ex instanceof EmoClientException){
+                        // The SoR returns a 301 response when we need to make this request against a different data center.
+                        if(((EmoClientException) ex).getResponse().getStatus()
+                                == Response.Status.MOVED_PERMANENTLY.getStatusCode()){
+                            redirectURI.set(((EmoClientException) ex).getResponse().getLocation());
+                        }}})
+                .run(() -> {_client.resource(uri)
+                                .type(MediaType.APPLICATION_JSON_TYPE)
+                                .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                                .put(template);
+                        });
+        if (redirectURI != null ){
+            Failsafe.with(_retryPolicy)
+                    .run(() -> {_client.resource(uri)
+                            .type(MediaType.APPLICATION_JSON_TYPE)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                            .put(template);
+                    });
+        }
+
+        /*for (int attempt = 0; ; attempt++) {
             try {
                 _client.resource(uri)
                         .type(MediaType.APPLICATION_JSON_TYPE)
@@ -246,41 +281,35 @@ public class DataStoreClient implements AuthDataStore {
                     uri = e.getResponse().getLocation();
                     continue;
                 }
-                throw convertException(e);
+                //throw convertException(e);
             }
-        }
+        }*/
     }
 
     @Override
     public TableOptions getTableOptions(String apiKey, String table) {
         requireNonNull(table, "table");
-        try {
-            URI uri = _dataStore.clone()
+        URI uri = _dataStore.clone()
                     .segment("_table", table, "options")
                     .build();
-            return _client.resource(uri)
-                    .accept(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(TableOptions.class);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+        return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
+                            .accept(MediaType.APPLICATION_JSON_TYPE)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                            .get(TableOptions.class));
     }
 
     @Override
     public long getTableApproximateSize(String apiKey, String table) {
         requireNonNull(table, "table");
-        try {
-            URI uri = _dataStore.clone()
+        URI uri = _dataStore.clone()
                     .segment("_table", table, "size")
                     .build();
-            return _client.resource(uri)
+        return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(Long.class);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .get(Long.class));
     }
 
     @Override
@@ -288,18 +317,15 @@ public class DataStoreClient implements AuthDataStore {
         requireNonNull(table, "table");
 
         checkArgument(limit > 0, "limit must be greater than 0");
-        try {
-            URI uri = _dataStore.clone()
+        URI uri = _dataStore.clone()
                     .segment("_table", table, "size")
                     .queryParam("limit", limit)
                     .build();
-            return _client.resource(uri)
+        return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(Long.class);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .get(Long.class));
     }
 
     @Override
@@ -312,19 +338,16 @@ public class DataStoreClient implements AuthDataStore {
         requireNonNull(table, "table");
         requireNonNull(key, "key");
         requireNonNull(consistency, "consistency");
-        try {
-            URI uri = _dataStore.clone()
+        URI uri = _dataStore.clone()
                     .segment(table, key)
                     .queryParam("consistency", consistency)
                     .build();
-            return _client.resource(uri)
+        return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
                     .get(new TypeReference<Map<String, Object>>() {
-                    });
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    }));
     }
 
     @Override
@@ -341,7 +364,6 @@ public class DataStoreClient implements AuthDataStore {
         }
         checkArgument(limit > 0, "Limit must be >0");
         requireNonNull(consistency, "consistency");
-        try {
             URI uri = _dataStore.clone()
                     .segment(table, key, "timeline")
                     .queryParam("data", includeContentData)
@@ -352,13 +374,11 @@ public class DataStoreClient implements AuthDataStore {
                     .queryParam("limit", limit)
                     .queryParam("consistency", consistency)
                     .build();
-            return _client.resource(uri)
+            return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<Iterator<Change>>(){});
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .get(new TypeReference<Iterator<Change>>(){}));
     }
 
     @Override
@@ -367,39 +387,33 @@ public class DataStoreClient implements AuthDataStore {
         requireNonNull(table, "table");
         checkArgument(limit > 0, "Limit must be >0");
         requireNonNull(consistency, "consistency");
-        try {
-            URI uri = _dataStore.clone()
+        URI uri = _dataStore.clone()
                     .segment(table)
                     .queryParam("from", optional(fromKeyExclusive))
                     .queryParam("limit", limit)
                     .queryParam("includeDeletes", includeDeletes)
                     .queryParam("consistency", consistency)
                     .build();
-            return _client.resource(uri)
+        return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<Iterator<Map<String,Object>>>(){});
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .get(new TypeReference<Iterator<Map<String,Object>>>(){}));
     }
 
     @Override
     public Collection<String> getSplits(String apiKey, String table, int desiredRecordsPerSplit) {
         requireNonNull(table, "table");
         checkArgument(desiredRecordsPerSplit > 0, "DesiredRecordsPerSplit must be >0");
-        try {
-            URI uri = _dataStore.clone()
+        URI uri = _dataStore.clone()
                     .segment("_split", table)
                     .queryParam("size", desiredRecordsPerSplit)
                     .build();
-            return _client.resource(uri)
+        return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<List<String>>(){});
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .get(new TypeReference<List<String>>(){}));
     }
 
     @Override
@@ -409,21 +423,18 @@ public class DataStoreClient implements AuthDataStore {
         requireNonNull(split, "split");
         checkArgument(limit > 0, "Limit must be >0");
         requireNonNull(consistency, "consistency");
-        try {
-            URI uri = _dataStore.clone()
+        URI uri = _dataStore.clone()
                     .segment("_split", table, split)
                     .queryParam("from", optional(fromKeyExclusive))
                     .queryParam("limit", limit)
                     .queryParam("includeDeletes", includeDeletes)
                     .queryParam("consistency", consistency)
                     .build();
-            return _client.resource(uri)
+        return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<Iterator<Map<String,Object>>>(){});
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .get(new TypeReference<Iterator<Map<String,Object>>>(){}));
     }
 
     @Override
@@ -435,20 +446,17 @@ public class DataStoreClient implements AuthDataStore {
     public Iterator<Map<String, Object>> multiGet(String apiKey, final List<Coordinate> coordinates, ReadConsistency consistency) {
         requireNonNull(coordinates, "coordinates");
         requireNonNull(consistency, "consistency");
-        try {
-            UriBuilder uriBuilder = _dataStore.clone().segment("_multiget").queryParam("consistency", consistency);
-            for (Coordinate coordinate : coordinates) {
+        UriBuilder uriBuilder = _dataStore.clone().segment("_multiget").queryParam("consistency", consistency);
+        for (Coordinate coordinate : coordinates) {
                 uriBuilder.queryParam("id", coordinate.toString());
             }
-            URI uri = uriBuilder.build();
-            return _client.resource(uri)
+        URI uri = uriBuilder.build();
+        return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
                     .get(new TypeReference<Iterator<Map<String, Object>>>() {
-                    });
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    }));
     }
 
     @Override
@@ -468,22 +476,19 @@ public class DataStoreClient implements AuthDataStore {
         requireNonNull(delta, "delta");
         requireNonNull(audit, "audit");
         requireNonNull(consistency, "consistency");
-        try {
-            UriBuilder uriBuilder = _dataStore.clone()
+        UriBuilder uriBuilder = _dataStore.clone()
                     .segment(facade ? "_facade" : "", table, key)
                     .queryParam("changeId", (changeId != null) ? changeId : TimeUUIDs.newUUID())
                     .queryParam("audit", RisonHelper.asORison(audit))
                     .queryParam("consistency", consistency);
-            for (String tag : tags) {
+        for (String tag : tags) {
                 uriBuilder.queryParam("tag", tag);
-            }
-            _client.resource(uriBuilder.build())
+        }
+        Failsafe.with(_retryPolicy)
+                    .run(() -> _client.resource(uriBuilder.build())
                     .type(APPLICATION_X_JSON_DELTA_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .post(delta.toString());
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .post(delta.toString()));
     }
 
     @Override
@@ -519,24 +524,21 @@ public class DataStoreClient implements AuthDataStore {
             // attributes into the URL query parameters for the *sole* purpose of making the server request logs easier
             // to read.  The server ignores the query parameters--only the body of the POST actually matters.
             Update first = batchIter.peek();
-            try {
-                UriBuilder uriBuilder = _dataStore.clone()
+            UriBuilder uriBuilder = _dataStore.clone()
                         .segment(facade ? "_facade" : "", "_stream")
                         .queryParam("batch", batchIdx)
                         .queryParam("table", first.getTable())
                         .queryParam("key", first.getKey())
                         .queryParam("audit", RisonHelper.asORison(first.getAudit()))
                         .queryParam("consistency", first.getConsistency());
-                for(String tag : tags) {
+            for(String tag : tags) {
                     uriBuilder.queryParam("tag", tag);
                 }
-                _client.resource(uriBuilder.build())
+            Failsafe.with(_retryPolicy)
+                        .run(() -> _client.resource(uriBuilder.build())
                         .type(MediaType.APPLICATION_JSON_TYPE)
                         .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                        .post(batchIter);
-            } catch (EmoClientException e) {
-                throw convertException(e);
-            }
+                        .post(batchIter));
         }
     }
 
@@ -551,7 +553,34 @@ public class DataStoreClient implements AuthDataStore {
                 .queryParam("options", RisonHelper.asORison(options))
                 .queryParam("audit", RisonHelper.asORison(audit))
                 .build();
-        for (int attempt = 0; ; attempt++) {
+
+        AtomicReference<URI> redirectURI = null;
+
+        Failsafe.with(_retryPolicy)
+                .onFailure(e -> {
+                    Throwable ex = e.getException();
+                    if (ex instanceof EmoClientException){
+                        // The SoR returns a 301 response when we need to make this request against a different data center.
+                        if(((EmoClientException) ex).getResponse().getStatus()
+                                == Response.Status.MOVED_PERMANENTLY.getStatusCode()){
+                            redirectURI.set(((EmoClientException) ex).getResponse().getLocation());
+                        }}})
+                .run(() -> {_client.resource(uri)
+                        .type(MediaType.APPLICATION_JSON_TYPE)
+                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                        .put();
+                });
+
+        if (redirectURI != null ){
+            Failsafe.with(_retryPolicy)
+                    .run(() -> {_client.resource(redirectURI.get())
+                            .type(MediaType.APPLICATION_JSON_TYPE)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                            .put();
+                    });
+        }
+
+        /*for (int attempt = 0; ; attempt++) {
             try {
                 _client.resource(uri)
                         .type(MediaType.APPLICATION_JSON_TYPE)
@@ -565,9 +594,9 @@ public class DataStoreClient implements AuthDataStore {
                     uri = e.getResponse().getLocation();
                     continue;
                 }
-                throw convertException(e);
+                //throw convertException(e);
             }
-        }
+        }*/
     }
 
     @Override
@@ -592,7 +621,6 @@ public class DataStoreClient implements AuthDataStore {
         requireNonNull(key, "key");
         requireNonNull(readConsistency, "readConsistency");
         requireNonNull(writeConsistency, "writeConsistency");
-        try {
             Integer ttlOverrideSeconds = (ttlOverride != null) ? Ttls.toSeconds(ttlOverride, 0, Integer.MAX_VALUE) : null;
             URI uri = _dataStore.clone()
                     .segment(table, key, "compact")
@@ -600,116 +628,38 @@ public class DataStoreClient implements AuthDataStore {
                     .queryParam("readConsistency", readConsistency)
                     .queryParam("writeConsistency", writeConsistency)
                     .build();
-            _client.resource(uri)
+            Failsafe.with(_retryPolicy)
+                    .run(() -> _client.resource(uri)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .post();
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .post());
     }
 
     @Override
     public Collection<String> getTablePlacements(String apiKey) {
-        try {
             URI uri = _dataStore.clone()
                     .segment("_tableplacement")
                     .build();
-            return _client.resource(uri)
+            return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<List<String>>(){});
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+                    .get(new TypeReference<List<String>>(){}));
     }
 
     @Override
     public URI getStashRoot(String apiKey)
             throws StashNotAvailableException {
-        try {
             URI uri = _dataStore.clone()
                     .segment("_stashroot")
                     .build();
-            String stashRoot = _client.resource(uri)
+            String stashRoot = Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
                     .accept(MediaType.TEXT_PLAIN_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(String.class);
+                    .get(String.class));
             return URI.create(stashRoot);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
     }
 
-    @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
-    private RuntimeException convertException(EmoClientException e) {
-        EmoResponse response = e.getResponse();
-        String exceptionType = response.getFirstHeader("X-BV-Exception");
-
-        if (response.getStatus() == Response.Status.BAD_REQUEST.getStatusCode()) {
-            if (IllegalArgumentException.class.getName().equals(exceptionType)) {
-                return new IllegalArgumentException(response.getEntity(String.class), e);
-            } else if (JsonStreamProcessingException.class.getName().equals(exceptionType)) {
-                return new JsonStreamProcessingException(response.getEntity(String.class));
-            } else if (DeltaSizeLimitException.class.getName().equals(exceptionType)) {
-                return response.getEntity(DeltaSizeLimitException.class);
-            } else if (AuditSizeLimitException.class.getName().equals(exceptionType)) {
-                return response.getEntity(AuditSizeLimitException.class);
-            }
-
-        } else if (response.getStatus() == Response.Status.CONFLICT.getStatusCode() &&
-                TableExistsException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(TableExistsException.class).initCause(e);
-            } else {
-                return (RuntimeException) new TableExistsException().initCause(e);
-            }
-
-        } else if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode() &&
-                UnknownTableException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(UnknownTableException.class).initCause(e);
-            } else {
-                return (RuntimeException) new UnknownTableException().initCause(e);
-            }
-
-        } else if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode() &&
-                UnknownPlacementException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(UnknownPlacementException.class).initCause(e);
-            } else {
-                return (RuntimeException) new UnknownPlacementException().initCause(e);
-            }
-
-        } else if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode() &&
-                StashNotAvailableException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(StashNotAvailableException.class).initCause(e);
-            } else {
-                return (RuntimeException) new StashNotAvailableException().initCause(e);
-            }
-
-        } else if (response.getStatus() == Response.Status.MOVED_PERMANENTLY.getStatusCode() &&
-                UnsupportedOperationException.class.getName().equals(exceptionType)) {
-            return new UnsupportedOperationException("Permanent redirect: " + response.getLocation(), e);
-
-        } else if (response.getStatus() == Response.Status.FORBIDDEN.getStatusCode() &&
-                UnauthorizedException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(UnauthorizedException.class).initCause(e);
-            } else {
-                return (RuntimeException) new UnauthorizedException().initCause(e);
-            }
-        } else if (response.getStatus() == Response.Status.SERVICE_UNAVAILABLE.getStatusCode() &&
-                ServiceUnavailableException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(ServiceUnavailableException.class).initCause(e);
-            } else {
-                return (RuntimeException) new ServiceUnavailableException().initCause(e);
-            }
-        }
-
-        return e;
-    }
 
     private String basicAuthCredentials(String credentials) {
         return String.format("Basic %s", Base64.encodeBase64String(credentials.getBytes(Charsets.UTF_8)));
