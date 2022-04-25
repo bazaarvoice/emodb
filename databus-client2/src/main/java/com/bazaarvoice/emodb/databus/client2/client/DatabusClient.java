@@ -20,6 +20,8 @@ import com.bazaarvoice.emodb.databus.api.UnknownSubscriptionException;
 import com.bazaarvoice.emodb.databus.client2.discovery.EmoServiceDiscovery;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.fasterxml.jackson.core.type.TypeReference;
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +32,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import java.io.Closeable;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.util.Collection;
@@ -55,12 +58,14 @@ public class DatabusClient implements Databus, Closeable {
     private EmoServiceDiscovery _databusDiscovery;
     private final EmoClient _client;
     private final String _apiKey;
+    private final RetryPolicy<Object> _retryPolicy;
     private static final boolean _partitionSafe = false;
 
-    public DatabusClient(EmoServiceDiscovery databusDiscovery, EmoClient client, String apiKey) {
+    public DatabusClient(EmoServiceDiscovery databusDiscovery, EmoClient client, String apiKey, RetryPolicy<Object> retryPolicy) {
         _databusDiscovery = databusDiscovery;
         _client = client;
         _apiKey = apiKey;
+        _retryPolicy = requireNonNull(retryPolicy);
     }
 
     @Override
@@ -75,12 +80,13 @@ public class DatabusClient implements Databus, Closeable {
                     .build();
             _log.debug("Uri for listSubscriptions call:{} ", uri.toString());
 
-            return _client.resource(uri)
-                    .accept(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                    .get(new TypeReference<Iterator<Subscription>>() {
-                    });
-        } catch (Exception e) {
+            return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
+                            .accept(MediaType.APPLICATION_JSON_TYPE)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
+                            .get(new TypeReference<Iterator<Subscription>>() {
+                            }));
+        } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
     }
@@ -104,13 +110,12 @@ public class DatabusClient implements Databus, Closeable {
                     .build();
             _log.debug("Uri for subscribe call:{} ", uri.toString());
 
-            _client.resource(uri)
-                    .type(JSON_CONDITION_MEDIA_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                    .put(tableFilter.toString());
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        } catch (Exception e) {
+            Failsafe.with(_retryPolicy)
+                    .run(() -> _client.resource(uri)
+                            .type(JSON_CONDITION_MEDIA_TYPE)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
+                            .put(tableFilter.toString()));
+        } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
     }
@@ -127,12 +132,11 @@ public class DatabusClient implements Databus, Closeable {
                     .build();
             _log.debug("Uri for unsubscribe call:{} ", uri.toString());
 
-            _client.resource(uri)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                    .delete();
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        } catch (Exception e) {
+            Failsafe.with(_retryPolicy)
+                    .run(() -> _client.resource(uri)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
+                            .delete());
+        }  catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
     }
@@ -148,12 +152,11 @@ public class DatabusClient implements Databus, Closeable {
                     .build();
             _log.debug("Uri for getSubscription call:{} ", uri.toString());
 
-            return _client.resource(uri)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                    .get(Subscription.class);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        } catch (Exception e) {
+            return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
+                            .get(Subscription.class));
+        } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
     }
@@ -176,13 +179,12 @@ public class DatabusClient implements Databus, Closeable {
                     .queryParam("partitioned", _partitionSafe)
                     .build();
             _log.debug("Uri for getEventCountUpTo call:{} ", uri.toString());
-            return _client.resource(uri)
-                    .accept(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                    .get(Long.class);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        } catch (Exception e) {
+            return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
+                            .accept(MediaType.APPLICATION_JSON_TYPE)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
+                            .get(Long.class));
+        } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
     }
@@ -200,13 +202,12 @@ public class DatabusClient implements Databus, Closeable {
                     .build();
             _log.debug("Uri for getClaimCount call:{} ", uri.toString());
 
-            return _client.resource(uri)
-                    .accept(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                    .get(Long.class);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        } catch (Exception e) {
+            return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
+                            .accept(MediaType.APPLICATION_JSON_TYPE)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
+                            .get(Long.class));
+        } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
     }
@@ -225,14 +226,13 @@ public class DatabusClient implements Databus, Closeable {
                     .build();
             _log.debug("Uri for peek call:{} ", uri.toString());
 
-            return _client.resource(uri)
-                    .accept(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                    .get(new TypeReference<Iterator<Event>>() {
-                    });
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        } catch (Exception e) {
+            return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
+                            .accept(MediaType.APPLICATION_JSON_TYPE)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
+                            .get(new TypeReference<Iterator<Event>>() {
+                            }));
+        } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
     }
@@ -254,14 +254,15 @@ public class DatabusClient implements Databus, Closeable {
                     .build();
             _log.debug("Uri for poll call:{} ", uri.toString());
 
-            EmoResponse response = _client.resource(uri)
-                    .queryParam("includeTags", "true")
-                    .accept(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                    .get(EmoResponse.class);
+            EmoResponse response = Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
+                            .queryParam("includeTags", "true")
+                            .accept(MediaType.APPLICATION_JSON_TYPE)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
+                            .get(EmoResponse.class));
 
             if (response.getStatus() != Response.Status.OK.getStatusCode()) {
-                throw convertException(new EmoClientException(response));
+                throw new EmoClientException(response);
             }
 
             Iterator<Event> events = response.getEntity(new TypeReference<Iterator<Event>>() {
@@ -279,9 +280,7 @@ public class DatabusClient implements Databus, Closeable {
             }
             return new PollResult(events, limit, moreEvents);
 
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        } catch (Exception e) {
+        } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
 
@@ -303,13 +302,12 @@ public class DatabusClient implements Databus, Closeable {
                     .build();
             _log.debug("Uri for renew call:{} ", uri.toString());
 
-            _client.resource(uri)
-                    .type(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                    .post(eventKeys);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        } catch (Exception e) {
+            Failsafe.with(_retryPolicy)
+                    .run(() -> _client.resource(uri)
+                            .type(MediaType.APPLICATION_JSON_TYPE)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
+                            .post(eventKeys));
+        } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
     }
@@ -329,13 +327,12 @@ public class DatabusClient implements Databus, Closeable {
                     .build();
             _log.debug("Uri for acknowledge call:{} ", uri.toString());
 
-            _client.resource(uri)
-                    .type(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                    .post(Entity.entity(eventKeys, "application/x.json-condition"));
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        } catch (Exception e) {
+            Failsafe.with(_retryPolicy)
+                    .run(() -> _client.resource(uri)
+                            .type(MediaType.APPLICATION_JSON_TYPE)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
+                            .post(Entity.entity(eventKeys, "application/x.json-condition")));
+        } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
     }
@@ -362,14 +359,13 @@ public class DatabusClient implements Databus, Closeable {
             URI uri = uriBuilder.build();
             _log.debug("Uri for replayAsyncSince call:{} ", uri.toString());
 
-            Map<String, Object> response = _client.resource(uri)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                    .post(new TypeReference<Map<String, Object>>() {
-                    }, null);
+            Map<String, Object> response = Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
+                            .post(new TypeReference<Map<String, Object>>() {
+                            }, null));
             return response.get("id").toString();
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        } catch (Exception e) {
+        } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
     }
@@ -387,12 +383,11 @@ public class DatabusClient implements Databus, Closeable {
                     .build();
             _log.debug("Uri for getReplayStatus call:{} ", uri.toString());
 
-            return _client.resource(uri)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                    .get(ReplaySubscriptionStatus.class);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        } catch (Exception e) {
+            return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
+                            .get(ReplaySubscriptionStatus.class));
+        } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
     }
@@ -411,14 +406,13 @@ public class DatabusClient implements Databus, Closeable {
                     .build();
             _log.debug("Uri for moveAsync call:{} ", uri.toString());
 
-            Map<String, Object> response = _client.resource(uri)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                    .post(new TypeReference<Map<String, Object>>() {
-                    }, null);
+            Map<String, Object> response = Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
+                            .post(new TypeReference<Map<String, Object>>() {
+                            }, null));
             return response.get("id").toString();
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        } catch (Exception e) {
+        } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
     }
@@ -435,12 +429,11 @@ public class DatabusClient implements Databus, Closeable {
                     .build();
             _log.debug("Uri for getMoveStatus call:{} ", uri.toString());
 
-            return _client.resource(uri)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                    .get(MoveSubscriptionStatus.class);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        } catch (Exception e) {
+            return Failsafe.with(_retryPolicy)
+                    .get(() -> _client.resource(uri)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
+                            .get(MoveSubscriptionStatus.class));
+        } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
     }
@@ -461,12 +454,11 @@ public class DatabusClient implements Databus, Closeable {
                     .build();
             _log.debug("Uri for injectEvent call:{} ", uri.toString());
 
-            _client.resource(uri)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                    .post(null);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        } catch (Exception e) {
+            Failsafe.with(_retryPolicy)
+                    .run(() -> _client.resource(uri)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
+                            .post(null));
+        } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
     }
@@ -484,12 +476,11 @@ public class DatabusClient implements Databus, Closeable {
                     .build();
             _log.debug("Uri for unclaimAll call:{} ", uri.toString());
 
-            _client.resource(uri)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                    .post(null);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        } catch (Exception e) {
+            Failsafe.with(_retryPolicy)
+                    .run(() -> _client.resource(uri)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
+                            .post(null));
+        } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
     }
@@ -507,66 +498,17 @@ public class DatabusClient implements Databus, Closeable {
                     .build();
             _log.debug("Uri for purge call:{} ", uri.toString());
 
-            _client.resource(uri)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                    .post();
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        } catch (Exception e) {
+            Failsafe.with(_retryPolicy)
+                    .run(() -> _client.resource(uri)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
+                            .post());
+        } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
     }
 
     private Object[] optional(Object queryArg) {
         return (queryArg != null) ? new Object[]{queryArg} : new Object[0];
-    }
-
-    private RuntimeException convertException(EmoClientException e) {
-        EmoResponse response = e.getResponse();
-        String exceptionType = response.getFirstHeader("X-BV-Exception");
-
-        if (response.getStatus() == Response.Status.BAD_REQUEST.getStatusCode() &&
-                IllegalArgumentException.class.getName().equals(exceptionType)) {
-            return new IllegalArgumentException(response.getEntity(String.class), e);
-
-        } else if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode() &&
-                UnknownSubscriptionException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(UnknownSubscriptionException.class).initCause(e);
-            } else {
-                return (RuntimeException) new UnknownSubscriptionException().initCause(e);
-            }
-
-        } else if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode() &&
-                UnknownMoveException.class.getName().equals(exceptionType)) {
-            return response.getEntity(UnknownMoveException.class);
-        } else if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode() &&
-                UnknownReplayException.class.getName().equals(exceptionType)) {
-            return response.getEntity(UnknownReplayException.class);
-        } else if (response.getStatus() == Response.Status.FORBIDDEN.getStatusCode() &&
-                UnauthorizedSubscriptionException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(UnauthorizedSubscriptionException.class).initCause(e);
-            } else {
-                return (RuntimeException) new UnauthorizedSubscriptionException().initCause(e);
-            }
-        } else if (response.getStatus() == Response.Status.FORBIDDEN.getStatusCode() &&
-                UnauthorizedException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(UnauthorizedException.class).initCause(e);
-            } else {
-                return (RuntimeException) new UnauthorizedException().initCause(e);
-            }
-        } else if (response.getStatus() == Response.Status.SERVICE_UNAVAILABLE.getStatusCode() &&
-                ServiceUnavailableException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(ServiceUnavailableException.class).initCause(e);
-            } else {
-                return (RuntimeException) new ServiceUnavailableException().initCause(e);
-            }
-        }
-
-        return e;
     }
 
 
