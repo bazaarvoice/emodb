@@ -27,6 +27,8 @@ import com.bazaarvoice.emodb.uac.api.MigrateEmoApiKeyRequest;
 import com.bazaarvoice.emodb.uac.api.UpdateEmoApiKeyRequest;
 import com.bazaarvoice.emodb.uac.api.UpdateEmoRoleRequest;
 import com.fasterxml.jackson.core.type.TypeReference;
+import dev.failsafe.Failsafe;
+import dev.failsafe.RetryPolicy;
 
 
 import javax.ws.rs.core.MediaType;
@@ -52,41 +54,40 @@ public class UserAccessControlClient implements AuthUserAccessControl {
 
     private final EmoClient _client;
     private final UriBuilder _uac;
+    private final RetryPolicy<Object> _retryPolicy;
     
-    public UserAccessControlClient(URI endPoint, EmoClient client) {
+    public UserAccessControlClient(URI endPoint, EmoClient client, RetryPolicy<Object> retryPolicy) {
         _client = requireNonNull(client, "client");
         _uac = EmoUriBuilder.fromUri(endPoint);
+        _retryPolicy = requireNonNull(retryPolicy);
     }
 
     @Override
     public Iterator<EmoRole> getAllRoles(String apiKey) {
-        try {
-            URI uri = _uac.clone()
-                    .segment("role")
-                    .build();
-            return _client.resource(uri)
-                    .accept(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<Iterator<EmoRole>>(){});
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+        URI uri = _uac.clone()
+                .segment("role")
+                .build();
+        return Failsafe.with(_retryPolicy)
+                .get(() -> _client.resource(uri)
+                        .accept(MediaType.APPLICATION_JSON_TYPE)
+                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                        .get(new TypeReference<Iterator<EmoRole>>() {
+                        }));
     }
 
     @Override
     public Iterator<EmoRole> getAllRolesInGroup(String apiKey, String group) {
-        try {
-            URI uri = _uac.clone()
-                    .segment("role")
-                    .segment(Optional.ofNullable(group).orElse(EmoRoleKey.NO_GROUP))
-                    .build();
-            return _client.resource(uri)
-                    .accept(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<Iterator<EmoRole>>(){});
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+
+        URI uri = _uac.clone()
+                .segment("role")
+                .segment(Optional.ofNullable(group).orElse(EmoRoleKey.NO_GROUP))
+                .build();
+        return Failsafe.with(_retryPolicy)
+                .get(() -> _client.resource(uri)
+                        .accept(MediaType.APPLICATION_JSON_TYPE)
+                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                        .get(new TypeReference<Iterator<EmoRole>>() {
+                        }));
     }
 
     @Override
@@ -97,10 +98,11 @@ public class UserAccessControlClient implements AuthUserAccessControl {
                 .segment(roleKey.getGroup())
                 .segment(roleKey.getId())
                 .build();
-        EmoResponse response = _client.resource(uri)
-                .accept(MediaType.APPLICATION_JSON_TYPE)
-                .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                .get(EmoResponse.class);
+        EmoResponse response = Failsafe.with(_retryPolicy)
+                .get(() -> _client.resource(uri)
+                        .accept(MediaType.APPLICATION_JSON_TYPE)
+                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                        .get(EmoResponse.class));
 
         if (response.getStatus() == Response.Status.OK.getStatusCode()) {
             return response.getEntity(EmoRole.class);
@@ -108,7 +110,7 @@ public class UserAccessControlClient implements AuthUserAccessControl {
             return null;
         }
 
-        throw convertException(new EmoClientException(response));
+        throw new EmoClientException(response);
     }
 
     @Override
@@ -116,20 +118,19 @@ public class UserAccessControlClient implements AuthUserAccessControl {
             throws EmoRoleExistsException {
         requireNonNull(request, "request");
         EmoRoleKey roleKey = requireNonNull(request.getRoleKey(), "roleKey");
-        try {
-            URI uri = _uac.clone()
-                    .segment("role")
-                    .segment(roleKey.getGroup())
-                    .segment(roleKey.getId())
-                    .build();
-            _client.resource(uri)
-                    .type(APPLICATION_X_CREATE_ROLE_TYPE)
-                    .accept(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .post(JsonHelper.asJson(request));
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+
+        URI uri = _uac.clone()
+                .segment("role")
+                .segment(roleKey.getGroup())
+                .segment(roleKey.getId())
+                .build();
+        Failsafe.with(_retryPolicy)
+                .run(() -> _client.resource(uri)
+                        .type(APPLICATION_X_CREATE_ROLE_TYPE)
+                        .accept(MediaType.APPLICATION_JSON_TYPE)
+                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                        .post(JsonHelper.asJson(request)));
+
     }
 
     @Override
@@ -137,39 +138,34 @@ public class UserAccessControlClient implements AuthUserAccessControl {
             throws EmoRoleNotFoundException {
         requireNonNull(request, "request");
         EmoRoleKey roleKey = requireNonNull(request.getRoleKey(), "roleKey");
-        try {
-            URI uri = _uac.clone()
-                    .segment("role")
-                    .segment(roleKey.getGroup())
-                    .segment(roleKey.getId())
-                    .build();
-            _client.resource(uri)
-                    .type(APPLICATION_X_UPDATE_ROLE_TYPE)
-                    .accept(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .put(JsonHelper.asJson(request));
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+        URI uri = _uac.clone()
+                .segment("role")
+                .segment(roleKey.getGroup())
+                .segment(roleKey.getId())
+                .build();
+        Failsafe.with(_retryPolicy)
+                .run(() -> _client.resource(uri)
+                        .type(APPLICATION_X_UPDATE_ROLE_TYPE)
+                        .accept(MediaType.APPLICATION_JSON_TYPE)
+                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                        .put(JsonHelper.asJson(request)));
     }
 
     @Override
     public void deleteRole(String apiKey, EmoRoleKey roleKey)
             throws EmoRoleNotFoundException {
         requireNonNull(roleKey, "roleKey");
-        try {
-            URI uri = _uac.clone()
-                    .segment("role")
-                    .segment(roleKey.getGroup())
-                    .segment(roleKey.getId())
-                    .build();
-            _client.resource(uri)
-                    .accept(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .delete();
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+
+        URI uri = _uac.clone()
+                .segment("role")
+                .segment(roleKey.getGroup())
+                .segment(roleKey.getId())
+                .build();
+        Failsafe.with(_retryPolicy)
+                .run(() -> _client.resource(uri)
+                        .accept(MediaType.APPLICATION_JSON_TYPE)
+                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                        .delete());
     }
 
     @Override
@@ -177,21 +173,18 @@ public class UserAccessControlClient implements AuthUserAccessControl {
             throws EmoRoleNotFoundException {
         requireNonNull(roleKey, "roleKey");
         requireNonNull(permission, "permission");
-        try {
-            URI uri = _uac.clone()
-                    .segment("role")
-                    .segment(roleKey.getGroup())
-                    .segment(roleKey.getId())
-                    .segment("permitted")
-                    .queryParam("permission", permission)
-                    .build();
-            return _client.resource(uri)
-                    .accept(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(Boolean.class);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+        URI uri = _uac.clone()
+                .segment("role")
+                .segment(roleKey.getGroup())
+                .segment(roleKey.getId())
+                .segment("permitted")
+                .queryParam("permission", permission)
+                .build();
+        return Failsafe.with(_retryPolicy)
+                .get(() -> _client.resource(uri)
+                        .accept(MediaType.APPLICATION_JSON_TYPE)
+                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                        .get(Boolean.class));
     }
 
     @Override
@@ -201,10 +194,11 @@ public class UserAccessControlClient implements AuthUserAccessControl {
                 .segment("api-key")
                 .segment(id)
                 .build();
-        EmoResponse response = _client.resource(uri)
-                .accept(MediaType.APPLICATION_JSON_TYPE)
-                .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                .get(EmoResponse.class);
+        EmoResponse response = Failsafe.with(_retryPolicy)
+                .get(() -> _client.resource(uri)
+                        .accept(MediaType.APPLICATION_JSON_TYPE)
+                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                        .get(EmoResponse.class));
         return getApiKeyFromResponse(response);
     }
 
@@ -216,10 +210,11 @@ public class UserAccessControlClient implements AuthUserAccessControl {
                 .segment("_key")
                 .segment(key)
                 .build();
-        EmoResponse response = _client.resource(uri)
-                .accept(MediaType.APPLICATION_JSON_TYPE)
-                .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                .get(EmoResponse.class);
+        EmoResponse response = Failsafe.with(_retryPolicy)
+                .get(() -> _client.resource(uri)
+                        .accept(MediaType.APPLICATION_JSON_TYPE)
+                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                        .get(EmoResponse.class));
         return getApiKeyFromResponse(response);
     }
 
@@ -230,35 +225,33 @@ public class UserAccessControlClient implements AuthUserAccessControl {
             return null;
         }
 
-        throw convertException(new EmoClientException(response));
+        throw (new EmoClientException(response));
     }
 
     @Override
     public CreateEmoApiKeyResponse createApiKey(String apiKey, CreateEmoApiKeyRequest request)
             throws EmoApiKeyNotFoundException {
         requireNonNull(request, "request");
-        if(isBlankString(request.getOwner())){
+        if (isBlankString(request.getOwner())) {
             throw new IllegalArgumentException("Non-empty owner is required");
         }
-        try {
-            URI uri = _uac.clone()
-                    .segment("api-key")
-                    .build();
-            EmoResource resource = _client.resource(uri);
 
-            for (Map.Entry<String, String> customQueryParam : request.getCustomRequestParameters().entries()) {
-                resource = resource.queryParam(customQueryParam.getKey(), customQueryParam.getValue());
-            }
+        URI uri = _uac.clone()
+                .segment("api-key")
+                .build();
+        EmoResource resource = _client.resource(uri);
 
-            return resource
-                    .type(APPLICATION_X_CREATE_API_KEY_TYPE)
-                    .accept(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .post(CreateEmoApiKeyResponse.class, JsonHelper.asJson(request));
-
-        } catch (EmoClientException e) {
-            throw convertException(e);
+        for (Map.Entry<String, String> customQueryParam : request.getCustomRequestParameters().entries()) {
+            resource = resource.queryParam(customQueryParam.getKey(), customQueryParam.getValue());
         }
+        EmoResource finalResource = resource;
+        return Failsafe.with(_retryPolicy)
+                .get(() -> finalResource
+                        .type(APPLICATION_X_CREATE_API_KEY_TYPE)
+                        .accept(MediaType.APPLICATION_JSON_TYPE)
+                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                        .post(CreateEmoApiKeyResponse.class, JsonHelper.asJson(request)));
+
     }
 
     @Override
@@ -267,23 +260,20 @@ public class UserAccessControlClient implements AuthUserAccessControl {
         requireNonNull(request, "request");
         String id = requireNonNull(request.getId(), "id");
         requireNonNull(request.getOwner(), "owner is required");
-        if(isBlankString(request.getOwner()) || !request.isOwnerPresent()){
+        if (isBlankString(request.getOwner()) || !request.isOwnerPresent()) {
             throw new IllegalArgumentException("Non-empty owner is required");
         }
 
-        try {
-            URI uri = _uac.clone()
-                    .segment("api-key")
-                    .segment(id)
-                    .build();
-            _client.resource(uri)
-                    .type(APPLICATION_X_UPDATE_API_KEY_TYPE)
-                    .accept(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .put(JsonHelper.asJson(request));
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+        URI uri = _uac.clone()
+                .segment("api-key")
+                .segment(id)
+                .build();
+        Failsafe.with(_retryPolicy)
+                .run(() -> _client.resource(uri)
+                        .type(APPLICATION_X_UPDATE_API_KEY_TYPE)
+                        .accept(MediaType.APPLICATION_JSON_TYPE)
+                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                        .put(JsonHelper.asJson(request)));
     }
 
     @Override
@@ -296,46 +286,42 @@ public class UserAccessControlClient implements AuthUserAccessControl {
     public String migrateApiKey(String apiKey, MigrateEmoApiKeyRequest request) {
         requireNonNull(request, "request");
         String id = requireNonNull(request.getId(), "id");
-        try {
-            URI uri = _uac.clone()
-                    .segment("api-key")
-                    .segment(id)
-                    .segment("migrate")
-                    .build();
 
-            EmoResource resource = _client.resource(uri);
+        URI uri = _uac.clone()
+                .segment("api-key")
+                .segment(id)
+                .segment("migrate")
+                .build();
 
-            for (Map.Entry<String, String> customQueryParam : request.getCustomRequestParameters().entries()) {
-                resource = resource.queryParam(customQueryParam.getKey(), customQueryParam.getValue());
-            }
+        EmoResource resource = _client.resource(uri);
 
-            CreateEmoApiKeyResponse response = resource
-                    .accept(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .post(CreateEmoApiKeyResponse.class, null);
-            
-            return response.getKey();
-        } catch (EmoClientException e) {
-            throw convertException(e);
+        for (Map.Entry<String, String> customQueryParam : request.getCustomRequestParameters().entries()) {
+            resource = resource.queryParam(customQueryParam.getKey(), customQueryParam.getValue());
         }
+
+        EmoResource finalResource = resource;
+        CreateEmoApiKeyResponse response = Failsafe.with(_retryPolicy)
+                .get(() -> finalResource
+                        .accept(MediaType.APPLICATION_JSON_TYPE)
+                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                        .post(CreateEmoApiKeyResponse.class, null));
+
+        return response.getKey();
     }
 
     @Override
     public void deleteApiKey(String apiKey, String id)
             throws EmoApiKeyNotFoundException {
         requireNonNull(id, "id");
-        try {
-            URI uri = _uac.clone()
-                    .segment("api-key")
-                    .segment(id)
-                    .build();
-            _client.resource(uri)
-                    .accept(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .delete();
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+        URI uri = _uac.clone()
+                .segment("api-key")
+                .segment(id)
+                .build();
+        Failsafe.with(_retryPolicy)
+                .run(() -> _client.resource(uri)
+                        .accept(MediaType.APPLICATION_JSON_TYPE)
+                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                        .delete());
     }
 
     @Override
@@ -343,96 +329,20 @@ public class UserAccessControlClient implements AuthUserAccessControl {
             throws EmoApiKeyNotFoundException {
         requireNonNull(id, "id");
         requireNonNull(permission, "permission");
-        try {
-            URI uri = _uac.clone()
-                    .segment("api-key")
-                    .segment(id)
-                    .segment("permitted")
-                    .queryParam("permission", permission)
-                    .build();
-            return _client.resource(uri)
-                    .accept(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(Boolean.class);
-        } catch (EmoClientException e) {
-            throw convertException(e);
-        }
+        URI uri = _uac.clone()
+                .segment("api-key")
+                .segment(id)
+                .segment("permitted")
+                .queryParam("permission", permission)
+                .build();
+        return Failsafe.with(_retryPolicy)
+                .get(() -> _client.resource(uri)
+                        .accept(MediaType.APPLICATION_JSON_TYPE)
+                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                        .get(Boolean.class));
     }
 
-    @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
-    private RuntimeException convertException(EmoClientException e) {
-        EmoResponse response = e.getResponse();
-        String exceptionType = response.getFirstHeader("X-BV-Exception");
 
-        if (response.getStatus() == Response.Status.BAD_REQUEST.getStatusCode()) {
-            if (InvalidEmoPermissionException.class.getName().equals(exceptionType)) {
-                if (response.hasEntity()) {
-                    return (RuntimeException) response.getEntity(InvalidEmoPermissionException.class).initCause(e);
-                } else {
-                    return (RuntimeException) new InvalidEmoPermissionException().initCause(e);
-                }
-            } else if (IllegalArgumentException.class.getName().equals(exceptionType)) {
-                return new IllegalArgumentException(response.getEntity(String.class), e);
-            } else if (JsonStreamProcessingException.class.getName().equals(exceptionType)) {
-                return new JsonStreamProcessingException(response.getEntity(String.class));
-            }
-
-        } else if (response.getStatus() == Response.Status.CONFLICT.getStatusCode()) {
-            if (EmoApiKeyExistsException.class.getName().equals(exceptionType)) {
-                if (response.hasEntity()) {
-                    return (RuntimeException) response.getEntity(EmoApiKeyExistsException.class).initCause(e);
-                } else {
-                    return (RuntimeException) new EmoApiKeyExistsException().initCause(e);
-                }
-            } else if (EmoRoleExistsException.class.getName().equals(exceptionType)) {
-                if (response.hasEntity()) {
-                    return (RuntimeException) response.getEntity(EmoRoleExistsException.class).initCause(e);
-                } else {
-                    return (RuntimeException) new EmoRoleExistsException().initCause(e);
-                }
-            }
-
-        } else if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode()) {
-            if (EmoApiKeyNotFoundException.class.getName().equals(exceptionType)) {
-                if (response.hasEntity()) {
-                    return (RuntimeException) response.getEntity(EmoApiKeyNotFoundException.class).initCause(e);
-                } else {
-                    return (RuntimeException) new EmoApiKeyNotFoundException().initCause(e);
-                }
-            } else if (EmoRoleNotFoundException.class.getName().equals(exceptionType)) {
-                if (response.hasEntity()) {
-                    return (RuntimeException) response.getEntity(EmoRoleNotFoundException.class).initCause(e);
-                } else {
-                    return (RuntimeException) new EmoRoleNotFoundException().initCause(e);
-                }
-            }
-
-        } else if (response.getStatus() == Response.Status.FORBIDDEN.getStatusCode()) {
-            if (UnauthorizedException.class.getName().equals(exceptionType)) {
-                if (response.hasEntity()) {
-                    return (RuntimeException) response.getEntity(UnauthorizedException.class).initCause(e);
-                } else {
-                    return (RuntimeException) new UnauthorizedException().initCause(e);
-                }
-            } else if (InsufficientRolePermissionException.class.getName().equals(exceptionType)) {
-                if (response.hasEntity()) {
-                    return (RuntimeException) response.getEntity(InsufficientRolePermissionException.class).initCause(e);
-                } else {
-                    return (RuntimeException) new InsufficientRolePermissionException().initCause(e);
-                }
-            }
-
-        } else if (response.getStatus() == Response.Status.SERVICE_UNAVAILABLE.getStatusCode() &&
-                ServiceUnavailableException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(ServiceUnavailableException.class).initCause(e);
-            } else {
-                return (RuntimeException) new ServiceUnavailableException().initCause(e);
-            }
-        }
-
-        return e;
-    }
 
     private boolean isBlankString(String string) {
         return string == null || string.trim().isEmpty();
