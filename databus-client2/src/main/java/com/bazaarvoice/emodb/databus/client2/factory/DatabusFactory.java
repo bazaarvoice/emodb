@@ -48,6 +48,6 @@ public class DatabusFactory implements Serializable {
                 _log.error("Databus discovery startup failed", e);
             }
         }
-        return new DatabusClient(_emoServiceDiscovery, _emoClient, _apiKey, RetryPolicy.createRetryPolicy());
+        return new DatabusClient(_emoServiceDiscovery, _emoClient, _apiKey, RetryPolicy.createDefault());
     }
 }

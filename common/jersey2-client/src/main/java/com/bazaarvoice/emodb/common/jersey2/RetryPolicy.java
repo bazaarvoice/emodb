@@ -32,7 +32,7 @@ public final class RetryPolicy {
 
     private RetryPolicy() {}
 
-    public static dev.failsafe.RetryPolicy createRetryPolicy() {
+    public static dev.failsafe.RetryPolicy createDefault() {
         return dev.failsafe.RetryPolicy.builder()
                 .handle(RuntimeException.class)
                 .abortOn(exception -> !isRetriableException((Exception) exception))

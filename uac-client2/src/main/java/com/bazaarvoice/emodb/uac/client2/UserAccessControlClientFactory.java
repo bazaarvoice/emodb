@@ -27,6 +27,6 @@ public class UserAccessControlClientFactory {
     }
 
     public AuthUserAccessControl create() {
-        return new UserAccessControlClient(_uri, _client, RetryPolicy.createRetryPolicy());
+        return new UserAccessControlClient(_uri, _client, RetryPolicy.createDefault());
     }
 }
