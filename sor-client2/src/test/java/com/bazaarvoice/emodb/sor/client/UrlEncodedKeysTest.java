@@ -1,10 +1,12 @@
 package com.bazaarvoice.emodb.sor.client;
 
 import com.bazaarvoice.emodb.client2.EmoClient;
+import com.bazaarvoice.emodb.client2.EmoClientException;
 import com.bazaarvoice.emodb.client2.EmoResource;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.uuid.TimeUUIDs;
+import dev.failsafe.RetryPolicy;
 import org.mockito.ArgumentMatcher;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -12,6 +14,7 @@ import org.testng.annotations.Test;
 import javax.ws.rs.core.MediaType;
 import java.net.URI;
 import java.net.URLEncoder;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -26,6 +29,7 @@ import static org.mockito.Mockito.when;
 
 public class UrlEncodedKeysTest {
     private EmoClient _client = mock(EmoClient.class);
+    private RetryPolicy _retryPolicy;
 
     @BeforeMethod
     public void setUp() {
@@ -36,11 +40,24 @@ public class UrlEncodedKeysTest {
         when(resource.accept(any(MediaType.class))).thenReturn(resource);
         when(resource.type(any(MediaType.class))).thenReturn(resource);
         when(resource.header(anyString(), anyString())).thenReturn(resource);
+        _retryPolicy = RetryPolicy.builder()
+                .handle(RuntimeException.class)
+                .withMaxRetries(3)
+                .withBackoff(Duration.ofMillis(100), Duration.ofMillis(200))
+                .onRetry(e -> {
+                    Throwable ex = e.getLastException();
+                    System.out.println("Exception: "+ex);
+                })
+                .onFailure(e -> {
+                    Throwable ex = e.getException();
+                    System.out.println("Exception: "+ex);
+                })
+                .build();
     }
 
     @Test
     public void testGetEncodedKey() throws Exception {
-        DataStoreClient dataStore = new DataStoreClient(new URI("http://test.server"), _client);
+        DataStoreClient dataStore = new DataStoreClient(new URI("http://test.server"), _client, _retryPolicy);
         String table = "test_get_encoded:table";
         String key = "near%20far";
 
@@ -51,7 +68,7 @@ public class UrlEncodedKeysTest {
 
     @Test
     public void testGetTemplateKey() throws Exception {
-        DataStoreClient dataStore = new DataStoreClient(new URI("http://test.server"), _client);
+        DataStoreClient dataStore = new DataStoreClient(new URI("http://test.server"), _client, _retryPolicy);
         String table = "test_get_template:table";
         String key = "/{value1}{value2}";
 
@@ -62,7 +79,7 @@ public class UrlEncodedKeysTest {
 
     @Test
     public void testUpdateEncodedKey() throws Exception {
-        DataStoreClient dataStore = new DataStoreClient(new URI("http://test.server"), _client);
+        DataStoreClient dataStore = new DataStoreClient(new URI("http://test.server"), _client, _retryPolicy);
         String table = "test_update_encoded:table";
         String key = "above%2fbelow";
         UUID changeId = TimeUUIDs.newUUID();
@@ -79,7 +96,7 @@ public class UrlEncodedKeysTest {
 
     @Test
     public void testUpdateTemplateKey() throws Exception {
-        DataStoreClient dataStore = new DataStoreClient(new URI("http://test.server"), _client);
+        DataStoreClient dataStore = new DataStoreClient(new URI("http://test.server"), _client, _retryPolicy);
         String table = "test_update_encoded:table";
         String key = "{a{b}c}{}";
         UUID changeId = TimeUUIDs.newUUID();
