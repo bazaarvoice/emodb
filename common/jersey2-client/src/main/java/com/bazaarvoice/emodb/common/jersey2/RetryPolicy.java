@@ -2,6 +2,8 @@ package com.bazaarvoice.emodb.common.jersey2;
 
 import com.bazaarvoice.emodb.client2.EmoClientException;
 import com.bazaarvoice.emodb.client2.EmoResponse;
+import com.bazaarvoice.emodb.common.api.ServiceUnavailableException;
+import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 import com.bazaarvoice.emodb.common.json.JsonStreamProcessingException;
 import com.bazaarvoice.emodb.common.json.JsonStreamingEOFException;
 import com.bazaarvoice.emodb.uac.api.EmoApiKeyExistsException;
@@ -12,33 +14,26 @@ import com.bazaarvoice.emodb.uac.api.InsufficientRolePermissionException;
 import com.bazaarvoice.emodb.uac.api.InvalidEmoPermissionException;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
-import dev.failsafe.RetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.bazaarvoice.emodb.common.api.UnauthorizedException;;
 
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 import java.time.Duration;
-import com.bazaarvoice.emodb.common.api.ServiceUnavailableException;
 
-public class BaseRetryPolicy {
+public final class RetryPolicy {
 
     private static final int MAX_RETRIES = 3;
     private static final long MIN_DELAY = 500;
     private static final long MAX_DELAY = 1000;
 
-    private final Logger _log = LoggerFactory.getLogger(BaseRetryPolicy.class);
+    private static final Logger _log = LoggerFactory.getLogger(RetryPolicy.class);
 
-    public static RetryPolicy<Object> generateRetryPolicy() {
-        BaseRetryPolicy retryPolicy = new BaseRetryPolicy();
-        return retryPolicy.createRetryPolicy();
-    }
+    private RetryPolicy() {}
 
-
-    private RetryPolicy<Object> createRetryPolicy() {
-        return RetryPolicy.builder()
+    public static dev.failsafe.RetryPolicy createRetryPolicy() {
+        return dev.failsafe.RetryPolicy.builder()
                 .handle(RuntimeException.class)
                 .abortOn(exception -> !isRetriableException((Exception) exception))
                 .withMaxRetries(MAX_RETRIES)
@@ -55,7 +50,7 @@ public class BaseRetryPolicy {
                 .build();
     }
 
-    private boolean isRetriableException(Exception e) {
+    private static boolean isRetriableException(Exception e) {
         return ((e instanceof EmoClientException &&
                 ((EmoClientException) e).getResponse().getStatus() >= 500) ||
                 e instanceof JsonStreamingEOFException) ||
@@ -66,7 +61,7 @@ public class BaseRetryPolicy {
     }
 
     @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
-    private RuntimeException convertException(EmoClientException e) {
+    private static RuntimeException convertException(EmoClientException e) {
         EmoResponse response = e.getResponse();
         String exceptionType = response.getFirstHeader("X-BV-Exception");
 

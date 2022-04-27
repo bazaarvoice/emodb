@@ -1,7 +1,7 @@
 package com.bazaarvoice.emodb.uac.client2;
 
 import com.bazaarvoice.emodb.client2.EmoClient;
-import com.bazaarvoice.emodb.common.jersey2.BaseRetryPolicy;
+import com.bazaarvoice.emodb.common.jersey2.RetryPolicy;
 import com.bazaarvoice.emodb.common.jersey2.Jersey2EmoClient;
 import com.bazaarvoice.emodb.uac.api.AuthUserAccessControl;
 import org.glassfish.jersey.client.ClientProperties;
@@ -27,6 +27,6 @@ public class UserAccessControlClientFactory {
     }
 
     public AuthUserAccessControl create() {
-        return new UserAccessControlClient(_uri, _client, BaseRetryPolicy.generateRetryPolicy());
+        return new UserAccessControlClient(_uri, _client, RetryPolicy.createRetryPolicy());
     }
 }

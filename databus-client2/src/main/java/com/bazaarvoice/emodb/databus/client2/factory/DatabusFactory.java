@@ -1,7 +1,7 @@
 package com.bazaarvoice.emodb.databus.client2.factory;
 
 import com.bazaarvoice.emodb.client2.EmoClient;
-import com.bazaarvoice.emodb.common.jersey2.BaseRetryPolicy;
+import com.bazaarvoice.emodb.common.jersey2.RetryPolicy;
 import com.bazaarvoice.emodb.common.jersey2.Jersey2EmoClient;
 import com.bazaarvoice.emodb.databus.client2.client.DatabusClient;
 import com.bazaarvoice.emodb.databus.client2.discovery.EmoServiceDiscovery;
@@ -48,6 +48,6 @@ public class DatabusFactory implements Serializable {
                 _log.error("Databus discovery startup failed", e);
             }
         }
-        return new DatabusClient(_emoServiceDiscovery, _emoClient, _apiKey, BaseRetryPolicy.generateRetryPolicy());
+        return new DatabusClient(_emoServiceDiscovery, _emoClient, _apiKey, RetryPolicy.createRetryPolicy());
     }
 }
