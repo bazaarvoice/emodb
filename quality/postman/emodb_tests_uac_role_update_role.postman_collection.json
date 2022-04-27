@@ -1,7 +1,7 @@
 {
 	"info": {
 		"_postman_id": "ddb923af-f9b0-4903-8999-dbe58e4fd4d2",
-		"name": "emodb_tests_uac_role_update_role",
+		"name": "EmoDB_Tests_uac_role_update_role",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -237,7 +237,7 @@
 																}
 															],
 															"cookie": [],
-															"body": "{\n \"group\": \"laboris laborum sunt cillum\",\n \"id\": \"tempor aliqua anim\",\n \"permissions\": [\n  \"sint commodo\",\n  \"culpa exercitation\"\n ],\n \"description\": \"ex sint sunt qui\",\n \"name\": \"occaecat consequat Excepteur dolor\"\n}"
+															"body": ""
 														}
 													]
 												},
@@ -273,7 +273,7 @@
 														],
 														"body": {
 															"mode": "raw",
-															"raw": "{\n    \n}"
+															"raw": "{\n    \"id\":\"{{id}}\",\n    \"group\":\"{{group}}\"\n}"
 														},
 														"url": {
 															"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}?APIKey={{api_key_no_rights}}",
@@ -303,7 +303,7 @@
 																"header": [],
 																"body": {
 																	"mode": "raw",
-																	"raw": "{\n    \"description\": \"ex quis voluptate consectetur\",\n    \"descriptionPresent\": false,\n    \"revokeOtherPermissions\": false,\n    \"name\": \"adipisicing sit nulla\",\n    \"namePresent\": false,\n    \"grantPermissions\": [\n        \"aute\",\n        \"et occaecat\"\n    ],\n    \"revokePermissions\": [\n        \"qui aliqua deserunt officia\",\n        \"magna ea officia aliqua\"\n    ]\n}"
+																	"raw": ""
 																},
 																"url": {
 																	"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}",
@@ -441,7 +441,7 @@
 																}
 															],
 															"cookie": [],
-															"body": "{\n \"group\": \"laboris laborum sunt cillum\",\n \"id\": \"tempor aliqua anim\",\n \"permissions\": [\n  \"sint commodo\",\n  \"culpa exercitation\"\n ],\n \"description\": \"ex sint sunt qui\",\n \"name\": \"occaecat consequat Excepteur dolor\"\n}"
+															"body": ""
 														}
 													]
 												},
@@ -763,7 +763,7 @@
 																}
 															],
 															"cookie": [],
-															"body": "{\n \"group\": \"laboris laborum sunt cillum\",\n \"id\": \"tempor aliqua anim\",\n \"permissions\": [\n  \"sint commodo\",\n  \"culpa exercitation\"\n ],\n \"description\": \"ex sint sunt qui\",\n \"name\": \"occaecat consequat Excepteur dolor\"\n}"
+															"body": ""
 														}
 													]
 												},
@@ -829,7 +829,7 @@
 																"header": [],
 																"body": {
 																	"mode": "raw",
-																	"raw": "{\n    \"description\": \"ex quis voluptate consectetur\",\n    \"descriptionPresent\": false,\n    \"revokeOtherPermissions\": false,\n    \"name\": \"adipisicing sit nulla\",\n    \"namePresent\": false,\n    \"grantPermissions\": [\n        \"aute\",\n        \"et occaecat\"\n    ],\n    \"revokePermissions\": [\n        \"qui aliqua deserunt officia\",\n        \"magna ea officia aliqua\"\n    ]\n}"
+																	"raw": ""
 																},
 																"url": {
 																	"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}",
@@ -967,7 +967,7 @@
 																}
 															],
 															"cookie": [],
-															"body": "{\n \"group\": \"laboris laborum sunt cillum\",\n \"id\": \"tempor aliqua anim\",\n \"permissions\": [\n  \"sint commodo\",\n  \"culpa exercitation\"\n ],\n \"description\": \"ex sint sunt qui\",\n \"name\": \"occaecat consequat Excepteur dolor\"\n}"
+															"body": ""
 														}
 													]
 												},
@@ -1289,7 +1289,7 @@
 																}
 															],
 															"cookie": [],
-															"body": "{\n \"group\": \"laboris laborum sunt cillum\",\n \"id\": \"tempor aliqua anim\",\n \"permissions\": [\n  \"sint commodo\",\n  \"culpa exercitation\"\n ],\n \"description\": \"ex sint sunt qui\",\n \"name\": \"occaecat consequat Excepteur dolor\"\n}"
+															"body": ""
 														}
 													]
 												},
@@ -1355,7 +1355,7 @@
 																"header": [],
 																"body": {
 																	"mode": "raw",
-																	"raw": "{\n    \"description\": \"ex quis voluptate consectetur\",\n    \"descriptionPresent\": false,\n    \"revokeOtherPermissions\": false,\n    \"name\": \"adipisicing sit nulla\",\n    \"namePresent\": false,\n    \"grantPermissions\": [\n        \"aute\",\n        \"et occaecat\"\n    ],\n    \"revokePermissions\": [\n        \"qui aliqua deserunt officia\",\n        \"magna ea officia aliqua\"\n    ]\n}"
+																	"raw": ""
 																},
 																"url": {
 																	"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}",
@@ -1506,7 +1506,7 @@
 																}
 															],
 															"cookie": [],
-															"body": "{\n \"group\": \"laboris laborum sunt cillum\",\n \"id\": \"tempor aliqua anim\",\n \"permissions\": [\n  \"sint commodo\",\n  \"culpa exercitation\"\n ],\n \"description\": \"ex sint sunt qui\",\n \"name\": \"occaecat consequat Excepteur dolor\"\n}"
+															"body": ""
 														}
 													]
 												},
@@ -1828,7 +1828,7 @@
 																}
 															],
 															"cookie": [],
-															"body": "{\n \"group\": \"laboris laborum sunt cillum\",\n \"id\": \"tempor aliqua anim\",\n \"permissions\": [\n  \"sint commodo\",\n  \"culpa exercitation\"\n ],\n \"description\": \"ex sint sunt qui\",\n \"name\": \"occaecat consequat Excepteur dolor\"\n}"
+															"body": ""
 														}
 													]
 												},
@@ -1894,7 +1894,7 @@
 																"header": [],
 																"body": {
 																	"mode": "raw",
-																	"raw": "{\n    \"description\": \"ex quis voluptate consectetur\",\n    \"descriptionPresent\": false,\n    \"revokeOtherPermissions\": false,\n    \"name\": \"adipisicing sit nulla\",\n    \"namePresent\": false,\n    \"grantPermissions\": [\n        \"aute\",\n        \"et occaecat\"\n    ],\n    \"revokePermissions\": [\n        \"qui aliqua deserunt officia\",\n        \"magna ea officia aliqua\"\n    ]\n}"
+																	"raw": ""
 																},
 																"url": {
 																	"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}",
@@ -2045,7 +2045,7 @@
 																}
 															],
 															"cookie": [],
-															"body": "{\n \"group\": \"laboris laborum sunt cillum\",\n \"id\": \"tempor aliqua anim\",\n \"permissions\": [\n  \"sint commodo\",\n  \"culpa exercitation\"\n ],\n \"description\": \"ex sint sunt qui\",\n \"name\": \"occaecat consequat Excepteur dolor\"\n}"
+															"body": ""
 														}
 													]
 												},
@@ -2367,7 +2367,7 @@
 																}
 															],
 															"cookie": [],
-															"body": "{\n \"group\": \"laboris laborum sunt cillum\",\n \"id\": \"tempor aliqua anim\",\n \"permissions\": [\n  \"sint commodo\",\n  \"culpa exercitation\"\n ],\n \"description\": \"ex sint sunt qui\",\n \"name\": \"occaecat consequat Excepteur dolor\"\n}"
+															"body": ""
 														}
 													]
 												},
@@ -2433,7 +2433,7 @@
 																"header": [],
 																"body": {
 																	"mode": "raw",
-																	"raw": "{\n    \"description\": \"ex quis voluptate consectetur\",\n    \"descriptionPresent\": false,\n    \"revokeOtherPermissions\": false,\n    \"name\": \"adipisicing sit nulla\",\n    \"namePresent\": false,\n    \"grantPermissions\": [\n        \"aute\",\n        \"et occaecat\"\n    ],\n    \"revokePermissions\": [\n        \"qui aliqua deserunt officia\",\n        \"magna ea officia aliqua\"\n    ]\n}"
+																	"raw": ""
 																},
 																"url": {
 																	"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}",
@@ -2582,7 +2582,7 @@
 																}
 															],
 															"cookie": [],
-															"body": "{\n \"group\": \"laboris laborum sunt cillum\",\n \"id\": \"tempor aliqua anim\",\n \"permissions\": [\n  \"sint commodo\",\n  \"culpa exercitation\"\n ],\n \"description\": \"ex sint sunt qui\",\n \"name\": \"occaecat consequat Excepteur dolor\"\n}"
+															"body": ""
 														}
 													]
 												},
@@ -2899,7 +2899,7 @@
 																}
 															],
 															"cookie": [],
-															"body": "{\n \"group\": \"laboris laborum sunt cillum\",\n \"id\": \"tempor aliqua anim\",\n \"permissions\": [\n  \"sint commodo\",\n  \"culpa exercitation\"\n ],\n \"description\": \"ex sint sunt qui\",\n \"name\": \"occaecat consequat Excepteur dolor\"\n}"
+															"body": ""
 														}
 													]
 												},
@@ -2965,7 +2965,7 @@
 																"header": [],
 																"body": {
 																	"mode": "raw",
-																	"raw": "{\n    \"description\": \"ex quis voluptate consectetur\",\n    \"descriptionPresent\": false,\n    \"revokeOtherPermissions\": false,\n    \"name\": \"adipisicing sit nulla\",\n    \"namePresent\": false,\n    \"grantPermissions\": [\n        \"aute\",\n        \"et occaecat\"\n    ],\n    \"revokePermissions\": [\n        \"qui aliqua deserunt officia\",\n        \"magna ea officia aliqua\"\n    ]\n}"
+																	"raw": ""
 																},
 																"url": {
 																	"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}",
@@ -3116,7 +3116,7 @@
 																}
 															],
 															"cookie": [],
-															"body": "{\n \"group\": \"laboris laborum sunt cillum\",\n \"id\": \"tempor aliqua anim\",\n \"permissions\": [\n  \"sint commodo\",\n  \"culpa exercitation\"\n ],\n \"description\": \"ex sint sunt qui\",\n \"name\": \"occaecat consequat Excepteur dolor\"\n}"
+															"body": ""
 														}
 													]
 												},
@@ -3439,7 +3439,7 @@
 																}
 															],
 															"cookie": [],
-															"body": "{\n \"group\": \"laboris laborum sunt cillum\",\n \"id\": \"tempor aliqua anim\",\n \"permissions\": [\n  \"sint commodo\",\n  \"culpa exercitation\"\n ],\n \"description\": \"ex sint sunt qui\",\n \"name\": \"occaecat consequat Excepteur dolor\"\n}"
+															"body": ""
 														}
 													]
 												},
@@ -3501,7 +3501,7 @@
 																"header": [],
 																"body": {
 																	"mode": "raw",
-																	"raw": "{\n    \"description\": \"ex quis voluptate consectetur\",\n    \"descriptionPresent\": false,\n    \"revokeOtherPermissions\": false,\n    \"name\": \"adipisicing sit nulla\",\n    \"namePresent\": false,\n    \"grantPermissions\": [\n        \"aute\",\n        \"et occaecat\"\n    ],\n    \"revokePermissions\": [\n        \"qui aliqua deserunt officia\",\n        \"magna ea officia aliqua\"\n    ]\n}"
+																	"raw": ""
 																},
 																"url": {
 																	"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}",
@@ -3650,7 +3650,7 @@
 																}
 															],
 															"cookie": [],
-															"body": "{\n \"group\": \"laboris laborum sunt cillum\",\n \"id\": \"tempor aliqua anim\",\n \"permissions\": [\n  \"sint commodo\",\n  \"culpa exercitation\"\n ],\n \"description\": \"ex sint sunt qui\",\n \"name\": \"occaecat consequat Excepteur dolor\"\n}"
+															"body": ""
 														}
 													]
 												},
@@ -3973,7 +3973,7 @@
 																}
 															],
 															"cookie": [],
-															"body": "{\n \"group\": \"laboris laborum sunt cillum\",\n \"id\": \"tempor aliqua anim\",\n \"permissions\": [\n  \"sint commodo\",\n  \"culpa exercitation\"\n ],\n \"description\": \"ex sint sunt qui\",\n \"name\": \"occaecat consequat Excepteur dolor\"\n}"
+															"body": ""
 														}
 													]
 												},
@@ -4035,7 +4035,7 @@
 																"header": [],
 																"body": {
 																	"mode": "raw",
-																	"raw": "{\n    \"description\": \"ex quis voluptate consectetur\",\n    \"descriptionPresent\": false,\n    \"revokeOtherPermissions\": false,\n    \"name\": \"adipisicing sit nulla\",\n    \"namePresent\": false,\n    \"grantPermissions\": [\n        \"aute\",\n        \"et occaecat\"\n    ],\n    \"revokePermissions\": [\n        \"qui aliqua deserunt officia\",\n        \"magna ea officia aliqua\"\n    ]\n}"
+																	"raw": ""
 																},
 																"url": {
 																	"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}",
@@ -4185,7 +4185,7 @@
 																}
 															],
 															"cookie": [],
-															"body": "{\n \"group\": \"laboris laborum sunt cillum\",\n \"id\": \"tempor aliqua anim\",\n \"permissions\": [\n  \"sint commodo\",\n  \"culpa exercitation\"\n ],\n \"description\": \"ex sint sunt qui\",\n \"name\": \"occaecat consequat Excepteur dolor\"\n}"
+															"body": ""
 														}
 													]
 												},
@@ -4508,7 +4508,7 @@
 																}
 															],
 															"cookie": [],
-															"body": "{\n \"group\": \"laboris laborum sunt cillum\",\n \"id\": \"tempor aliqua anim\",\n \"permissions\": [\n  \"sint commodo\",\n  \"culpa exercitation\"\n ],\n \"description\": \"ex sint sunt qui\",\n \"name\": \"occaecat consequat Excepteur dolor\"\n}"
+															"body": ""
 														}
 													]
 												},
@@ -4570,7 +4570,7 @@
 																"header": [],
 																"body": {
 																	"mode": "raw",
-																	"raw": "{\n    \"description\": \"ex quis voluptate consectetur\",\n    \"descriptionPresent\": false,\n    \"revokeOtherPermissions\": false,\n    \"name\": \"adipisicing sit nulla\",\n    \"namePresent\": false,\n    \"grantPermissions\": [\n        \"aute\",\n        \"et occaecat\"\n    ],\n    \"revokePermissions\": [\n        \"qui aliqua deserunt officia\",\n        \"magna ea officia aliqua\"\n    ]\n}"
+																	"raw": ""
 																},
 																"url": {
 																	"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}",
@@ -4717,7 +4717,7 @@
 																}
 															],
 															"cookie": [],
-															"body": "{\n \"group\": \"laboris laborum sunt cillum\",\n \"id\": \"tempor aliqua anim\",\n \"permissions\": [\n  \"sint commodo\",\n  \"culpa exercitation\"\n ],\n \"description\": \"ex sint sunt qui\",\n \"name\": \"occaecat consequat Excepteur dolor\"\n}"
+															"body": ""
 														}
 													]
 												},
@@ -5040,7 +5040,7 @@
 																}
 															],
 															"cookie": [],
-															"body": "{\n \"group\": \"laboris laborum sunt cillum\",\n \"id\": \"tempor aliqua anim\",\n \"permissions\": [\n  \"sint commodo\",\n  \"culpa exercitation\"\n ],\n \"description\": \"ex sint sunt qui\",\n \"name\": \"occaecat consequat Excepteur dolor\"\n}"
+															"body": ""
 														}
 													]
 												},
@@ -5102,7 +5102,7 @@
 																"header": [],
 																"body": {
 																	"mode": "raw",
-																	"raw": "{\n    \"description\": \"ex quis voluptate consectetur\",\n    \"descriptionPresent\": false,\n    \"revokeOtherPermissions\": false,\n    \"name\": \"adipisicing sit nulla\",\n    \"namePresent\": false,\n    \"grantPermissions\": [\n        \"aute\",\n        \"et occaecat\"\n    ],\n    \"revokePermissions\": [\n        \"qui aliqua deserunt officia\",\n        \"magna ea officia aliqua\"\n    ]\n}"
+																	"raw": ""
 																},
 																"url": {
 																	"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}",
@@ -5249,7 +5249,7 @@
 																}
 															],
 															"cookie": [],
-															"body": "{\n \"group\": \"laboris laborum sunt cillum\",\n \"id\": \"tempor aliqua anim\",\n \"permissions\": [\n  \"sint commodo\",\n  \"culpa exercitation\"\n ],\n \"description\": \"ex sint sunt qui\",\n \"name\": \"occaecat consequat Excepteur dolor\"\n}"
+															"body": ""
 														}
 													]
 												},
@@ -5572,7 +5572,7 @@
 																}
 															],
 															"cookie": [],
-															"body": "{\n \"group\": \"laboris laborum sunt cillum\",\n \"id\": \"tempor aliqua anim\",\n \"permissions\": [\n  \"sint commodo\",\n  \"culpa exercitation\"\n ],\n \"description\": \"ex sint sunt qui\",\n \"name\": \"occaecat consequat Excepteur dolor\"\n}"
+															"body": ""
 														}
 													]
 												},
@@ -5634,7 +5634,7 @@
 																"header": [],
 																"body": {
 																	"mode": "raw",
-																	"raw": "{\n    \"description\": \"ex quis voluptate consectetur\",\n    \"descriptionPresent\": false,\n    \"revokeOtherPermissions\": false,\n    \"name\": \"adipisicing sit nulla\",\n    \"namePresent\": false,\n    \"grantPermissions\": [\n        \"aute\",\n        \"et occaecat\"\n    ],\n    \"revokePermissions\": [\n        \"qui aliqua deserunt officia\",\n        \"magna ea officia aliqua\"\n    ]\n}"
+																	"raw": ""
 																},
 																"url": {
 																	"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}",
@@ -5779,7 +5779,7 @@
 																}
 															],
 															"cookie": [],
-															"body": "{\n \"group\": \"laboris laborum sunt cillum\",\n \"id\": \"tempor aliqua anim\",\n \"permissions\": [\n  \"sint commodo\",\n  \"culpa exercitation\"\n ],\n \"description\": \"ex sint sunt qui\",\n \"name\": \"occaecat consequat Excepteur dolor\"\n}"
+															"body": ""
 														}
 													]
 												},
@@ -6102,7 +6102,7 @@
 																}
 															],
 															"cookie": [],
-															"body": "{\n \"group\": \"laboris laborum sunt cillum\",\n \"id\": \"tempor aliqua anim\",\n \"permissions\": [\n  \"sint commodo\",\n  \"culpa exercitation\"\n ],\n \"description\": \"ex sint sunt qui\",\n \"name\": \"occaecat consequat Excepteur dolor\"\n}"
+															"body": ""
 														}
 													]
 												},
@@ -6164,7 +6164,7 @@
 																"header": [],
 																"body": {
 																	"mode": "raw",
-																	"raw": "{\n    \"description\": \"ex quis voluptate consectetur\",\n    \"descriptionPresent\": false,\n    \"revokeOtherPermissions\": false,\n    \"name\": \"adipisicing sit nulla\",\n    \"namePresent\": false,\n    \"grantPermissions\": [\n        \"aute\",\n        \"et occaecat\"\n    ],\n    \"revokePermissions\": [\n        \"qui aliqua deserunt officia\",\n        \"magna ea officia aliqua\"\n    ]\n}"
+																	"raw": ""
 																},
 																"url": {
 																	"raw": "{{baseurl_dc1}}/uac/1/role/{{group}}/{{id}}",
@@ -6312,7 +6312,7 @@
 																}
 															],
 															"cookie": [],
-															"body": "{\n \"group\": \"laboris laborum sunt cillum\",\n \"id\": \"tempor aliqua anim\",\n \"permissions\": [\n  \"sint commodo\",\n  \"culpa exercitation\"\n ],\n \"description\": \"ex sint sunt qui\",\n \"name\": \"occaecat consequat Excepteur dolor\"\n}"
+															"body": ""
 														}
 													]
 												},
