@@ -150,13 +150,6 @@
 								"1",
 								"api-key"
 							],
-							"query": [
-								{
-									"key": "key",
-									"value": "abcde12345abcde12345abcde12345abcde12345abcde123",
-									"disabled": true
-								}
-							]
 						}
 					},
 					"response": []
