@@ -42,6 +42,11 @@
             <artifactId>emodb-common-json</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.bazaarvoice.emodb</groupId>
+            <artifactId>emodb-common-jersey2-client</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!-- Third party dependencies -->
         <dependency>
@@ -67,10 +72,6 @@
         <dependency>
             <groupId>dev.failsafe</groupId>
             <artifactId>failsafe</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
         </dependency>
     </dependencies>
 </project>
