@@ -32,7 +32,7 @@ public final class RetryPolicy {
 
     private RetryPolicy() {}
 
-    public static dev.failsafe.RetryPolicy createDefault() {
+    public static dev.failsafe.RetryPolicy<Object> createDefault() {
         return dev.failsafe.RetryPolicy.builder()
                 .handle(RuntimeException.class)
                 .abortOn(exception -> !isRetriableException((Exception) exception))
@@ -45,7 +45,11 @@ public final class RetryPolicy {
                 .onFailure(e -> {
                     Throwable ex = e.getException();
                     _log.error("Failed to execute the request due to the exception: " + ex);
-                    convertException((EmoClientException) e.getException());
+                    if (ex instanceof EmoClientException) {
+                        _log.error(convertException((EmoClientException) ex).getMessage());
+                    } else {
+                        _log.error(ex.getMessage());
+                    }
                 })
                 .build();
     }

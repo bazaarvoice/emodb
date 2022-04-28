@@ -5,7 +5,6 @@ import com.bazaarvoice.emodb.client2.EmoResponse;
 import com.bazaarvoice.emodb.common.json.JsonStreamingEOFException;
 import dev.failsafe.Execution;
 import dev.failsafe.Failsafe;
-import dev.failsafe.RetryPolicy;
 import org.mockito.Mockito;
 import org.testng.annotations.Test;
 
@@ -59,7 +58,7 @@ public class RetryPolicyTest {
         List list = mock(List.class);
         when(list.size()).thenThrow(JsonStreamingEOFException.class);
 
-        RetryPolicy<Object> retryPolicy = com.bazaarvoice.emodb.common.jersey2.RetryPolicy.createDefault();
+        dev.failsafe.RetryPolicy<Object> retryPolicy = RetryPolicy.createDefault();
 
         Execution<Object> execution = Execution.of(retryPolicy);
         while (!execution.isComplete()) {
@@ -83,7 +82,7 @@ public class RetryPolicyTest {
         EmoResponse _response = mock(EmoResponse.class);
         when(list.size()).thenThrow(new EmoClientException(_response));
 
-        RetryPolicy<Object> retryPolicy = com.bazaarvoice.emodb.common.jersey2.RetryPolicy.createDefault();
+        dev.failsafe.RetryPolicy<Object> retryPolicy = RetryPolicy.createDefault();
 
         Execution<Object> execution = Execution.of(retryPolicy);
 
@@ -112,7 +111,7 @@ public class RetryPolicyTest {
 
 
         AtomicReference<URI> redirectURIActual = new AtomicReference<>();
-        RetryPolicy<Object> retryPolicy = com.bazaarvoice.emodb.common.jersey2.RetryPolicy.createDefault();
+        dev.failsafe.RetryPolicy<Object> retryPolicy = RetryPolicy.createDefault();
 
         try {
             Failsafe.with(retryPolicy)
