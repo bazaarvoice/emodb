@@ -245,7 +245,9 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
                 .getKey(storage.getRowKey(blobId))
                 .withColumnRange(start, end, false, Integer.MAX_VALUE));
 
-        StorageSummary summary = toStorageSummary(columns);
+        StorageSummary summary = toStorageSummary(columns, true);
+        _blobMetadataReadMeter.mark();
+
         if (summary == null) {
             return null;
         }
@@ -254,7 +256,6 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
 //      Cleanup older versions of the blob, if any (unlikely).
         deleteDataColumns(table, blobId, columns, ConsistencyLevel.CL_ANY, summary.getTimestamp());
 
-        _blobMetadataReadMeter.mark();
         return summary;
     }
 
@@ -280,7 +281,7 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
         return countRowsInColumn(tbl, ColumnGroup.A);
     }
 
-    private static StorageSummary toStorageSummary(ColumnList<Composite> columns) {
+    private static StorageSummary toStorageSummary(ColumnList<Composite> columns, boolean checkChunks) {
         if (columns.size() == 0) {
             return null;
         }
@@ -292,16 +293,18 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
         }
         StorageSummary summary = JsonHelper.fromJson(summaryColumn.getStringValue(), StorageSummary.class);
 
-        // Check that all the chunks are available.  Some may still be in the process of being written or replicated.
-        if (columns.size() < 1 + summary.getChunkCount()) {
-            return null;
-        }
-        for (int chunkId = 0; chunkId < summary.getChunkCount(); chunkId++) {
-            Column<Composite> presence = columns.getColumnByIndex(chunkId + 1);
-            if (presence == null ||
-                    !matches(presence.getName(), ColumnGroup.B, chunkId) ||
-                    presence.getTimestamp() != summary.getTimestamp()) {
+        if (checkChunks) {
+            // Check that all the chunks are available.  Some may still be in the process of being written or replicated.
+            if (columns.size() < 1 + summary.getChunkCount()) {
                 return null;
+            }
+            for (int chunkId = 0; chunkId < summary.getChunkCount(); chunkId++) {
+                Column<Composite> presence = columns.getColumnByIndex(chunkId + 1);
+                if (presence == null ||
+                        !matches(presence.getName(), ColumnGroup.B, chunkId) ||
+                        presence.getTimestamp() != summary.getTimestamp()) {
+                    return null;
+                }
             }
         }
         return summary;
@@ -323,7 +326,8 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
         CompositeSerializer colSerializer = CompositeSerializer.get();
         final ByteBufferRange columnRange = new RangeBuilder()
                 .setStart(getColumnPrefix(ColumnGroup.A, Composite.ComponentEquality.LESS_THAN_EQUAL), colSerializer)
-                .setEnd(getColumnPrefix(ColumnGroup.B, Composite.ComponentEquality.GREATER_THAN_EQUAL), colSerializer)
+                .setEnd(getColumnPrefix(ColumnGroup.A, Composite.ComponentEquality.GREATER_THAN_EQUAL), colSerializer)
+                .setLimit(1)
                 .build();
 
         // Loop over all the range prefixes (256 of them) and, for each, execute Cassandra queries to page through the
@@ -334,7 +338,8 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
             protected Iterator<Map.Entry<String, StorageSummary>> computeNext() {
                 if (scanIter.hasNext()) {
                     ByteBufferRange keyRange = scanIter.next();
-                    return decodeMetadataRows(scanInternal(placement, keyRange, columnRange, limit), table);
+                    Iterator<Row<ByteBuffer, Composite>> rowIter = scanInternal(placement, keyRange, columnRange, limit);
+                    return decodeMetadataRows(rowIter, table);
                 }
                 return endOfData();
             }
@@ -353,7 +358,7 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
 
                     String blobId = AstyanaxStorage.getContentKey(key);
 
-                    StorageSummary summary = toStorageSummary(columns);
+                    StorageSummary summary = toStorageSummary(columns, false);
                     if (summary == null) {
                         continue;  // Partial blob, parts may still be replicating.
                     }
