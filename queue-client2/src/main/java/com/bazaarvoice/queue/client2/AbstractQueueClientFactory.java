@@ -15,7 +15,7 @@ import java.util.Objects;
 abstract public class AbstractQueueClientFactory {
 
     private final EmoClient _client;
-    private URI _endPoint;
+    private final URI _endPoint;
 
     protected AbstractQueueClientFactory(EmoClient client, URI endPoint) {
         _client = Objects.requireNonNull(client);

@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import static java.util.Objects.requireNonNull;
 
 /**
  * DedupQueueService instance that takes an {@link AuthDedupQueueService} and API key and proxies all calls using
@@ -21,8 +22,8 @@ class DedupQueueServiceAuthenticatorProxy implements DedupQueueService {
     private final String _apiKey;
 
     DedupQueueServiceAuthenticatorProxy(AuthDedupQueueService authDedupQueueService, String apiKey) {
-        _authDedupQueueService = authDedupQueueService;
-        _apiKey = apiKey;
+        _authDedupQueueService = requireNonNull(authDedupQueueService, "AuthDedupQueueService");
+        _apiKey = requireNonNull(apiKey, "apiKey");
     }
 
     @Override
