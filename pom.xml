@@ -49,6 +49,7 @@
         <module>datacenter</module>
         <module>queue-client-common</module>
         <module>queue-client</module>
+        <module>queue-client2</module>
         <module>queue</module>
         <module>job</module>
         <module>sor-client-common</module>
