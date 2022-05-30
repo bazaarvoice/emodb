@@ -66,12 +66,12 @@
         <yumArtifactName>emodb-web-${project.version}</yumArtifactName>
         <yumArtifactId>emodb-web</yumArtifactId>
 
-        <jacoco.version>0.8.7</jacoco.version>
+        <jacoco.version>0.8.8</jacoco.version>
         <skipCC>true</skipCC>
 
-        <sonar.version>3.9.1.2184</sonar.version>
-        <sonar.sources>src/main</sonar.sources>
-        <sonar.test.sources>src/test</sonar.test.sources>
+        <sonar.projectKey>bazaarvoice_emoji</sonar.projectKey>
+        <sonar.qualitygate.wait>true</sonar.qualitygate.wait>
+        <sonar.moduleKey>${artifactId}</sonar.moduleKey>
 
         <mockito.version>3.7.0</mockito.version>
         <testng.version>7.3.0</testng.version>
@@ -828,6 +828,21 @@
                     <groupId>org.jacoco</groupId>
                     <artifactId>jacoco-maven-plugin</artifactId>
                     <version>${jacoco.version}</version>
+                    <executions>
+                        <execution>
+                            <id>pre-unit-test</id>
+                            <goals>
+                                <goal>prepare-agent</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>post-unit-test</id>
+                            <phase>test</phase>
+                            <goals>
+                                <goal>report</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
                 <plugin>
                     <groupId>org.sonarsource.scanner.maven</groupId>
@@ -901,7 +916,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <argLine>${jacoco.agent.argLine}</argLine> <!-- activate the JaCoCo javaagent -->
+                    <argLine>@{jacoco.agent.argLine} -Dfile.encoding=UTF-8 -Djava.awt.headless=true</argLine> <!-- activate the JaCoCo javaagent -->
                     <parallel>classes</parallel>
                     <threadCount>2</threadCount>
                     <perCoreThreadCount>true</perCoreThreadCount>
@@ -911,6 +926,7 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
+                <version>3.3.3</version>
                 <configuration>
                     <!--
                         Default configuration skips dependency checks to reduce build time.  A build should be performed
@@ -1025,22 +1041,8 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-javadoc-plugin</artifactId>
                         <configuration>
-                            <additionalparam>-Xdoclint:none</additionalparam>
+                            <additionaparam>-Xdoclint:none</additionaparam>
                         </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>sonar</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.sonarsource.scanner.maven</groupId>
-                        <artifactId>sonar-maven-plugin</artifactId>
                     </plugin>
                 </plugins>
             </build>
