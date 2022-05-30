@@ -67,7 +67,7 @@
         <yumArtifactId>emodb-web</yumArtifactId>
 
         <jacoco.version>0.8.8</jacoco.version>
-        <skipCC>true</skipCC>
+        <skipCC>false</skipCC>
 
         <sonar.projectKey>bazaarvoice_emodb</sonar.projectKey>
         <sonar.qualitygate.wait>true</sonar.qualitygate.wait>
