@@ -69,7 +69,7 @@
         <jacoco.version>0.8.8</jacoco.version>
         <skipCC>true</skipCC>
 
-        <sonar.projectKey>bazaarvoice_emoji</sonar.projectKey>
+        <sonar.projectKey>bazaarvoice_emodb</sonar.projectKey>
         <sonar.qualitygate.wait>true</sonar.qualitygate.wait>
         <sonar.moduleKey>${artifactId}</sonar.moduleKey>
 
