@@ -879,7 +879,7 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <configuration>
-                    <propertyName>jacoco.agent.argLine</propertyName> <!-- Name it to make the dependecny clearer; default: argLine -->
+                    <!--propertyName>jacoco.agent.argLine</propertyName--> <!-- Name it to make the dependecny clearer; default: argLine -->
                     <skip>${skipCC}</skip>
                 </configuration>
                 <executions>
@@ -903,7 +903,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <argLine>@{jacoco.agent.argLine} -Dfile.encoding=UTF-8 -Djava.awt.headless=true</argLine> <!-- activate the JaCoCo javaagent -->
+                    <argLine>@{argLine} -Dfile.encoding=UTF-8 -Djava.awt.headless=true</argLine> <!-- activate the JaCoCo javaagent -->
                     <parallel>classes</parallel>
                     <threadCount>2</threadCount>
                     <perCoreThreadCount>true</perCoreThreadCount>
