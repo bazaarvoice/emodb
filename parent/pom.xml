@@ -913,7 +913,6 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>3.3.3</version>
                 <configuration>
                     <!--
                         Default configuration skips dependency checks to reduce build time.  A build should be performed
