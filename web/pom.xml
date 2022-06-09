@@ -20,7 +20,6 @@
         <docker.build.dockerFile>Dockerfile</docker.build.dockerFile>
         <docker.build.skipRun>true</docker.build.skipRun>
         <docker.floating.tag>${project.version}</docker.floating.tag>
-        <docker.registry.url>${set.this.variable}</docker.registry.url>
         <docker.image.name>bazaarvoice/emodb-web</docker.image.name>
     </properties>
 
@@ -622,7 +621,7 @@
                         <configuration>
                             <images>
                                 <image>
-                                    <name>${docker.registry.url}:emodb-web</name>
+                                    <name>${docker.image.name}</name>
                                     <alias>${project.artifactId}</alias>
                                     <build>
                                         <args>
