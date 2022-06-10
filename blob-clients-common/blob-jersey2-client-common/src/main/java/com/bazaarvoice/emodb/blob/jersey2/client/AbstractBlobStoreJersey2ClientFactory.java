@@ -3,11 +3,11 @@ package com.bazaarvoice.emodb.blob.jersey2.client;
 import com.bazaarvoice.emodb.blob.api.AuthBlobStore;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.client2.EmoClient;
-import com.bazaarvoice.emodb.client2.EmoClientException;
-import com.bazaarvoice.emodb.common.json.JsonStreamingEOFException;
+import com.bazaarvoice.emodb.common.jersey2.RetryPolicy;
 
 import java.io.Serializable;
 import java.net.URI;
+import java.util.Objects;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -21,21 +21,17 @@ abstract public class AbstractBlobStoreJersey2ClientFactory implements Serializa
     private ScheduledExecutorService _connectionManagementService;
 
     protected AbstractBlobStoreJersey2ClientFactory(EmoClient client, URI endPoint) {
-        _client = client;
-        _endPoint = endPoint;
+        _client = Objects.requireNonNull(client);
+        _endPoint = Objects.requireNonNull(endPoint);
+    }
+
+    public BlobStore usingCredentials(final String apiKey) {
+        AuthBlobStore authBlobStore = new BlobStoreJersey2Client(_endPoint, _client,
+                _connectionManagementService, RetryPolicy.createDefault());
+        return new BlobStoreJersey2AuthenticatorProxy(authBlobStore, apiKey);
     }
 
     protected void setConnectionManagementService(ScheduledExecutorService connectionManagementService) {
         _connectionManagementService = connectionManagementService;
-    }
-
-    public boolean isRetriableException(Exception e) {
-        return (e instanceof EmoClientException &&
-                ((EmoClientException) e).getResponse().getStatus() >= 500) ||
-                e instanceof JsonStreamingEOFException;
-    }
-    public BlobStore usingCredentials(final String apiKey) {
-        AuthBlobStore authBlobStore = new BlobStoreJersey2Client(_endPoint, _client, _connectionManagementService);
-        return new BlobStoreJersey2AuthenticatorProxy(authBlobStore, apiKey);
     }
 }

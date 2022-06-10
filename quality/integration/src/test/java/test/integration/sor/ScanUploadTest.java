@@ -145,8 +145,7 @@ public class ScanUploadTest {
                 future.get();
             }
         } catch (Exception e) {
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         } finally {
             populationService.shutdownNow();
         }

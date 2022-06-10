@@ -22,9 +22,9 @@ public class LoggingServerStartedListener implements ServerStartedListener<Void>
         Logger log = LoggerFactory.getLogger(getClass());
         log.info("Service started for cluster {}: service available on {}:{}, admin available on {}:{}",
                 _metadata.getCluster(),
-                _metadata.getServiceHostAndPort().getHost(),
+                _metadata.getServiceHostAndPort().getHostText(),
                 _metadata.getServiceHostAndPort().getPort(),
-                _metadata.getAdminHostAndPort().getHost(),
+                _metadata.getAdminHostAndPort().getHostText(),
                 _metadata.getAdminHostAndPort().getPort());
     }
 }

@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.bazaarvoice.emodb</groupId>
         <artifactId>emodb-parent</artifactId>
-        <version>6.5.9-SNAPSHOT</version>
+        <version>6.5.18-SNAPSHOT</version>
         <relativePath>../parent/pom.xml</relativePath>
     </parent>
 
@@ -20,11 +20,6 @@
         <dependency>
             <groupId>com.bazaarvoice.emodb</groupId>
             <artifactId>emodb-common-api</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.bazaarvoice.emodb</groupId>
-            <artifactId>emodb-common-json</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -60,6 +55,12 @@
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.bazaarvoice.emodb</groupId>
+            <artifactId>emodb-common-json</artifactId>
+            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

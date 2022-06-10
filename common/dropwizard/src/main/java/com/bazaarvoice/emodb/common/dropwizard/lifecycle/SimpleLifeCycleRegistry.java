@@ -34,9 +34,8 @@ public class SimpleLifeCycleRegistry implements LifeCycleRegistry, Managed, Clos
         try {
             stop();
         } catch (Exception e) {
-            Throwables.throwIfInstanceOf(e, IOException.class);
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            Throwables.propagateIfInstanceOf(e, IOException.class);
+            throw Throwables.propagate(e);
         }
     }
 

@@ -1,0 +1,1047 @@
+{
+	"info": {
+		"_postman_id": "ab12035c-16b9-4408-90b0-a7958eb3afc6",
+		"name": "EmoDB_Tests_uac_add_api-key",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "TC: Add api-key without permissions",
+			"item": [
+				{
+					"name": "create Api Key",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 403\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});",
+									"",
+									"pm.test(\"Assert response body\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.keys([\"reason\"]);",
+									"    pm.expect(jsonData.reason).to.eql(\"not authorized\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x.json-create-api-key"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"description\": \"postman_test_apikey\",\n    \"owner\": \"postman\"\n}"
+						},
+						"url": {
+							"raw": "{{baseurl_dc1}}/uac/1/api-key?APIKey={{api_key_no_rights}}",
+							"host": [
+								"{{baseurl_dc1}}"
+							],
+							"path": [
+								"uac",
+								"1",
+								"api-key"
+							],
+							"query": [
+								{
+									"key": "key",
+									"value": "{{key1}}",
+									"disabled": true
+								},
+								{
+									"key": "APIKey",
+									"value": "{{api_key_no_rights}}"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "successful operation",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"description\": \"postman\",\n    \"owner\": \"postman\"\n}"
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/uac/1/api-key?key={{api-key}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"uac",
+										"1",
+										"api-key"
+									],
+									"query": [
+										{
+											"key": "key",
+											"value": "{{api-key}}"
+										}
+									]
+								}
+							},
+							"status": "Internal Server Error",
+							"code": 500,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "TC: Add api-key without owner parameter",
+			"item": [
+				{
+					"name": "create Api Key",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Assert response body\", function () {",
+									"    var responseText = pm.response.text();",
+									"    pm.expect(responseText).to.eql(\"Non-empty owner is required\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x.json-create-api-key"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"description\": \"postman_test_apikey\"\n}"
+						},
+						"url": {
+							"raw": "{{baseurl_dc1}}/uac/1/api-key?APIKey={{api_key}}",
+							"host": [
+								"{{baseurl_dc1}}"
+							],
+							"path": [
+								"uac",
+								"1",
+								"api-key"
+							],
+							"query": [
+								{
+									"key": "key",
+									"value": "{{key1}}",
+									"disabled": true
+								},
+								{
+									"key": "APIKey",
+									"value": "{{api_key}}"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "successful operation",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"description\": \"postman\",\n    \"owner\": \"postman\"\n}"
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/uac/1/api-key?key={{api-key}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"uac",
+										"1",
+										"api-key"
+									],
+									"query": [
+										{
+											"key": "key",
+											"value": "{{api-key}}"
+										}
+									]
+								}
+							},
+							"status": "Internal Server Error",
+							"code": 500,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "TC: Add api-key without description parameter",
+			"item": [
+				{
+					"name": "create Api Key",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.environment.set('id', pm.response.json().id);",
+									"",
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Assert response body\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.keys([\"key\",\"id\"]);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x.json-create-api-key"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"owner\": \"postman\"\n}"
+						},
+						"url": {
+							"raw": "{{baseurl_dc1}}/uac/1/api-key?APIKey={{api_key}}",
+							"host": [
+								"{{baseurl_dc1}}"
+							],
+							"path": [
+								"uac",
+								"1",
+								"api-key"
+							],
+							"query": [
+								{
+									"key": "key",
+									"value": "{{key1}}",
+									"disabled": true
+								},
+								{
+									"key": "APIKey",
+									"value": "{{api_key}}"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "successful operation",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"description\": \"postman\",\n    \"owner\": \"postman\"\n}"
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/uac/1/api-key?key={{api-key}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"uac",
+										"1",
+										"api-key"
+									],
+									"query": [
+										{
+											"key": "key",
+											"value": "{{api-key}}"
+										}
+									]
+								}
+							},
+							"status": "Internal Server Error",
+							"code": 500,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				},
+				{
+					"name": "get Api Key",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Assert response body\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.keys([\"id\",\"maskedKey\",\"issued\",\"owner\"]);",
+									"    pm.expect(jsonData.id).to.eql(pm.environment.get(\"id\"));",
+									"    pm.expect(jsonData.owner).to.eql(\"postman\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseurl_dc1}}/uac/1/api-key/{{id}}?APIKey={{api_key}}",
+							"host": [
+								"{{baseurl_dc1}}"
+							],
+							"path": [
+								"uac",
+								"1",
+								"api-key",
+								"{{id}}"
+							],
+							"query": [
+								{
+									"key": "APIKey",
+									"value": "{{api_key}}"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "successful operation",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseurl_dc1}}/uac/1/api-key/{{id}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"uac",
+										"1",
+										"api-key",
+										"{{id}}"
+									],
+									"variable": [
+										{
+											"key": "id"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				},
+				{
+					"name": "delete Api Key",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Assert response body\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{baseurl_dc1}}/uac/1/api-key/{{id}}?APIKey={{api_key}}",
+							"host": [
+								"{{baseurl_dc1}}"
+							],
+							"path": [
+								"uac",
+								"1",
+								"api-key",
+								"{{id}}"
+							],
+							"query": [
+								{
+									"key": "APIKey",
+									"value": "{{api_key}}"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "successful operation",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseurl_dc1}}/uac/1/api-key/{{id}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"uac",
+										"1",
+										"api-key",
+										"{{id}}"
+									],
+									"variable": [
+										{
+											"key": "id"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "TC: Add api-key",
+			"item": [
+				{
+					"name": "create Api Key",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.environment.set('id', pm.response.json().id);",
+									"",
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Assert response body\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.keys([\"key\",\"id\"]);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x.json-create-api-key"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"description\": \"postman_test_api-key\",\n    \"owner\": \"postman\"\n}"
+						},
+						"url": {
+							"raw": "{{baseurl_dc1}}/uac/1/api-key?APIKey={{api_key}}",
+							"host": [
+								"{{baseurl_dc1}}"
+							],
+							"path": [
+								"uac",
+								"1",
+								"api-key"
+							],
+							"query": [
+								{
+									"key": "APIKey",
+									"value": "{{api_key}}"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "successful operation",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"description\": \"postman\",\n    \"owner\": \"postman\"\n}"
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/uac/1/api-key?key={{api-key}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"uac",
+										"1",
+										"api-key"
+									],
+									"query": [
+										{
+											"key": "key",
+											"value": "{{api-key}}"
+										}
+									]
+								}
+							},
+							"status": "Internal Server Error",
+							"code": 500,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				},
+				{
+					"name": "get Api Key",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Assert response body\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.keys([\"id\",\"maskedKey\",\"issued\",\"owner\",\"description\"]);",
+									"    pm.expect(jsonData.id).to.eql(pm.environment.get(\"id\"));",
+									"    pm.expect(jsonData.owner).to.eql(\"postman\");",
+									"    pm.expect(jsonData.description).to.eql(\"postman_test_api-key\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseurl_dc1}}/uac/1/api-key/{{id}}?APIKey={{api_key}}",
+							"host": [
+								"{{baseurl_dc1}}"
+							],
+							"path": [
+								"uac",
+								"1",
+								"api-key",
+								"{{id}}"
+							],
+							"query": [
+								{
+									"key": "APIKey",
+									"value": "{{api_key}}"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "successful operation",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseurl_dc1}}/uac/1/api-key/{{id}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"uac",
+										"1",
+										"api-key",
+										"{{id}}"
+									],
+									"variable": [
+										{
+											"key": "id"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				},
+				{
+					"name": "delete Api Key",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Assert response body\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{baseurl_dc1}}/uac/1/api-key/{{id}}?APIKey={{api_key}}",
+							"host": [
+								"{{baseurl_dc1}}"
+							],
+							"path": [
+								"uac",
+								"1",
+								"api-key",
+								"{{id}}"
+							],
+							"query": [
+								{
+									"key": "APIKey",
+									"value": "{{api_key}}"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "successful operation",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseurl_dc1}}/uac/1/api-key/{{id}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"uac",
+										"1",
+										"api-key",
+										"{{id}}"
+									],
+									"variable": [
+										{
+											"key": "id"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "TC: Add api-key with role assigned",
+			"item": [
+				{
+					"name": "create Api Key",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.environment.set('id', pm.response.json().id);",
+									"",
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Assert response body\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.keys([\"key\",\"id\"]);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x.json-create-api-key"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"description\": \"postman_test_api-key\",\n    \"owner\": \"postman\",\n    \"roles\": [\n        \"sor_read\",\n        \"blob_read\"\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{baseurl_dc1}}/uac/1/api-key?APIKey={{api_key}}",
+							"host": [
+								"{{baseurl_dc1}}"
+							],
+							"path": [
+								"uac",
+								"1",
+								"api-key"
+							],
+							"query": [
+								{
+									"key": "APIKey",
+									"value": "{{api_key}}"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "successful operation",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"description\": \"postman\",\n    \"owner\": \"postman\"\n}"
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/uac/1/api-key?key={{api-key}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"uac",
+										"1",
+										"api-key"
+									],
+									"query": [
+										{
+											"key": "key",
+											"value": "{{api-key}}"
+										}
+									]
+								}
+							},
+							"status": "Internal Server Error",
+							"code": 500,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				},
+				{
+					"name": "get Api Key",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Assert response body\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.keys([\"id\",\"maskedKey\",\"issued\",\"owner\",\"description\",\"roles\"]);",
+									"    pm.expect(jsonData.id).to.eql(pm.environment.get(\"id\"));",
+									"    pm.expect(jsonData.owner).to.eql(\"postman\");",
+									"    pm.expect(jsonData.description).to.eql(\"postman_test_api-key\");",
+									"    pm.expect(jsonData.roles).to.deep.equal([{\"group\":\"_\",\"id\":\"sor_read\"},{\"group\":\"_\",\"id\":\"blob_read\"}]);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseurl_dc1}}/uac/1/api-key/{{id}}?APIKey={{api_key}}",
+							"host": [
+								"{{baseurl_dc1}}"
+							],
+							"path": [
+								"uac",
+								"1",
+								"api-key",
+								"{{id}}"
+							],
+							"query": [
+								{
+									"key": "APIKey",
+									"value": "{{api_key}}"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "successful operation",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseurl_dc1}}/uac/1/api-key/{{id}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"uac",
+										"1",
+										"api-key",
+										"{{id}}"
+									],
+									"variable": [
+										{
+											"key": "id"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				},
+				{
+					"name": "delete Api Key",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Assert response body\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{baseurl_dc1}}/uac/1/api-key/{{id}}?APIKey={{api_key}}",
+							"host": [
+								"{{baseurl_dc1}}"
+							],
+							"path": [
+								"uac",
+								"1",
+								"api-key",
+								"{{id}}"
+							],
+							"query": [
+								{
+									"key": "APIKey",
+									"value": "{{api_key}}"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "successful operation",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseurl_dc1}}/uac/1/api-key/{{id}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"uac",
+										"1",
+										"api-key",
+										"{{id}}"
+									],
+									"variable": [
+										{
+											"key": "id"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+						}
+					]
+				}
+			]
+		}
+	]
+}

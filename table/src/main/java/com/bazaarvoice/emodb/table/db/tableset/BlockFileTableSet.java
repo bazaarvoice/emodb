@@ -89,8 +89,7 @@ public class BlockFileTableSet extends AbstractSerializingTableSet {
             }
             return readTable(index);
         } catch (IOException e) {
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 
@@ -291,8 +290,7 @@ public class BlockFileTableSet extends AbstractSerializingTableSet {
 
                 return Pair.<Integer, Set<Long>>create(-1, ImmutableSet.<Long>of());
             } catch (IOException e) {
-                Throwables.throwIfUnchecked(e);
-                throw new RuntimeException(e);
+                throw Throwables.propagate(e);
             } finally {
                 postBufferAccess();
             }
@@ -321,8 +319,7 @@ public class BlockFileTableSet extends AbstractSerializingTableSet {
                 try (InputStream in = new ByteBufferInputStream(dup)) {
                     return getTableSerializer().deserialize(in);
                 } catch (IOException e) {
-                    Throwables.throwIfUnchecked(e);
-                    throw new RuntimeException(e);
+                    throw Throwables.propagate(e);
                 }
             } finally {
                 postBufferAccess();
@@ -351,8 +348,7 @@ public class BlockFileTableSet extends AbstractSerializingTableSet {
                 // Increment the buffer use count to prevent a flush until the access is complete
                 _bufferUseCount++;
             } catch (Exception e) {
-                Throwables.throwIfUnchecked(e);
-                throw new RuntimeException(e);
+                throw Throwables.propagate(e);
             } finally {
                 _lock.unlock();
             }
@@ -446,8 +442,7 @@ public class BlockFileTableSet extends AbstractSerializingTableSet {
 
                 return oldBuffer;
             } catch (InterruptedException e) {
-                Throwables.throwIfUnchecked(e);
-                throw new RuntimeException(e);
+                throw Throwables.propagate(e);
             } finally {
                 // Mark the flush as complete and notify and reads or writes that were blocked
                 _flushPending = false;

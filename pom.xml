@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.bazaarvoice.emodb</groupId>
         <artifactId>emodb-parent</artifactId>
-        <version>6.5.9-SNAPSHOT</version>
+        <version>6.5.18-SNAPSHOT</version>
         <relativePath>parent/pom.xml</relativePath>
     </parent>
 
@@ -49,10 +49,12 @@
         <module>datacenter</module>
         <module>queue-client-common</module>
         <module>queue-client</module>
+        <module>queue-client2</module>
         <module>queue</module>
         <module>job</module>
         <module>sor-client-common</module>
         <module>sor-client</module>
+        <module>sor-client2</module>
         <module>sor</module>
         <module>databus-client-common</module>
         <module>databus-client</module>
@@ -63,6 +65,7 @@
         <module>blob-clients/blob-jersey2-client</module>
         <module>blob</module>
         <module>uac-client</module>
+        <module>uac-client2</module>
         <module>plugins</module>
         <module>web</module>
         <module>web-local</module>

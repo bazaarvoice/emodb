@@ -512,8 +512,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
         try {
             operationResult = execution.execute();
         } catch (ConnectionException e) {
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
         return operationResult.getResult();
     }

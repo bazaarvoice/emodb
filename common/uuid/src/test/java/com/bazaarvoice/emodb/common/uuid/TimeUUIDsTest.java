@@ -193,8 +193,7 @@ public class TimeUUIDsTest {
         try {
             return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS z").parse(string);
         } catch (ParseException e) {
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 }

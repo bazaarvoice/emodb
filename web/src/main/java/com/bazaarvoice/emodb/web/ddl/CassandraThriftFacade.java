@@ -26,7 +26,7 @@ final class CassandraThriftFacade implements Closeable {
     public static CassandraThriftFacade forSeedsAndPort(String seeds, int defaultPort) {
         final String seed = seeds.contains(",") ? seeds.substring(0, seeds.indexOf(',')) : seeds;
         HostAndPort host = HostAndPort.fromString(seed).withDefaultPort(defaultPort);
-        return new CassandraThriftFacade(new TFramedTransport(new TSocket(host.getHost(), host.getPort())));
+        return new CassandraThriftFacade(new TFramedTransport(new TSocket(host.getHostText(), host.getPort())));
     }
 
     private static final String CQL_VERSION = "3.0.0";
@@ -40,8 +40,7 @@ final class CassandraThriftFacade implements Closeable {
         try {
             _transport.open();
         } catch (Exception e) {
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 
@@ -50,8 +49,7 @@ final class CassandraThriftFacade implements Closeable {
         try {
             _transport.close();
         } catch (Exception e) {
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 
@@ -60,8 +58,7 @@ final class CassandraThriftFacade implements Closeable {
         try {
             return _client.describe_version();
         } catch (Exception e) {
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 
@@ -78,8 +75,7 @@ final class CassandraThriftFacade implements Closeable {
         try {
             _client.system_add_keyspace(keyspaceDefinition);
         } catch (Exception e) {
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 
@@ -87,8 +83,7 @@ final class CassandraThriftFacade implements Closeable {
         try {
             _client.system_update_keyspace(keyspaceDefinition);
         } catch (Exception e) {
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 
@@ -102,8 +97,7 @@ final class CassandraThriftFacade implements Closeable {
                 }
             }
         } catch (Exception e) {
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 

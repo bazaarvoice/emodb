@@ -10,6 +10,8 @@ import com.datastax.driver.core.Session;
 import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.exceptions.FrameTooLongException;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
+import com.datastax.driver.core.exceptions.OperationTimedOutException;
+import com.datastax.driver.core.exceptions.ReadTimeoutException;
 import com.datastax.driver.core.utils.MoreFutures;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
@@ -73,8 +75,7 @@ public class AdaptiveResultSet implements ResultSet {
                 _log.debug("Repeating previous query with fetch size {} due to {}", reducedFetchSize, t.getMessage());
                 return executeAdaptiveQueryAsync(session, statement, reducedFetchSize, remainingAdaptations - 1);
             }
-            Throwables.throwIfUnchecked(t);
-            throw new RuntimeException(t);
+            throw Throwables.propagate(t);
         });
     }
 
@@ -94,8 +95,7 @@ public class AdaptiveResultSet implements ResultSet {
                     fetchSize = Math.max(fetchSize / 2, MIN_FETCH_SIZE);
                     _log.debug("Repeating previous query with fetch size {} due to {}", fetchSize, t.getMessage());
                 } else {
-                    Throwables.throwIfUnchecked(t);
-                    throw new RuntimeException(t);
+                    throw Throwables.propagate(t);
                 }
             }
         }
@@ -170,8 +170,7 @@ public class AdaptiveResultSet implements ResultSet {
         // This code is only reachable if there was an exception fetching more rows.  If appropriate reduce the fetch
         // size and try again, otherwise propagate the exception.
         if (!reduceFetchSize(fetchException)) {
-            Throwables.throwIfUnchecked(fetchException);
-            throw new RuntimeException(fetchException);
+            throw Throwables.propagate(fetchException);
         }
 
         // Call again to return the next row.

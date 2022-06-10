@@ -46,7 +46,7 @@ public class InstantParam extends AbstractParam<Instant> {
 
     @Override
     protected Instant parse(String input) throws Exception {
-        if (CharMatcher.digit().matchesAllOf(input)) {
+        if (CharMatcher.DIGIT.matchesAllOf(input)) {
             // Assume millis, but check for nanos
             long millis = Long.parseLong(input);
             if (millis >= 253402300800000L) { // +10000-01-01T00:00:00Z

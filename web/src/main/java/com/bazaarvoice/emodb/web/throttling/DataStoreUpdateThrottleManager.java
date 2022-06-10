@@ -69,8 +69,7 @@ public class DataStoreUpdateThrottleManager implements DataStoreUpdateThrottler 
             _currentRateLimits.set(toZKPath(id), throttle);
         } catch (Exception e) {
             _log.warn("Failed to update rate limit for {}", INSTANCE_RATE_LIMIT_KEY.equals(id) ? "instance" : id, e);
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 
@@ -79,8 +78,7 @@ public class DataStoreUpdateThrottleManager implements DataStoreUpdateThrottler 
             _currentRateLimits.remove(toZKPath(id));
         } catch (Exception e) {
             _log.warn("Failed to clear rate limit for {}", INSTANCE_RATE_LIMIT_KEY.equals(id) ? "instance" : id, e);
-            Throwables.throwIfUnchecked(e);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
     }
 
