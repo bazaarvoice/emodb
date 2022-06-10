@@ -34,7 +34,7 @@
         <guava.version>20.0</guava.version>
         <guice.version>4.0</guice.version>
         <jackson.version>2.6.7.5</jackson.version>
-        <jetty.version>9.0.7.v20131107</jetty.version>
+        <jetty.version>9.4.40.v20210413</jetty.version>
         <jna.version>5.3.1</jna.version>
         <org.codehaus.jackson.version>1.9.13</org.codehaus.jackson.version>
         <metrics.version>3.0.2</metrics.version>
