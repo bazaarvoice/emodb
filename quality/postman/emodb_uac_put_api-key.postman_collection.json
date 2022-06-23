@@ -5517,7 +5517,7 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"console.log(pm.environment.get(\"issuedDate\"));"
+							""
 						],
 						"type": "text/javascript"
 					}
