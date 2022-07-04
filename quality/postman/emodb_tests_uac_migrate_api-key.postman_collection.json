@@ -1,8 +1,9 @@
 {
 	"info": {
-		"_postman_id": "170ac325-94ac-4ad5-8855-8054a99ea124",
+		"_postman_id": "cc9df285-8ad0-4862-8e4e-96618f28175c",
 		"name": "EmoDB_Tests_uac_migrate_api-key",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "17172123"
 	},
 	"item": [
 		{
@@ -1084,6 +1085,7 @@
 							"script": {
 								"exec": [
 									"pm.environment.set('id', pm.response.json().id);",
+									"pm.environment.set('key', pm.response.json().key);",
 									"",
 									"pm.test(\"Status code is 201\", function () {",
 									"    pm.response.to.have.status(201);",
@@ -1267,7 +1269,7 @@
 								"exec": [
 									"let apikey = \"\";",
 									"var character = pm.variables.replaceIn('{{$randomAlphaNumeric}}')",
-									"for(; apikey.length < 48; apikey += character) {",
+									"for(; apikey.length < 47; apikey += character) {",
 									"    character = pm.variables.replaceIn('{{$randomAlphaNumeric}}');",
 									"}",
 									"apikey += \"!\"",
@@ -1403,8 +1405,8 @@
 							"listen": "prerequest",
 							"script": {
 								"exec": [
-									"var startKeySubStr = pm.environment.get(\"key2\").substring(0, 4);",
-									"var endKeySubStr = pm.environment.get(\"key2\").substring(44, 48);",
+									"var startKeySubStr = pm.environment.get(\"key\").substring(0, 4);",
+									"var endKeySubStr = pm.environment.get(\"key\").substring(44, 48);",
 									"",
 									"pm.environment.set(\"startKeySubStr\", startKeySubStr);",
 									"pm.environment.set(\"endKeySubStr\", endKeySubStr);"
@@ -1580,6 +1582,7 @@
 							"script": {
 								"exec": [
 									"pm.environment.set('id', pm.response.json().id);",
+									"pm.environment.set('key', pm.response.json().key)",
 									"",
 									"pm.test(\"Status code is 201\", function () {",
 									"    pm.response.to.have.status(201);",
@@ -2242,89 +2245,6 @@
 							"body": "{\n \"success\": false,\n \"debug\": {}\n}"
 						}
 					]
-				}
-			]
-		},
-		{
-			"name": "migrate Api Key",
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": ""
-				},
-				"url": {
-					"raw": "{{baseurl_dc1}}/uac/1/api-key/{{id}}/migrate?key={{key2}}&APIKey={{api_key}}",
-					"host": [
-						"{{baseurl_dc1}}"
-					],
-					"path": [
-						"uac",
-						"1",
-						"api-key",
-						"{{id}}",
-						"migrate"
-					],
-					"query": [
-						{
-							"key": "key",
-							"value": "{{key2}}"
-						},
-						{
-							"key": "APIKey",
-							"value": "{{api_key}}"
-						}
-					]
-				}
-			},
-			"response": [
-				{
-					"name": "successful operation",
-					"originalRequest": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{baseurl_dc1}}/uac/1/api-key/{{id}}/migrate?key=",
-							"host": [
-								"{{baseurl_dc1}}"
-							],
-							"path": [
-								"uac",
-								"1",
-								"api-key",
-								"{{id}}",
-								"migrate"
-							],
-							"query": [
-								{
-									"key": "key",
-									"value": ""
-								}
-							],
-							"variable": [
-								{
-									"key": "id"
-								}
-							]
-						}
-					},
-					"status": "OK",
-					"code": 200,
-					"_postman_previewlanguage": "json",
-					"header": [
-						{
-							"key": "Content-Type",
-							"value": "application/json"
-						}
-					],
-					"cookie": [],
-					"body": ""
 				}
 			]
 		}
