@@ -20,7 +20,7 @@ services:
       interval: 10s
 
   cassandra-dc1:
-    image: '${CASSANDRA_IMAGE}:3.11.12'
+    image: '${CASSANDRA_IMAGE}:${CASSANDRA_TAG}'
     networks:
       - emodb
     environment:

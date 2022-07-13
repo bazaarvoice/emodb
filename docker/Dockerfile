@@ -24,7 +24,7 @@ ENV LOCAL_ADMIN_PORT=${LOCAL_ADMIN_PORT}
 RUN echo "emodb:x:1000:1000:EmoDB:/:" >> /etc/passwd
 
 COPY --chown=1000 maven/emodb-web-* /app/emodb-web.jar
-COPY --chown=1000 configs/* /app/config/*
+COPY --chown=1000 configs/* /app/config/
 
 WORKDIR /app
 
