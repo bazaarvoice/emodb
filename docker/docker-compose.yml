@@ -35,7 +35,10 @@ services:
     volumes:
       - 'cassandra-dc1_data:/var/lib/cassandra/data'
     healthcheck:
-      test: ["CMD-SHELL", "nodetool status | grep UN || exit 1"]
+      test: [ "CMD", "cqlsh", "-e", "describe keyspaces" ]
+      interval: 5s
+      timeout: 5s
+      retries: 60
 
   kafka:
     image: 'confluentinc/cp-kafka:6.2.0'
@@ -73,8 +76,6 @@ services:
     ports:
       - '8080:8080'
       - '8081:8081'
-    volumes:
-      - '../web-local/target/logs:/app/logs'
     healthcheck:
       interval: 1m
       timeout: 10s
@@ -248,11 +249,3 @@ services:
     depends_on:
       emodb-web-dc1:
         condition: service_healthy
-
-volumes:
-  zookeeper_data:
-    driver: local
-  cassandra-dc1_data:
-    driver: local
-  kafka_data:
-    driver: local
