@@ -80,7 +80,7 @@ services:
       interval: 1m
       timeout: 10s
       retries: 3
-      test: ["CMD-SHELL", "printf \"GET /healthcheck HTTP/1.1\n Accept-Encoding: gzip\nAccept: text/html\nHost: localhost\n\n\" | nc localhost 8081 || exit 1"]
+      test: ["CMD-SHELL", "curl localhost:8081/ping || exit 1"]
     depends_on:
       zookeeper:
         condition: service_healthy
@@ -112,7 +112,7 @@ services:
       interval: 1m
       timeout: 10s
       retries: 3
-      test: ["CMD-SHELL", "printf \"GET /healthcheck HTTP/1.1\n Accept-Encoding: gzip\nAccept: text/html\nHost: localhost\n\n\" | nc localhost 8081 || exit 1"]
+      test: ["CMD-SHELL", "curl localhost:8081/ping || exit 1"]
     depends_on:
       emodb-web-dc1:
         condition: service_healthy
