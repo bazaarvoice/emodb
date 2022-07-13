@@ -60,6 +60,7 @@ services:
   emodb-web-dc1:
     image: '${EMODB_WEB_IMAGE}:latest'
     restart: always
+    pull_policy: always
     networks:
       - emodb
     environment:
