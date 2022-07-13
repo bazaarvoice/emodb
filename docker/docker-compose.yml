@@ -249,3 +249,11 @@ services:
     depends_on:
       emodb-web-dc1:
         condition: service_healthy
+
+volumes:
+  zookeeper_data:
+    driver: local
+  cassandra-dc1_data:
+    driver: local
+  kafka_data:
+    driver: local
