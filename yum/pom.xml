@@ -45,7 +45,7 @@
                     <plugin>
                         <groupId>com.bazaarvoice.maven.plugins</groupId>
                         <artifactId>s3repo-maven-plugin</artifactId>
-                        <version>3.6</version>
+                        <version>3.7</version>
                         <executions>
                             <execution>
                                 <phase>deploy</phase>
