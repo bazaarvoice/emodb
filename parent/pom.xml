@@ -6,12 +6,12 @@
         <groupId>com.bazaarvoice.commons</groupId>
         <artifactId>bv-opensource-super-pom</artifactId>
         <version>1.12</version>
-        <relativePath/>
+        <relativePath />
     </parent>
 
     <groupId>com.bazaarvoice.emodb</groupId>
     <artifactId>emodb-parent</artifactId>
-    <version>6.5.19-SNAPSHOT</version>
+    <version>6.5.19</version>
     <packaging>pom</packaging>
 
     <name>EmoDB Parent</name>
@@ -20,7 +20,7 @@
         <connection>scm:git:git@github.com:bazaarvoice/emodb.git</connection>
         <developerConnection>scm:git:git@github.com:bazaarvoice/emodb.git</developerConnection>
         <url>scm:git:git@github.com:bazaarvoice/emodb.git</url>
-        <tag>HEAD</tag>
+        <tag>emodb-6.5.19</tag>
     </scm>
 
     <properties>
@@ -983,9 +983,9 @@
                                     <version>[${java.minimum.version},)</version>
                                     <message>requires ${java.minimum.version}+</message>
                                 </requireJavaVersion>
-                                <dependencyConvergence/>
-                                <requireUpperBoundDeps/>
-                                <banDuplicatePomDependencyVersions/>
+                                <dependencyConvergence />
+                                <requireUpperBoundDeps />
+                                <banDuplicatePomDependencyVersions />
                                 <bannedDependencies>
                                     <excludes>
                                         <!-- This should not exist until DW 0.8.x+ upgrade -->
