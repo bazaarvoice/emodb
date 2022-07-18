@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.common.stash;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
@@ -60,7 +61,7 @@ abstract public class StashReader {
      * _rootPath:
      *
      * <code>
-     *     assert getRootPath().startsWith(_rootPath);
+     * assert getRootPath().startsWith(_rootPath);
      * </code>
      */
     abstract protected String getRootPath();
@@ -106,14 +107,16 @@ abstract public class StashReader {
 
     private static AmazonS3 createS3ClientForEndpoint(String endPoint, AWSCredentialsProvider credentialsProvider,
                                                       @Nullable ClientConfiguration s3Config) {
-        AmazonS3 s3;
-        if (s3Config == null) {
-            s3 = AmazonS3ClientBuilder.standard().withCredentials(credentialsProvider).build();
-        } else {
-            s3 = AmazonS3ClientBuilder.standard().withCredentials(credentialsProvider).withClientConfiguration(s3Config).build();
+
+        AmazonS3ClientBuilder s3ClientBuilder = AmazonS3ClientBuilder.standard()
+                .withCredentials(credentialsProvider)
+                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endPoint, null));
+
+        if (s3Config != null) {
+            s3ClientBuilder
+                    .withClientConfiguration(s3Config);
         }
-        s3.setEndpoint(endPoint);
-        return s3;
+        return s3ClientBuilder.build();
     }
 
     private static String determineEndpointForBucket(String bucket, AWSCredentialsProvider credentialsProvider,
@@ -137,7 +140,7 @@ abstract public class StashReader {
                     .withMaxKeys(1));
 
             // If this didn't error out then the presumed us-east-1 region was correct
-            return  "s3.us-east-1.amazonaws.com";
+            return "s3.us-east-1.amazonaws.com";
         } catch (AmazonS3Exception e) {
             if (e.getStatusCode() == 301 /* MOVED_PERMANENTLY */) {
                 String endPoint = e.getAdditionalDetails().get("Endpoint");
@@ -173,7 +176,7 @@ abstract public class StashReader {
                             dir = null;
                         } else {
                             // Strip the prefix and trailing "/"
-                            dir = dir.substring(prefix.length(), dir.length()-1);
+                            dir = dir.substring(prefix.length(), dir.length() - 1);
                         }
                     } else if (_truncated) {
                         ObjectListing response = _s3.listObjects(new ListObjectsRequest()
@@ -377,6 +380,7 @@ abstract public class StashReader {
         Iterator<S3ObjectSummary> allSummaries = Iterators.concat(new AbstractIterator<Iterator<S3ObjectSummary>>() {
             String marker = null;
             ObjectListing response;
+
             protected Iterator<S3ObjectSummary> computeNext() {
                 if (response == null || response.isTruncated()) {
                     response = _s3.listObjects(new ListObjectsRequest()
