@@ -4,9 +4,9 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
+import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLog;
@@ -32,7 +32,10 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.time.Clock;
 import java.time.Duration;
@@ -42,7 +45,13 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -51,13 +60,13 @@ import static java.util.Objects.requireNonNull;
 /**
  * Audit writer implementation which writes all audits as GZIP'd jsonl documents to S3 partitioned by date.
  * This format allows audit queries to be carried out by Athena, Amazon's Presto implementation over S3 documents.
- *
+ * <p>
  * This audit writer favors fast, non-blocking calls to {@link #persist(String, String, Audit, long)} over guaranteeing
  * a completely loss-less audit history.  To achieve this all audits are written to an in-memory queue.  That queue
  * is written to a local log file until it has reached a maximum size or age, both configurable in the constructor.
  * At this time the file is asynchronously GZIP'd then delivered to S3.  Once the file is delivered it is deleted from
  * the local host.
- *
+ * <p>
  * Each stage has multiple layers of recovery, ensuring that once a line is written to a file that file will eventually
  * be delivered to S3.  The exceptions to this which can cause audit loss are:
  *
@@ -124,7 +133,7 @@ public class AthenaAuditWriter implements AuditStore {
             s3AuditRoot = s3AuditRoot.substring(1);
         }
         if (s3AuditRoot.endsWith("/")) {
-            s3AuditRoot = s3AuditRoot.substring(0, s3AuditRoot.length()-1);
+            s3AuditRoot = s3AuditRoot.substring(0, s3AuditRoot.length() - 1);
         }
         _s3AuditRoot = s3AuditRoot;
 
@@ -197,12 +206,11 @@ public class AthenaAuditWriter implements AuditStore {
             credentialsProvider = new DefaultAWSCredentialsProviderChain();
         }
 
-        AmazonS3 s3 = AmazonS3ClientBuilder.standard().withCredentials(credentialsProvider)
-                .withRegion(Regions.fromName(configuration.getLogBucketRegion())).build();
-         if (configuration.getS3Endpoint() != null) {
-            s3.setEndpoint(configuration.getS3Endpoint());
-        }
-        return s3;
+        return AmazonS3ClientBuilder.standard()
+                .withCredentials(credentialsProvider)
+                .withRegion(Regions.fromName(configuration.getLogBucketRegion()))
+                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(configuration.getS3Endpoint(), Regions.getCurrentRegion().getName()))
+                .build();
     }
 
     @Override
@@ -420,8 +428,9 @@ public class AthenaAuditWriter implements AuditStore {
 
         /**
          * Writes a single audit to the log file.
+         *
          * @return True if the audit was written, false if the audit could not be written because the file was closed
-         *         or can no longer accept writes due to file size or age.
+         * or can no longer accept writes due to file size or age.
          */
         boolean writeAudit(QueuedAudit audit) {
             Map<String, Object> auditMap = Maps.newLinkedHashMap();
