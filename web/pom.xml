@@ -631,7 +631,6 @@
                                         <args>
                                             <version>${project.version}</version>
                                         </args>
-                                        <!-- <contextDir>${project.basedir}/../docker</contextDir> -->
                                         <dockerFileDir>${project.basedir}/../docker</dockerFileDir>
                                         <tags>
                                             <tag>${docker.floating.tag}</tag>
