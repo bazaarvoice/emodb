@@ -23,7 +23,7 @@ Docker is now included with mvn and docker image will be built if we select prof
 Also, to speed things up, you can try skipping tests. I usually do ` -DskipTests -DskipITs` and then watch in awe as Maven proceeds to run all of the tests anyway.
 
 ### build Emodb local image and Cassandra 
-Emodb based on the built previosly image but with different tag to use it localy.
+Emodb based on the built previously image but with different tag to use it on local machine.
 Cassandra based on the official image, but in order to supply our own `cassandra.yml` configuration, we have to "inherit" the official build. Again, running from `$GITROOT`:
 
 ```bash
