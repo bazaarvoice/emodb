@@ -1,0 +1,24 @@
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: emodb
+  github.com/project-slug: bazaarvoice/emodb
+  description: EmoDB is a RESTful HTTP server for storing JSON objects and for watching for changes to those events.
+  annotations:
+    backstage.io/techdocs-ref: 'url:https://github.com/bazaarvoice/emodb'
+  links:
+    - url: https://github.com/bazaarvoice/emodb
+      title: GitHub repository
+    - url: https://bazaarvoice.slack.com/app_redirect?channel=emodb-users
+      title: Slack channel
+      icon: send
+    - url: https://app.datadoghq.com/dashboard/xn9-q4f-kxa/emodb-overview
+      title: Datadog dashboard
+      icon: dashboard
+    - url: https://bazaarvoice.pagerduty.com/escalation_policies#PVXN6X3
+      title: PagerDuty Escalation Policy
+spec:
+  type: service
+  lifecyle: production
+  owner: data-storage
+  
