@@ -90,7 +90,7 @@ project's internal use it would be harmful if team B were to poll and ack messag
 knowledge or consent.  Permissions can be used to restrict the capabilities of an individual role, and assigning the
 role to one or more API keys transitively limits the capabilities of those API keys.
 
-A full list of possible permissions can be found in [Permissions.java](https://github.com/bazaarvoice/emodb/blob/master/web/src/main/java/com/bazaarvoice/emodb/web/auth/Permissions.java).
+A full list of possible permissions can be found in [Permissions.java](https://github.com/bazaarvoice/emodb/blob/main/web/src/main/java/com/bazaarvoice/emodb/web/auth/Permissions.java).
 The following section highlights the general format and nuances around SoR and Blob permissions.
 
 ### Permission format
@@ -189,7 +189,7 @@ IDs are similarly constrained except there is no restriction on creating IDs nam
 optional, although providing descriptive values for each is recommended.
 
 EmoDB has several pre-defined roles that are always available.  You can see these roles and what permissions they
-have in [DefaultRoles.java](https://github.com/bazaarvoice/emodb/blob/master/web/src/main/java/com/bazaarvoice/emodb/web/auth/DefaultRoles.java)
+have in [DefaultRoles.java](https://github.com/bazaarvoice/emodb/blob/main/web/src/main/java/com/bazaarvoice/emodb/web/auth/DefaultRoles.java)
 
 The role administration API allows you to create new roles with custom permissions.  These roles can then be associated
 with one or more API keys to provide fine controls over what actions the API key can perform.  Note that each of these
@@ -223,7 +223,7 @@ Example:
           -H "Content-Type: application/x.json-create-role" \
           -d '{"name":"Sample role","description":"A sample role","permissions":["sor|read|*","blob|read|*"]}'
     {"success":true}
-    
+
 Java Example:
 
 ```java
@@ -266,7 +266,7 @@ Example:
           "sor|read|*"
         ]
     }
-   
+
     $ curl -s "http://localhost:8080/uac/1/role/sample_group" | jq .
     [
       {
@@ -290,13 +290,13 @@ Permissions required:
 HTTP:
 
     GET /uac/1/role/{group}/{id}
-    
+
 Java
 
 ```java
 EmoRole getRole(EmoRoleKey roleKey)
 ```
-    
+
 Example:
 
     $ curl -s "http://localhost:8080/uac/1/role/sample_group/sample_id" | jq .
@@ -310,7 +310,7 @@ Example:
         "sor|read|*"
       ]
     }
-    
+
 Java Example:
 
 ```java
@@ -318,7 +318,7 @@ EmoRole role = uac.getRole(new EmoRoleKey("sample_group", "sample_id"));
 ```
 
 # Update a role
-            
+
 Permissions required:
 
 * `role|update|{group}|{id}`
@@ -328,13 +328,13 @@ HTTP:
     PUT /uac/1/role/{group}/{id}
 
     Content-Type: "application/x.json-update-role"
-    
+
 Java:
 
 ```java
 void updateRole(UpdateEmoRoleRequest request)
 ```
-   
+
 When updating a role you only need to provide those attributes which you want changed.  Additionally, you can incrementally
 add and remove individual permissions without passing back the entire permission set on each call.  The following
 examples revoke permission for `blob|read|*` and add permission for `databus|*|subscription1`.
@@ -345,7 +345,7 @@ Example:
           -H "Content-Type: application/x.json-update-role" \
           -d '{"name":"A new name","revokePermissions":["blob|read|*"],"grantPermissions":["databus|*|subscription1"]}'
     {"success":true}
-    
+
 Java Example:
 
 ```java
@@ -365,7 +365,7 @@ Permissions required:
 HTTP:
 
     DELETE /uac/1/role/{group}/{id}
-    
+
 Java:
 
 ```java
@@ -376,7 +376,7 @@ Example:
 
     $ curl -s -XDELETE "http://localhost:8080/uac/1/role/sample_group/sample_id"
     {"success":true}
-    
+
 Java Example:
 
 ```java
@@ -421,9 +421,9 @@ Permissions required:
 HTTP:
 
     POST /uac/1/api-key
-   
+
     Content-Type: "application/x.json-create-api-key"
-    
+
 Java
 
 ```java
@@ -484,7 +484,7 @@ Example:
       "maskedKey": "um3a****************************************mkjc",
       "id": "MEBZF4AP3YI6PMX7F22LNQUCKI"
     }
-   
+
 Java Example:
 
 ```java
@@ -503,9 +503,9 @@ HTTP:
     PUT /uac/1/api-key/{id}
 
     Content-Type: "application/x.json-update-api-key
-    
+
 Java:
-    
+
 ```java
 updateApiKey(UpdateEmoApiKeyRequest request)
 ```
@@ -525,7 +525,7 @@ Example:
         -H "Content-Type: application/x.json-update-api-key" \
         -d '{"owner":"new_owner@example.com","unassignRoles":[{"group":"sample_group","id":"sample_id"}],"assignRoles":[{"group":"sample_group","id":"new_sample_id"}]}'
     {"success":true}
-    
+
 Java Example:
 
 ```java
@@ -570,17 +570,17 @@ Java Example:
 String newPrivateKey = uac.migrateApiKey(new MigrateEmoApiKeyRequest("MEBZF4AP3YI6PMX7F22LNQUCKI"))
 ```
 
-### Delete an API key 
+### Delete an API key
 
 Permissions required:
 
 * `apikey|delete`
 * `role|grant|{group}|{id}` for each role currently assigned to the API key
- 
+
 HTTP:
 
     DELETE /uac/1/api-key/{id}
-    
+
 Java:
 
 ```java
@@ -591,7 +591,7 @@ Example:
 
     $ curl -s -XDELETE "http://localhost:8080/uac/1/api-key/MEBZF4AP3YI6PMX7F22LNQUCKI"
     {"successs":true}
-    
+
 Java Example:
 
 ```java

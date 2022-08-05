@@ -4,21 +4,21 @@ EmoDB Plugins
 While EmoDB provides full functionality out-of-the-box there are some cases where it may be useful to integrate
 custom functionality into the EmoDB without forking the source code or requiring a custom build.  To that end
 EmoDB provides a plugin architecture.  All plugins inherit from
-[Plugin<T>] (https://github.com/bazaarvoice/emodb/blob/master/plugins/src/main/java/com/bazaarvoice/emodb/plugin/Plugin.java).
+[Plugin<T>] (https://github.com/bazaarvoice/emodb/blob/main/plugins/src/main/java/com/bazaarvoice/emodb/plugin/Plugin.java).
 
 Plugin types
 ------------
 
 There are currently two plugins supported by EmoDB:
 
-### [ServerStartedListener] (https://github.com/bazaarvoice/emodb/blob/master/plugins/src/main/java/com/bazaarvoice/emodb/plugin/lifecycle/ServerStartedListener.java)
+### [ServerStartedListener] (https://github.com/bazaarvoice/emodb/blob/main/plugins/src/main/java/com/bazaarvoice/emodb/plugin/lifecycle/ServerStartedListener.java)
 
 It is frequently useful for the server to perform custom actions once it is started and available for requests.
 A common example of this is registering the server with a service registry.  The `ServerStartedListener` plugin provides
 a single method, `serverStarted()`, which is called immediately after the server is fully started.
 
 The following example demonstrates configuring the provided implementation
-[LoggingServerStartedListener] (https://github.com/bazaarvoice/emodb/blob/master/plugins/src/main/java/com/bazaarvoice/emodb/plugin/lifecycle/LoggingServerStartedListener.java)
+[LoggingServerStartedListener] (https://github.com/bazaarvoice/emodb/blob/main/plugins/src/main/java/com/bazaarvoice/emodb/plugin/lifecycle/LoggingServerStartedListener.java)
 in the server's `config.yaml`:
 
 ```
@@ -26,7 +26,7 @@ serverStartedListeners:
    - class: com.bazaarvoice.emodb.plugin.lifecycle.LoggingServerStartedListener
 ```
 
-### [StashStateListener] (https://github.com/bazaarvoice/emodb/blob/master/plugins/src/main/java/com/bazaarvoice/emodb/plugin/stash/StashStateListener.java)
+### [StashStateListener] (https://github.com/bazaarvoice/emodb/blob/main/plugins/src/main/java/com/bazaarvoice/emodb/plugin/stash/StashStateListener.java)
 
 When Stash is running it is useful to have callbacks on certain Stash events for monitoring and alerting.
 `StashStateListener` provides methods that are called when these events occur.  Implementations can use these events
@@ -44,7 +44,7 @@ by this method are:
   * Called whenever a Stash run is canceled.  Called once per Stash run and cluster.
 
 The following example demonstrates configuring the provided implementation
-[LoggingStashStateListener] (https://github.com/bazaarvoice/emodb/blob/master/plugins/src/main/java/com/bazaarvoice/emodb/plugin/stash/LoggingStashStateListener.java)
+[LoggingStashStateListener] (https://github.com/bazaarvoice/emodb/blob/main/plugins/src/main/java/com/bazaarvoice/emodb/plugin/stash/LoggingStashStateListener.java)
 in the server's `config.yaml`:
 
 ```
