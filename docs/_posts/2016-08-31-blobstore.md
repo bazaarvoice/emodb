@@ -41,7 +41,7 @@ Minimal Java client without ZooKeeper or Dropwizard:
 String emodbHost = "localhost:8080";  // Adjust to point to the EmoDB server.
 String apiKey = "xyz";  // Use the API key provided by EmoDB
 MetricRegistry metricRegistry = new MetricRegistry(); // This is usually a singleton passed
- 
+
 BlobStore blobStore = ServicePoolBuilder.create(BlobStore.class)
         .withHostDiscoverySource(new BlobStoreFixedHostDiscoverySource(emodbHost))
         .withServiceFactory(BlobStoreClientFactory.forCluster("local_default", metricRegistry).usingCredentials(apiKey))
@@ -103,7 +103,7 @@ Quick Start
 1. Download the [EmoDB binaries](https://github.com/bazaarvoice/emodb/releases).
 
 2. Run the EmoDB server locally. This will start zookeeper and cassandra locally.
-    
+
         $ bin/start-local.sh
         ...
         INFO  [2012-05-14 19:12:19,802] org.eclipse.jetty.server.AbstractConnector: Started InstrumentedBlockingChannelConnector@0.0.0.0:8080
@@ -278,7 +278,7 @@ Request Parameters:
     information that can be used to trace changes to an object and debug applications that use EmoDB.
     If your client is written in Java, you may use the [rison](https://github.com/bazaarvoice/rison)
     project to implement the O-Rison encoding.  For other languages, see [here](https://github.com/Nanonid/rison).
-    There are a few [pre-defined keys](https://github.com/bazaarvoice/emodb/blob/master/common/api/src/main/java/com/bazaarvoice/emodb/common/api/Audit.java)
+    There are a few [pre-defined keys](https://github.com/bazaarvoice/emodb/blob/main/common/api/src/main/java/com/bazaarvoice/emodb/common/api/Audit.java)
     in Audit.java that clients are encouraged to use.  You may pass an empty map of audit information
     (encoded as an empty string), but this is discouraged.  After applying the O-Rison encoding, don't
     forget that, as with all url query parameters, the audit argument must be UTF-8 URI-encoded.  There
@@ -350,7 +350,7 @@ Request Parameters:
     information that can be used to trace changes to an object and debug applications that use EmoDB.
     If your client is written in Java, you may use the [rison](https://github.com/bazaarvoice/rison)
     project to implement the O-Rison encoding.  For other languages, see [here](https://github.com/Nanonid/rison).
-    There are a few [pre-defined keys](https://github.com/bazaarvoice/emodb/blob/master/common/api/src/main/java/com/bazaarvoice/emodb/common/api/Audit.java)
+    There are a few [pre-defined keys](https://github.com/bazaarvoice/emodb/blob/main/common/api/src/main/java/com/bazaarvoice/emodb/common/api/Audit.java)
     in Audit.java that clients are encouraged to use.  You may pass an empty map of audit information
     (encoded as an empty string), but this is discouraged.  After applying the O-Rison encoding, don't
     forget that, as with all url query parameters, the audit argument must be UTF-8 URI-encoded.  There
