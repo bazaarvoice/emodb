@@ -5,7 +5,7 @@ EmoDB
 
 Store your feelings here.
 
-Written by [Bazaarvoice](http://www.bazaarvoice.com): see [the credits page](https://github.com/bazaarvoice/emodb/blob/master/Credits.md) for more details.
+Written by [Bazaarvoice](http://www.bazaarvoice.com): see [the credits page](https://github.com/bazaarvoice/emodb/blob/main/Credits.md) for more details.
 
 Introduction
 ------------

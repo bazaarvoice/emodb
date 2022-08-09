@@ -63,8 +63,8 @@ With that in mind, there are a few suggestions and requirements for your Cassand
   to you whether to use v-nodes and monitor what load imbalances result in your case, if any.
 * The data in EmoDB is only as good as the underlying data in Cassandra.  We recommend following the Cassandra
   maintenance guidelines as closely as possible, such as monitoring your ring's health and performing regular repairs.
-  
-  
+
+
 ### Setting Up Your Cassandra Rings
 
 A typical starter EmoDB deployment uses two Cassandra rings:  one for the SoR and Blob Store, and one for the Databus
@@ -327,8 +327,8 @@ cluster: emodb_qa
 
 ... almost!  Obviously you are not quite done at this point.  There is still more configuration and installation to be
 done before you are up and running.  However, most of the major configuration is done at this point.  There are examples
-of `config.yaml` from the EmoDB code [here](https://github.com/bazaarvoice/emodb/blob/master/web-local/config-local.yaml)
-and [here](https://github.com/bazaarvoice/emodb/blob/master/sdk/src/main/resources/emodb-default-config.yaml), and
+of `config.yaml` from the EmoDB code [here](https://github.com/bazaarvoice/emodb/blob/main/web-local/config-local.yaml)
+and [here](https://github.com/bazaarvoice/emodb/blob/main/sdk/src/main/resources/emodb-default-config.yaml), and
 although these are geared toward running EmoDB locally they should provide a decent starting point for configuring
 the rest of your EmoDB cluster.
 
