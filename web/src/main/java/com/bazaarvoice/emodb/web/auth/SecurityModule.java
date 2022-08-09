@@ -26,6 +26,7 @@ import com.bazaarvoice.emodb.auth.role.RoleManager;
 import com.bazaarvoice.emodb.auth.role.TableRoleManagerDAO;
 import com.bazaarvoice.emodb.auth.shiro.GuavaCacheManager;
 import com.bazaarvoice.emodb.auth.shiro.InvalidatableCacheManager;
+import com.bazaarvoice.emodb.auth.util.ApiKeyEncryption;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.PayloadBuilder;
 import com.bazaarvoice.emodb.common.dropwizard.guice.ServerCluster;

@@ -1,6 +1,5 @@
-package com.bazaarvoice.emodb.web.auth;
+package com.bazaarvoice.emodb.auth.util;
 
-import com.bazaarvoice.emodb.auth.util.CredentialEncrypter;
 import com.bazaarvoice.emodb.common.dropwizard.guice.ServerCluster;
 import com.google.inject.Inject;
 

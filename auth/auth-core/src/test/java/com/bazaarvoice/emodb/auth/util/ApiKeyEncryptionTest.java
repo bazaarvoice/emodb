@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.web.auth;
+package com.bazaarvoice.emodb.auth.util;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;

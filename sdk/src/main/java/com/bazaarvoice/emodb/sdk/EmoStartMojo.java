@@ -1,7 +1,7 @@
 package com.bazaarvoice.emodb.sdk;
 
 import com.bazaarvoice.emodb.common.json.JsonHelper;
-import com.bazaarvoice.emodb.web.auth.ApiKeyEncryption;
+import com.bazaarvoice.emodb.auth.util.ApiKeyEncryption;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;

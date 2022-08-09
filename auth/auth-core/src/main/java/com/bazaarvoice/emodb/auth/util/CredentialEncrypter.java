@@ -147,6 +147,7 @@ public class CredentialEncrypter {
      */
     public static boolean isPotentiallyEncryptedBytes(byte[] bytes) {
         requireNonNull(bytes, "bytes");
+        System.out.println("CHECK IF POTENTIALLY ENCRYPTED bytes");
 
         // The number of bytes is a non-zero multiple of the block size.
         try {
@@ -162,6 +163,7 @@ public class CredentialEncrypter {
      * by a specific instance.
      */
     public static boolean isPotentiallyEncryptedString(String string) {
+        System.out.println("CHECK IF POTENTIALLY ENCRYPTED String");
         requireNonNull(string, "string");
 
         // String is base64 encoded

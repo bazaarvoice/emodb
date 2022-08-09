@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.web.auth;
 
+import com.bazaarvoice.emodb.auth.util.ApiKeyEncryption;
 import com.bazaarvoice.emodb.web.EmoConfiguration;
 import io.dropwizard.cli.ConfiguredCommand;
 import io.dropwizard.setup.Bootstrap;
