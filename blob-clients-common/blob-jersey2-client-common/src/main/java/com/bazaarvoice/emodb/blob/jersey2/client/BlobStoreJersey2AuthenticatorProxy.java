@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.blob.jersey2.client;
 
+import com.bazaarvoice.emodb.auth.util.ApiKeyEncryption;
 import com.bazaarvoice.emodb.blob.api.AuthBlobStore;
 import com.bazaarvoice.emodb.blob.api.Blob;
 import com.bazaarvoice.emodb.blob.api.BlobMetadata;
@@ -31,7 +32,14 @@ class BlobStoreJersey2AuthenticatorProxy implements BlobStore {
 
     BlobStoreJersey2AuthenticatorProxy(AuthBlobStore authBlobStore, String apiKey) {
         _authBlobStore = authBlobStore;
-        _apiKey = apiKey;
+        if(ApiKeyEncryption.isPotentiallyEncryptedApiKey(apiKey)){
+            System.out.println("Encrypted key found for blobstore client request... decrypting");
+            _apiKey = new ApiKeyEncryption("c1" /*replace this & get cluster from EmoConfiguration*/)
+                    .decrypt(apiKey);
+        }else {
+            System.out.println("Decrypting not required.. apikey is in plaintext");
+            _apiKey = apiKey;
+        }
     }
 
     @Override
