@@ -67,5 +67,10 @@
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.bazaarvoice.emodb</groupId>
+            <artifactId>emodb-auth-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>
