@@ -99,5 +99,10 @@
             <artifactId>emodb-common-stash</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.bazaarvoice.emodb</groupId>
+            <artifactId>emodb-auth-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>

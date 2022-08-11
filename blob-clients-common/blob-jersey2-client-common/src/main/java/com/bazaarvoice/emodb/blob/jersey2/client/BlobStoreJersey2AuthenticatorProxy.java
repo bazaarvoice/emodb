@@ -33,11 +33,8 @@ class BlobStoreJersey2AuthenticatorProxy implements BlobStore {
     BlobStoreJersey2AuthenticatorProxy(AuthBlobStore authBlobStore, String apiKey) {
         _authBlobStore = authBlobStore;
         if(ApiKeyEncryption.isPotentiallyEncryptedApiKey(apiKey)){
-            System.out.println("Encrypted key found for blobstore client request... decrypting");
-            _apiKey = new ApiKeyEncryption("c1" /*replace this & get cluster from EmoConfiguration*/)
-                    .decrypt(apiKey);
+            throw new IllegalArgumentException("API Key is encrypted, please decrypt it");
         }else {
-            System.out.println("Decrypting not required.. apikey is in plaintext");
             _apiKey = apiKey;
         }
     }

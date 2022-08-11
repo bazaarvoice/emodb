@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.sor.client;
 
 import com.bazaarvoice.emodb.auth.InvalidCredentialException;
 import com.bazaarvoice.emodb.auth.proxy.CachingAuthenticatingProxy;
+import com.bazaarvoice.emodb.auth.util.ApiKeyEncryption;
 import com.bazaarvoice.emodb.sor.api.AuthDataStore;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 
@@ -21,6 +22,9 @@ public class DataStoreAuthenticator extends CachingAuthenticatingProxy<DataStore
     protected String validateCredentials(String apiKey) throws InvalidCredentialException {
         if (apiKey.isEmpty()) {
             throw new InvalidCredentialException("API key cannot be empty");
+        }
+        if(ApiKeyEncryption.isPotentiallyEncryptedApiKey(apiKey)){
+            throw new InvalidCredentialException("API Key is encrypted, please decrypt it");
         }
         return apiKey;
     }
