@@ -1,7 +1,7 @@
 package com.bazaarvoice.queue.client2;
 
 import com.bazaarvoice.emodb.auth.InvalidCredentialException;
-import com.bazaarvoice.emodb.auth.util.ApiKeyEncryption;
+import com.bazaarvoice.emodb.auth.util.CredentialEncrypter;
 import com.bazaarvoice.emodb.client2.EmoClient;
 import com.bazaarvoice.emodb.common.jersey2.RetryPolicy;
 import com.bazaarvoice.emodb.queue.api.AuthQueueService;
@@ -29,7 +29,7 @@ abstract public class AbstractQueueClientFactory {
     public QueueService usingCredentials(String apiKey) {
         requireNonNull(apiKey, "API key is required");
 
-        if (ApiKeyEncryption.isPotentiallyEncryptedApiKey(apiKey)) {
+        if (CredentialEncrypter.isPotentiallyEncryptedString(apiKey)) {
             throw new InvalidCredentialException("API Key is encrypted, please decrypt it");
         }
         AuthQueueService authQueueService = new QueueClient(_endPoint, _client, RetryPolicy.createDefault());

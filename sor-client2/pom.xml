@@ -53,6 +53,11 @@
             <artifactId>emodb-common-json</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.bazaarvoice.emodb</groupId>
+            <artifactId>emodb-auth-util</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!-- 3rd-party dependencies -->
         <dependency>
@@ -97,11 +102,6 @@
         <dependency>
             <groupId>com.bazaarvoice.emodb</groupId>
             <artifactId>emodb-common-stash</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.bazaarvoice.emodb</groupId>
-            <artifactId>emodb-auth-core</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>

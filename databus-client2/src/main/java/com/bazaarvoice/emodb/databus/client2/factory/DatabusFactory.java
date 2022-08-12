@@ -1,7 +1,7 @@
 package com.bazaarvoice.emodb.databus.client2.factory;
 
 import com.bazaarvoice.emodb.auth.InvalidCredentialException;
-import com.bazaarvoice.emodb.auth.util.ApiKeyEncryption;
+import com.bazaarvoice.emodb.auth.util.CredentialEncrypter;
 import com.bazaarvoice.emodb.client2.EmoClient;
 import com.bazaarvoice.emodb.common.jersey2.RetryPolicy;
 import com.bazaarvoice.emodb.common.jersey2.Jersey2EmoClient;
@@ -36,7 +36,7 @@ public class DatabusFactory implements Serializable {
         _emoClient = new Jersey2EmoClient(requireNonNull(client, "Client is required"));
         _apiKey = requireNonNull(apiKey, "API key is required");
 
-        if (ApiKeyEncryption.isPotentiallyEncryptedApiKey(apiKey)) {
+        if (CredentialEncrypter.isPotentiallyEncryptedString(apiKey)) {
             throw new InvalidCredentialException("API Key is encrypted, please decrypt it");
         }
     }

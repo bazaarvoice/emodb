@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.blob.jersey2.client;
 
-import com.bazaarvoice.emodb.auth.util.ApiKeyEncryption;
+import com.bazaarvoice.emodb.auth.util.CredentialEncrypter;
 import com.bazaarvoice.emodb.blob.api.AuthBlobStore;
 import com.bazaarvoice.emodb.blob.api.Blob;
 import com.bazaarvoice.emodb.blob.api.BlobMetadata;
@@ -32,7 +32,7 @@ class BlobStoreJersey2AuthenticatorProxy implements BlobStore {
 
     BlobStoreJersey2AuthenticatorProxy(AuthBlobStore authBlobStore, String apiKey) {
         _authBlobStore = authBlobStore;
-        if(ApiKeyEncryption.isPotentiallyEncryptedApiKey(apiKey)){
+        if(CredentialEncrypter.isPotentiallyEncryptedString(apiKey)){
             throw new IllegalArgumentException("API Key is encrypted, please decrypt it");
         }else {
             _apiKey = apiKey;

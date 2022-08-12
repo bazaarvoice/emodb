@@ -75,6 +75,7 @@
         <module>megabus</module>
         <module>kafka</module>
         <module>databus-client2</module>
+        <module>auth/auth-util</module>
     </modules>
 
 </project>

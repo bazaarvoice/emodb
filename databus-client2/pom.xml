@@ -47,6 +47,11 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.bazaarvoice.emodb</groupId>
+            <artifactId>emodb-auth-util</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
         </dependency>
@@ -101,11 +106,6 @@
         <dependency>
             <groupId>dev.failsafe</groupId>
             <artifactId>failsafe</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.bazaarvoice.emodb</groupId>
-            <artifactId>emodb-auth-core</artifactId>
-            <version>${project.version}</version>
         </dependency>
     </dependencies>
 </project>
