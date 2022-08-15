@@ -23,7 +23,7 @@ public class DataStoreAuthenticator extends CachingAuthenticatingProxy<DataStore
         if (apiKey.isEmpty()) {
             throw new InvalidCredentialException("API key cannot be empty");
         }
-        if(CredentialEncrypter.isPotentiallyEncryptedString(apiKey)){
+        if (CredentialEncrypter.isPotentiallyEncryptedString(apiKey)) {
             throw new InvalidCredentialException("API Key is encrypted, please decrypt it");
         }
         return apiKey;

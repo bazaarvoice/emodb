@@ -32,9 +32,9 @@ class BlobStoreJersey2AuthenticatorProxy implements BlobStore {
 
     BlobStoreJersey2AuthenticatorProxy(AuthBlobStore authBlobStore, String apiKey) {
         _authBlobStore = authBlobStore;
-        if(CredentialEncrypter.isPotentiallyEncryptedString(apiKey)){
+        if (CredentialEncrypter.isPotentiallyEncryptedString(apiKey)) {
             throw new IllegalArgumentException("API Key is encrypted, please decrypt it");
-        }else {
+        } else {
             _apiKey = apiKey;
         }
     }
