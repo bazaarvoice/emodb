@@ -22,16 +22,6 @@
             <artifactId>emodb-cachemgr</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.bazaarvoice.emodb</groupId>
-            <artifactId>emodb-common-dropwizard</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.bazaarvoice.emodb</groupId>
-            <artifactId>emodb-auth-util</artifactId>
-            <version>${project.version}</version>
-        </dependency>
 
         <!-- 3rd-party dependencies -->
         <dependency>

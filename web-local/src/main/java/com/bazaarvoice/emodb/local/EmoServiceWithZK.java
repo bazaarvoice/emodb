@@ -14,7 +14,7 @@ import com.bazaarvoice.emodb.uac.client.UserAccessControlClientFactory;
 import com.bazaarvoice.emodb.uac.client.UserAccessControlFixedHostDiscoverySource;
 import com.bazaarvoice.emodb.web.EmoConfiguration;
 import com.bazaarvoice.emodb.web.EmoService;
-import com.bazaarvoice.emodb.auth.util.ApiKeyEncryption;
+import com.bazaarvoice.emodb.web.auth.ApiKeyEncryption;
 import com.bazaarvoice.emodb.web.guice.SelfHostAndPortModule;
 import com.bazaarvoice.emodb.web.util.EmoServiceObjectMapperFactory;
 import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
