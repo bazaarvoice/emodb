@@ -22,6 +22,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.function.Supplier;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * BlobStore instance that takes an {@link AuthBlobStore} and API key and proxies all calls using the API key.
  */
@@ -32,6 +34,8 @@ class BlobStoreJersey2AuthenticatorProxy implements BlobStore {
 
     BlobStoreJersey2AuthenticatorProxy(AuthBlobStore authBlobStore, String apiKey) {
         _authBlobStore = authBlobStore;
+        requireNonNull(apiKey, "API key is required");
+
         if (CredentialEncrypter.isPotentiallyEncryptedString(apiKey)) {
             throw new IllegalArgumentException("API Key is encrypted, please decrypt it");
         } else {
