@@ -4,7 +4,7 @@ import com.bazaarvoice.emodb.common.dropwizard.guice.ServerCluster;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.plugin.PluginServerMetadata;
 import com.bazaarvoice.emodb.plugin.stash.StashStateListener;
-import com.bazaarvoice.emodb.auth.util.ApiKeyEncryption;
+import com.bazaarvoice.emodb.web.auth.ApiKeyEncryption;
 import com.bazaarvoice.emodb.web.scanner.ScanUploadModule;
 import com.bazaarvoice.emodb.web.scanner.ScanUploader;
 import com.bazaarvoice.emodb.web.scanner.ScannerZooKeeper;

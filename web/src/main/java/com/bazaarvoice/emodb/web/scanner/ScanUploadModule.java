@@ -30,7 +30,7 @@ import com.bazaarvoice.emodb.queue.client.QueueClientFactory;
 import com.bazaarvoice.emodb.queue.client.QueueServiceAuthenticator;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.DataStore;
-import com.bazaarvoice.emodb.auth.util.ApiKeyEncryption;
+import com.bazaarvoice.emodb.web.auth.ApiKeyEncryption;
 import com.bazaarvoice.emodb.web.scanner.config.ScannerConfiguration;
 import com.bazaarvoice.emodb.web.scanner.config.ScheduledScanConfiguration;
 import com.bazaarvoice.emodb.web.scanner.control.DistributedScanRangeMonitor;
