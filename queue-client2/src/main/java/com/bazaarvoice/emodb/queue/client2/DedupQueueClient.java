@@ -1,4 +1,4 @@
-package com.bazaarvoice.queue.client2;
+package com.bazaarvoice.emodb.queue.client2;
 
 import com.bazaarvoice.emodb.client2.EmoClient;
 import com.bazaarvoice.emodb.queue.api.AuthDedupQueueService;
