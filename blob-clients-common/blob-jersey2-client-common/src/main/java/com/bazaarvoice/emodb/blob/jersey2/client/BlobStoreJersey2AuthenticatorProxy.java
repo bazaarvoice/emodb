@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.blob.jersey2.client;
 
+import com.bazaarvoice.emodb.auth.InvalidCredentialException;
 import com.bazaarvoice.emodb.auth.util.CredentialEncrypter;
 import com.bazaarvoice.emodb.blob.api.AuthBlobStore;
 import com.bazaarvoice.emodb.blob.api.Blob;
@@ -34,15 +35,19 @@ class BlobStoreJersey2AuthenticatorProxy implements BlobStore {
 
     BlobStoreJersey2AuthenticatorProxy(AuthBlobStore authBlobStore, String apiKey) {
         requireNonNull(authBlobStore, "AuthBlobstore is required");
-        requireNonNull(apiKey, "API key is required");
-
         _authBlobStore = authBlobStore;
+        _apiKey = validateApiKey(apiKey);
+    }
 
-        if (CredentialEncrypter.isPotentiallyEncryptedString(apiKey)) {
-            throw new IllegalArgumentException("API Key is encrypted, please decrypt it");
-        } else {
-            _apiKey = apiKey;
+    private static String validateApiKey(String apiKey) throws InvalidCredentialException {
+        requireNonNull(apiKey, "API key is required");
+        if (apiKey.isEmpty()) {
+            throw new InvalidCredentialException("API key cannot be empty");
         }
+        if (CredentialEncrypter.isPotentiallyEncryptedString(apiKey)) {
+            throw new InvalidCredentialException("API Key is encrypted, please decrypt it");
+        }
+        return apiKey;
     }
 
     @Override

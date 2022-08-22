@@ -6,6 +6,8 @@ import com.bazaarvoice.emodb.auth.util.CredentialEncrypter;
 import com.bazaarvoice.emodb.sor.api.AuthDataStore;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 
+import static java.util.Objects.requireNonNull;
+
 public class DataStoreAuthenticator extends CachingAuthenticatingProxy<DataStore, String> {
 
     private final AuthDataStore _authDataStore;
@@ -20,6 +22,16 @@ public class DataStoreAuthenticator extends CachingAuthenticatingProxy<DataStore
 
     @Override
     protected String validateCredentials(String apiKey) throws InvalidCredentialException {
+        return validateApiKey(apiKey);
+    }
+
+    @Override
+    protected DataStore createInstanceWithCredentials(String apiKey) {
+        return new DataStoreAuthenticatorProxy(_authDataStore, apiKey);
+    }
+
+    private static String validateApiKey(String apiKey) throws InvalidCredentialException {
+        requireNonNull(apiKey, "API key is required");
         if (apiKey.isEmpty()) {
             throw new InvalidCredentialException("API key cannot be empty");
         }
@@ -27,10 +39,5 @@ public class DataStoreAuthenticator extends CachingAuthenticatingProxy<DataStore
             throw new InvalidCredentialException("API Key is encrypted, please decrypt it");
         }
         return apiKey;
-    }
-
-    @Override
-    protected DataStore createInstanceWithCredentials(String apiKey) {
-        return new DataStoreAuthenticatorProxy(_authDataStore, apiKey);
     }
 }

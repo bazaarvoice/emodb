@@ -27,12 +27,18 @@ abstract public class AbstractQueueClientFactory {
     }
 
     public QueueService usingCredentials(String apiKey) {
-        requireNonNull(apiKey, "API key is required");
+        AuthQueueService authQueueService = new QueueClient(_endPoint, _client, RetryPolicy.createDefault());
+        return new QueueServiceAuthenticatorProxy(authQueueService, validateApiKey(apiKey));
+    }
 
+    private static String validateApiKey(String apiKey) throws InvalidCredentialException {
+        requireNonNull(apiKey, "API key is required");
+        if (apiKey.isEmpty()) {
+            throw new InvalidCredentialException("API key cannot be empty");
+        }
         if (CredentialEncrypter.isPotentiallyEncryptedString(apiKey)) {
             throw new InvalidCredentialException("API Key is encrypted, please decrypt it");
         }
-        AuthQueueService authQueueService = new QueueClient(_endPoint, _client, RetryPolicy.createDefault());
-        return new QueueServiceAuthenticatorProxy(authQueueService, apiKey);
+        return apiKey;
     }
 }

@@ -34,11 +34,7 @@ public class DatabusFactory implements Serializable {
     public DatabusFactory(EmoServiceDiscovery emoServiceDiscovery, String apiKey, JerseyClient client) {
         _emoServiceDiscovery = requireNonNull(emoServiceDiscovery, "Service discovery is required");
         _emoClient = new Jersey2EmoClient(requireNonNull(client, "Client is required"));
-        _apiKey = requireNonNull(apiKey, "API key is required");
-
-        if (CredentialEncrypter.isPotentiallyEncryptedString(apiKey)) {
-            throw new InvalidCredentialException("API Key is encrypted, please decrypt it");
-        }
+        _apiKey = validateApiKey(apiKey);
     }
 
     public DatabusClient create() {
@@ -55,5 +51,17 @@ public class DatabusFactory implements Serializable {
             }
         }
         return new DatabusClient(_emoServiceDiscovery, _emoClient, _apiKey, RetryPolicy.createDefault());
+    }
+
+
+    private static String validateApiKey(String apiKey) throws InvalidCredentialException {
+        requireNonNull(apiKey, "API key is required");
+        if (apiKey.isEmpty()) {
+            throw new InvalidCredentialException("API key cannot be empty");
+        }
+        if (CredentialEncrypter.isPotentiallyEncryptedString(apiKey)) {
+            throw new InvalidCredentialException("API Key is encrypted, please decrypt it");
+        }
+        return apiKey;
     }
 }
