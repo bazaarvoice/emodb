@@ -1,5 +1,7 @@
 package com.bazaarvoice.emodb.blob.jersey2.client;
 
+import com.bazaarvoice.emodb.auth.InvalidCredentialException;
+import com.bazaarvoice.emodb.auth.util.CredentialEncrypter;
 import com.bazaarvoice.emodb.blob.api.AuthBlobStore;
 import com.bazaarvoice.emodb.blob.api.Blob;
 import com.bazaarvoice.emodb.blob.api.BlobMetadata;
@@ -21,6 +23,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.function.Supplier;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * BlobStore instance that takes an {@link AuthBlobStore} and API key and proxies all calls using the API key.
  */
@@ -30,8 +34,20 @@ class BlobStoreJersey2AuthenticatorProxy implements BlobStore {
     private final String _apiKey;
 
     BlobStoreJersey2AuthenticatorProxy(AuthBlobStore authBlobStore, String apiKey) {
+        requireNonNull(authBlobStore, "AuthBlobstore is required");
         _authBlobStore = authBlobStore;
-        _apiKey = apiKey;
+        _apiKey = validateApiKey(apiKey);
+    }
+
+    private static String validateApiKey(String apiKey) throws InvalidCredentialException {
+        requireNonNull(apiKey, "API key is required");
+        if (apiKey.isEmpty()) {
+            throw new InvalidCredentialException("API key cannot be empty");
+        }
+        if (CredentialEncrypter.isPotentiallyEncryptedString(apiKey)) {
+            throw new InvalidCredentialException("API Key is encrypted, please decrypt it");
+        }
+        return apiKey;
     }
 
     @Override

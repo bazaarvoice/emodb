@@ -47,6 +47,11 @@
             <artifactId>emodb-common-jersey2-client</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.bazaarvoice.emodb</groupId>
+            <artifactId>emodb-auth-util</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!-- Third party dependencies -->
         <dependency>

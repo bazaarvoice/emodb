@@ -1,8 +1,10 @@
 package com.bazaarvoice.emodb.databus.client2.factory;
 
+import com.bazaarvoice.emodb.auth.InvalidCredentialException;
+import com.bazaarvoice.emodb.auth.util.CredentialEncrypter;
 import com.bazaarvoice.emodb.client2.EmoClient;
-import com.bazaarvoice.emodb.common.jersey2.RetryPolicy;
 import com.bazaarvoice.emodb.common.jersey2.Jersey2EmoClient;
+import com.bazaarvoice.emodb.common.jersey2.RetryPolicy;
 import com.bazaarvoice.emodb.databus.client2.client.DatabusClient;
 import com.bazaarvoice.emodb.databus.client2.discovery.EmoServiceDiscovery;
 import com.bazaarvoice.emodb.databus.client2.discovery.ZKEmoServiceDiscovery;
@@ -31,8 +33,8 @@ public class DatabusFactory implements Serializable {
 
     public DatabusFactory(EmoServiceDiscovery emoServiceDiscovery, String apiKey, JerseyClient client) {
         _emoServiceDiscovery = requireNonNull(emoServiceDiscovery, "Service discovery is required");
-        _apiKey = requireNonNull(apiKey, "API key is required");
         _emoClient = new Jersey2EmoClient(requireNonNull(client, "Client is required"));
+        _apiKey = validateApiKey(apiKey);
     }
 
     public DatabusClient create() {
@@ -49,5 +51,17 @@ public class DatabusFactory implements Serializable {
             }
         }
         return new DatabusClient(_emoServiceDiscovery, _emoClient, _apiKey, RetryPolicy.createDefault());
+    }
+
+
+    private static String validateApiKey(String apiKey) throws InvalidCredentialException {
+        requireNonNull(apiKey, "API key is required");
+        if (apiKey.isEmpty()) {
+            throw new InvalidCredentialException("API key cannot be empty");
+        }
+        if (CredentialEncrypter.isPotentiallyEncryptedString(apiKey)) {
+            throw new InvalidCredentialException("API Key is encrypted, please decrypt it");
+        }
+        return apiKey;
     }
 }
