@@ -49,7 +49,7 @@
         <jersey2.version>2.21</jersey2.version>
         <shiro.version>1.8.0</shiro.version>
         <cassandra.driver.version>3.11.1</cassandra.driver.version>
-        <kafka.version>2.8.0</kafka.version>
+        <kafka.version>2.8.2</kafka.version>
         <swagger.version>1.5.8</swagger.version>
         <jaxb.version>2.3.1</jaxb.version>
         <failsafe.dev.version>3.2.3</failsafe.dev.version>
