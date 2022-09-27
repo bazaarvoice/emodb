@@ -31,7 +31,7 @@
         <curator.version>2.4.2</curator.version>
         <curator-extensions.version>1.4.2</curator-extensions.version>
         <dropwizard.version>0.7.1</dropwizard.version>
-        <guava.version>20.0</guava.version>
+        <guava.version>30.0-android</guava.version>
         <guice.version>4.0</guice.version>
         <jackson.version>2.6.7.5</jackson.version>
         <jetty.version>9.0.7.v20131107</jetty.version>
