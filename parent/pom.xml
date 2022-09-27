@@ -24,21 +24,21 @@
     </scm>
 
     <properties>
-        <astyanax.version>3.8.0-bv13</astyanax.version>
+        <astyanax.version>3.8.0-bv8</astyanax.version>
         <dropwizard-metrics-datadog.version>1.1.13</dropwizard-metrics-datadog.version>
-        <cassandra.version>3.11.12</cassandra.version>
+        <cassandra.version>4.0.0</cassandra.version>
         <cassandra-maven-plugin.version>${cassandra.version}.1</cassandra-maven-plugin.version>
-        <curator.version>2.4.2</curator.version>
+        <curator.version>4.2.0</curator.version>
         <curator-extensions.version>1.4.2</curator-extensions.version>
-        <dropwizard.version>0.7.1</dropwizard.version>
-        <guava.version>20.0</guava.version>
-        <guice.version>4.0</guice.version>
+        <dropwizard.version>1.3.26</dropwizard.version>
+        <guava.version>30.0-android</guava.version>
+        <guice.version>5.0.0</guice.version>
         <jackson.version>2.6.7.5</jackson.version>
         <jetty.version>9.0.7.v20131107</jetty.version>
         <jna.version>5.3.1</jna.version>
         <org.codehaus.jackson.version>1.9.13</org.codehaus.jackson.version>
         <metrics.version>3.0.2</metrics.version>
-        <ostrich.version>1.9.3</ostrich.version>
+        <ostrich.version>2.1.0</ostrich.version>
         <rison.version>2.6.3</rison.version>
         <slf4j.version>1.7.36</slf4j.version>
         <commons-io.version>2.7</commons-io.version>
@@ -48,7 +48,7 @@
         <jersey.version>1.19.4</jersey.version>
         <jersey2.version>2.21</jersey2.version>
         <shiro.version>1.8.0</shiro.version>
-        <cassandra.driver.version>3.11.1</cassandra.driver.version>
+        <cassandra.driver.version>4.0.0</cassandra.driver.version>
         <kafka.version>2.8.0</kafka.version>
         <swagger.version>1.5.8</swagger.version>
         <jaxb.version>2.3.1</jaxb.version>
