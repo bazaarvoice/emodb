@@ -28,17 +28,17 @@
         <dropwizard-metrics-datadog.version>1.1.13</dropwizard-metrics-datadog.version>
         <cassandra.version>3.11.12</cassandra.version>
         <cassandra-maven-plugin.version>${cassandra.version}.1</cassandra-maven-plugin.version>
-        <curator.version>2.4.2</curator.version>
+        <curator.version>4.2.0</curator.version>
         <curator-extensions.version>1.4.2</curator-extensions.version>
         <dropwizard.version>0.7.1</dropwizard.version>
-        <guava.version>20.0</guava.version>
-        <guice.version>4.0</guice.version>
+        <guava.version>30.0-android</guava.version>
+        <guice.version>5.0.0</guice.version>
         <jackson.version>2.6.7.5</jackson.version>
         <jetty.version>9.0.7.v20131107</jetty.version>
         <jna.version>5.3.1</jna.version>
         <org.codehaus.jackson.version>1.9.13</org.codehaus.jackson.version>
         <metrics.version>3.0.2</metrics.version>
-        <ostrich.version>1.9.3</ostrich.version>
+        <ostrich.version>2.1.0</ostrich.version>
         <rison.version>2.6.3</rison.version>
         <slf4j.version>1.7.36</slf4j.version>
         <commons-io.version>2.7</commons-io.version>
