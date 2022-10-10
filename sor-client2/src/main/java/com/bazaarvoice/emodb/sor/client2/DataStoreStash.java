@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.sor.client;
+package com.bazaarvoice.emodb.sor.client2;
 
 import com.amazonaws.ClientConfiguration;
 import com.bazaarvoice.emodb.common.stash.StandardStashReader;

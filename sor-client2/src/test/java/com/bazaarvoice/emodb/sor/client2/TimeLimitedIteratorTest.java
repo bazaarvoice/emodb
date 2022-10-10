@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.sor.client;
+package com.bazaarvoice.emodb.sor.client2;
 
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.PeekingIterator;

@@ -73,8 +73,6 @@ public class DatabusClient implements Databus, Closeable {
         checkArgument(limit > 0, "Limit must be >0");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
-                    .path("bus")
-                    .path("1")
                     .queryParam("from", optional(fromSubscriptionExclusive))
                     .queryParam("limit", limit)
                     .build();
@@ -101,8 +99,6 @@ public class DatabusClient implements Databus, Closeable {
     public void subscribe(String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl, boolean includeDefaultJoinFilter) {
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
-                    .path("bus")
-                    .path("1")
                     .path(subscription)
                     .queryParam("ttl", subscriptionTtl.getSeconds())
                     .queryParam("eventTtl", eventTtl.getSeconds())
@@ -125,8 +121,6 @@ public class DatabusClient implements Databus, Closeable {
         requireNonNull(subscription, "subscription");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
-                    .path("bus")
-                    .path("1")
                     .path(subscription)
                     .queryParam("partitioned", _partitionSafe)
                     .build();
@@ -146,8 +140,6 @@ public class DatabusClient implements Databus, Closeable {
         requireNonNull(subscription, "subscription");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
-                    .path("bus")
-                    .path("1")
                     .path(subscription)
                     .build();
             _log.debug("Uri for getSubscription call:{} ", uri.toString());
@@ -171,8 +163,6 @@ public class DatabusClient implements Databus, Closeable {
         requireNonNull(subscription, "subscription");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
-                    .path("bus")
-                    .path("1")
                     .path(subscription)
                     .path("size")
                     .queryParam("limit", optional(limit != Long.MAX_VALUE ? limit : null))
@@ -194,8 +184,6 @@ public class DatabusClient implements Databus, Closeable {
         requireNonNull(subscription, "subscription");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
-                    .path("bus")
-                    .path("1")
                     .path(subscription)
                     .path("claimcount")
                     .queryParam("partitioned", _partitionSafe)
@@ -217,8 +205,6 @@ public class DatabusClient implements Databus, Closeable {
         requireNonNull(subscription, "subscription");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
-                    .path("bus")
-                    .path("1")
                     .path(subscription)
                     .path("peek")
                     .queryParam("limit", limit)
@@ -244,8 +230,6 @@ public class DatabusClient implements Databus, Closeable {
 
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
-                    .path("bus")
-                    .path("1")
                     .path(subscription)
                     .path("poll")
                     .queryParam("ttl", Ttls.toSeconds(claimTtl, 0, Integer.MAX_VALUE))
@@ -293,8 +277,6 @@ public class DatabusClient implements Databus, Closeable {
         requireNonNull(claimTtl, "claimTtl");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
-                    .path("bus")
-                    .path("1")
                     .path(subscription)
                     .path("renew")
                     .queryParam("ttl", Ttls.toSeconds(claimTtl, 0, Integer.MAX_VALUE))
@@ -319,8 +301,6 @@ public class DatabusClient implements Databus, Closeable {
         requireNonNull(eventKeys, "eventKeys");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
-                    .path("bus")
-                    .path("1")
                     .path(subscription)
                     .path("ack")
                     .queryParam("partitioned", _partitionSafe)
@@ -347,8 +327,6 @@ public class DatabusClient implements Databus, Closeable {
         requireNonNull(subscription, "subscription");
         try {
             UriBuilder uriBuilder = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
-                    .path("bus")
-                    .path("1")
                     .path(subscription)
                     .path("replay");
             if (since != null) {
@@ -376,8 +354,6 @@ public class DatabusClient implements Databus, Closeable {
         requireNonNull(reference, "reference");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
-                    .path("bus")
-                    .path("1")
                     .path("replay")
                     .path(reference)
                     .build();
@@ -398,8 +374,6 @@ public class DatabusClient implements Databus, Closeable {
         requireNonNull(to, "to");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
-                    .path("bus")
-                    .path("1")
                     .path("_move")
                     .queryParam("from", from)
                     .queryParam("to", to)
@@ -422,8 +396,6 @@ public class DatabusClient implements Databus, Closeable {
         requireNonNull(reference, "reference");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
-                    .path("bus")
-                    .path("1")
                     .path("_move")
                     .path(reference)
                     .build();
@@ -445,8 +417,6 @@ public class DatabusClient implements Databus, Closeable {
         requireNonNull(key, "key");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
-                    .path("bus")
-                    .path("1")
                     .path(subscription)
                     .path("inject")
                     .queryParam("table", table)
@@ -468,8 +438,6 @@ public class DatabusClient implements Databus, Closeable {
         requireNonNull(subscription, "subscription");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
-                    .path("bus")
-                    .path("1")
                     .path(subscription)
                     .path("unclaimall")
                     .queryParam("partitioned", _partitionSafe)
@@ -490,8 +458,6 @@ public class DatabusClient implements Databus, Closeable {
         requireNonNull(subscription, "subscription");
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
-                    .path("bus")
-                    .path("1")
                     .path(subscription)
                     .path("purge")
                     .queryParam("partitioned", _partitionSafe)

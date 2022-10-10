@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.sor.client;
+package com.bazaarvoice.emodb.sor.client2;
 
 import com.bazaarvoice.emodb.client2.EmoClient;
 import com.bazaarvoice.emodb.common.jersey2.Jersey2EmoClient;
