@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.sor.client;
+package com.bazaarvoice.emodb.sor.client2;
 
 import com.bazaarvoice.emodb.auth.InvalidCredentialException;
 import com.bazaarvoice.emodb.auth.proxy.CachingAuthenticatingProxy;

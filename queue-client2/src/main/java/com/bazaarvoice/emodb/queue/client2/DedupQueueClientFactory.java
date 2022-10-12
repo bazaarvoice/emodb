@@ -1,4 +1,4 @@
-package com.bazaarvoice.queue.client2;
+package com.bazaarvoice.emodb.queue.client2;
 
 import com.bazaarvoice.emodb.common.jersey2.Jersey2EmoClient;
 import org.glassfish.jersey.client.ClientProperties;

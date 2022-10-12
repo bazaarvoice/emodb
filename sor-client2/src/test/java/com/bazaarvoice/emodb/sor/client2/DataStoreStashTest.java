@@ -1,6 +1,12 @@
-package com.bazaarvoice.emodb.sor.client;
+package com.bazaarvoice.emodb.sor.client2;
 
-import com.bazaarvoice.emodb.common.stash.*;
+import com.bazaarvoice.emodb.common.stash.StandardStashReader;
+import com.bazaarvoice.emodb.common.stash.StashFileMetadata;
+import com.bazaarvoice.emodb.common.stash.StashRowIterable;
+import com.bazaarvoice.emodb.common.stash.StashRowIterator;
+import com.bazaarvoice.emodb.common.stash.StashSplit;
+import com.bazaarvoice.emodb.common.stash.StashTable;
+import com.bazaarvoice.emodb.common.stash.StashTableMetadata;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.TableNotStashedException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;

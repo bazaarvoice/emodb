@@ -1,7 +1,6 @@
-package com.bazaarvoice.emodb.sor.client;
+package com.bazaarvoice.emodb.sor.client2;
 
 import com.bazaarvoice.emodb.client2.EmoClient;
-import com.bazaarvoice.emodb.client2.EmoClientException;
 import com.bazaarvoice.emodb.client2.EmoResource;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.delta.Deltas;

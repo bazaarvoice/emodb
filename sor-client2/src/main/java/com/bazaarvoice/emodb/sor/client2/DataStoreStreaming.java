@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.sor.client;
+package com.bazaarvoice.emodb.sor.client2;
 
 import com.bazaarvoice.emodb.common.api.impl.TimePartitioningIterator;
 import com.bazaarvoice.emodb.common.json.RestartingStreamingIterator;
