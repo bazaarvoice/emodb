@@ -206,11 +206,16 @@ public class AthenaAuditWriter implements AuditStore {
             credentialsProvider = new DefaultAWSCredentialsProviderChain();
         }
 
-        return AmazonS3ClientBuilder.standard()
-                .withCredentials(credentialsProvider)
-                .withRegion(Regions.fromName(configuration.getLogBucketRegion()))
-                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(configuration.getS3Endpoint(), Regions.getCurrentRegion().getName()))
-                .build();
+        AmazonS3ClientBuilder amazonS3ClientBuilder = AmazonS3ClientBuilder.standard()
+                .withCredentials(credentialsProvider);
+
+        if (configuration.getS3Endpoint() != null) {
+            amazonS3ClientBuilder.withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(configuration.getS3Endpoint(), Regions.getCurrentRegion().getName()));
+        } else {
+            amazonS3ClientBuilder.withRegion(Regions.fromName(configuration.getLogBucketRegion()));
+
+        }
+        return amazonS3ClientBuilder.build();
     }
 
     @Override
