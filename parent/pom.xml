@@ -43,7 +43,7 @@
         <slf4j.version>1.7.36</slf4j.version>
         <commons-io.version>2.7</commons-io.version>
         <commons-compress.version>1.21</commons-compress.version>
-        <aws-sdk.version>1.11.551</aws-sdk.version>
+        <aws-sdk.version>1.11.1034</aws-sdk.version>
         <jodatime-version>2.8.2</jodatime-version>
         <jersey.version>1.19.4</jersey.version>
         <jersey2.version>2.21</jersey2.version>
@@ -427,7 +427,7 @@
             <dependency>
                 <groupId>commons-codec</groupId>
                 <artifactId>commons-codec</artifactId>
-                <version>1.11</version>
+                <version>1.15</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
