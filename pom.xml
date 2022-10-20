@@ -31,12 +31,13 @@
         <module>common/zookeeper</module>
         <module>common/stash</module>
         <module>common/client</module>
-        <module>common/client2</module>
+        <module>common/client-jax-rs-2</module>
         <module>common/jersey-client</module>
-        <module>common/jersey2-client</module>
+        <module>common/client-jersey2</module>
         <module>auth/auth-client</module>
         <module>auth/auth-core</module>
         <module>auth/auth-store</module>
+        <module>auth/auth-util</module>
         <module>cachemgr</module>
         <module>queue-api</module>
         <module>sor-api</module>
@@ -49,33 +50,31 @@
         <module>datacenter</module>
         <module>queue-client-common</module>
         <module>queue-client</module>
-        <module>queue-client2</module>
+        <module>queue-client-jersey2</module>
         <module>queue</module>
         <module>job</module>
         <module>sor-client-common</module>
         <module>sor-client</module>
-        <module>sor-client2</module>
+        <module>sor-client-jersey2</module>
         <module>sor</module>
         <module>databus-client-common</module>
         <module>databus-client</module>
+        <module>databus-client-jersey2</module>
         <module>databus</module>
-        <module>blob-clients-common/blob-client-common</module>
-        <module>blob-clients-common/blob-jersey2-client-common</module>
+         <module>blob-clients/blob-client-common</module>
         <module>blob-clients/blob-client</module>
-        <module>blob-clients/blob-jersey2-client</module>
+        <module>blob-clients/blob-client-jersey2</module>
         <module>blob</module>
         <module>uac-client</module>
-        <module>uac-client2</module>
+        <module>uac-client-jersey2</module>
         <module>plugins</module>
         <module>web</module>
+        <module>megabus</module>
+        <module>kafka</module>
         <module>web-local</module>
         <module>sdk</module>
         <module>quality</module>
         <module>yum</module>
-        <module>megabus</module>
-        <module>kafka</module>
-        <module>databus-client2</module>
-        <module>auth/auth-util</module>
     </modules>
 
 </project>
