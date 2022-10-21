@@ -150,12 +150,10 @@
         <dependency>
             <groupId>com.sun.jersey</groupId>
             <artifactId>jersey-client</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.dropwizard</groupId>
             <artifactId>dropwizard-jackson</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.dropwizard</groupId>
