@@ -10,7 +10,7 @@
         <relativePath>../parent/pom.xml</relativePath>
     </parent>
 
-    <artifactId>emodb-sor-jersey2</artifactId>
+    <artifactId>emodb-sor-client-jersey2</artifactId>
     <packaging>jar</packaging>
 
     <name>EmoDB System of Record HTTP Client Jersey2.x</name>

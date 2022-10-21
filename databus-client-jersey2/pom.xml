@@ -10,7 +10,7 @@
         <relativePath>../parent/pom.xml</relativePath>
     </parent>
 
-    <artifactId>emodb-databus-jersey2</artifactId>
+    <artifactId>emodb-databus-client-jersey2</artifactId>
     <packaging>jar</packaging>
 
     <name>EmoDB Databus HTTP Client Jersey2</name>
