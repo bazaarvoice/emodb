@@ -10,7 +10,7 @@
         <relativePath>../parent/pom.xml</relativePath>
     </parent>
 
-    <artifactId>emodb-queue-jersey2</artifactId>
+    <artifactId>emodb-queue-client-jersey2</artifactId>
     <packaging>jar</packaging>
 
     <name>EmoDB Queue HTTP Client Jersey 2</name>
