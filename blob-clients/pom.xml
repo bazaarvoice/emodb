@@ -16,8 +16,9 @@
     <packaging>pom</packaging>
 
     <modules>
+        <module>emodb-blob-client-common</module>
         <module>blob-client</module>
-        <module>blob-jersey2-client</module>
+        <module>blob-client-jersey2</module>
     </modules>
     
 </project>
