@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.databus.client.client;
+package com.bazaarvoice.emodb.databus.client;
 
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest;
 import com.bazaarvoice.emodb.client.EmoClient;
@@ -50,7 +50,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class DatabusClient implements Databus, Closeable {
 
-    private final static Logger _log = LoggerFactory.getLogger(com.bazaarvoice.emodb.databus.client.client.DatabusClient.class);
+    private final static Logger _log = LoggerFactory.getLogger(DatabusClient.class);
 
     private static final String POLL_DATABUS_EMPTY_HEADER = "X-BV-Databus-Empty";
     private static final MediaType JSON_CONDITION_MEDIA_TYPE = new MediaType("application", "x.json-condition");

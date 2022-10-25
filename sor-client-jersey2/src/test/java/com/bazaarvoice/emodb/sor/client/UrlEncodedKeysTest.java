@@ -45,11 +45,11 @@ public class UrlEncodedKeysTest {
                 .withBackoff(Duration.ofMillis(100), Duration.ofMillis(200))
                 .onRetry(e -> {
                     Throwable ex = e.getLastException();
-                    System.out.println("Exception: "+ex);
+                    System.out.println("Exception: " + ex);
                 })
                 .onFailure(e -> {
                     Throwable ex = e.getException();
-                    System.out.println("Exception: "+ex);
+                    System.out.println("Exception: " + ex);
                 })
                 .build();
     }
