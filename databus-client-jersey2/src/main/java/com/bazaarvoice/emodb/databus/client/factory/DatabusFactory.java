@@ -5,7 +5,7 @@ import com.bazaarvoice.emodb.auth.util.CredentialEncrypter;
 import com.bazaarvoice.emodb.client.EmoClient;
 import com.bazaarvoice.emodb.client.Jersey2EmoClient;
 import com.bazaarvoice.emodb.client.RetryPolicy;
-import com.bazaarvoice.emodb.databus.client.client.DatabusClient;
+import com.bazaarvoice.emodb.databus.client.DatabusClient;
 import com.bazaarvoice.emodb.databus.client.discovery.EmoServiceDiscovery;
 import com.bazaarvoice.emodb.databus.client.discovery.ZKEmoServiceDiscovery;
 import com.google.common.base.Throwables;
