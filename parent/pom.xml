@@ -6,7 +6,7 @@
         <groupId>com.bazaarvoice.commons</groupId>
         <artifactId>bv-opensource-super-pom</artifactId>
         <version>1.12</version>
-        <relativePath />
+        <relativePath/>
     </parent>
 
     <groupId>com.bazaarvoice.emodb</groupId>
@@ -24,7 +24,7 @@
     </scm>
 
     <properties>
-        <astyanax.version>3.8.0-bv13</astyanax.version>
+        <astyanax.version>3.8.0-bv9</astyanax.version>
         <dropwizard-metrics-datadog.version>1.1.13</dropwizard-metrics-datadog.version>
         <cassandra.version>3.11.12</cassandra.version>
         <cassandra-maven-plugin.version>${cassandra.version}.1</cassandra-maven-plugin.version>
@@ -992,9 +992,9 @@
                                     <version>[${java.minimum.version},)</version>
                                     <message>requires ${java.minimum.version}+</message>
                                 </requireJavaVersion>
-                                <dependencyConvergence />
-                                <requireUpperBoundDeps />
-                                <banDuplicatePomDependencyVersions />
+                                <dependencyConvergence/>
+                                <requireUpperBoundDeps/>
+                                <banDuplicatePomDependencyVersions/>
                                 <bannedDependencies>
                                     <excludes>
                                         <!-- This should not exist until DW 0.8.x+ upgrade -->
