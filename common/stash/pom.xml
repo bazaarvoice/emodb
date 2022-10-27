@@ -79,7 +79,6 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <!-- Need to add system property to force default character encoding to be US-ASCII -->
-                    <argLine>@{argLine} -Dfile.encoding=US-ASCII</argLine> <!-- activate the JaCoCo javaagent -->
                 </configuration>
             </plugin>
         </plugins>
