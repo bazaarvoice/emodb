@@ -758,7 +758,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                 // Update the audit to include the tags associated with the update
                 updateBatch.forEach(update -> {
                     Audit augmentedAudit = AuditBuilder.from(update.getAudit())
-                            .set(Audit.SHA1, Hashing.sha1().hashUnencodedChars(update.getDelta().toString()).toString())
+                            .set(Audit.SHA1, Hashing.sha512().hashUnencodedChars(update.getDelta().toString()).toString())
                             .set(Audit.TAGS, tags)
                             .build();
 
