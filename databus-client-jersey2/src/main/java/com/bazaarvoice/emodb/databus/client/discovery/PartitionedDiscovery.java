@@ -25,7 +25,7 @@ public class PartitionedDiscovery extends ZKEmoServiceDiscovery {
 
     public PartitionedDiscovery(String zookeeperConnectionString, String service, String partitionKey) {
         super(zookeeperConnectionString, service);
-        Hasher hasher = Hashing.md5().newHasher();
+        Hasher hasher = Hashing.sha512().newHasher();
         putUnencodedChars(hasher, partitionKey);
         _partitionHash = hasher.hash().asInt();
     }
@@ -57,7 +57,7 @@ public class PartitionedDiscovery extends ZKEmoServiceDiscovery {
     private List<Integer> computeHashCodes(String id) {
         List<Integer> list = Lists.newArrayListWithCapacity(100);
         for (int i = 0; list.size() < 100; i++) {
-            Hasher hasher = Hashing.md5().newHasher();
+            Hasher hasher = Hashing.sha512().newHasher();
             hasher.putInt(i);
             putUnencodedChars(hasher, id);
             ByteBuffer buf = ByteBuffer.wrap(hasher.hash().asBytes());
