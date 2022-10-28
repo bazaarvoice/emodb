@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -140,7 +141,7 @@ public class S3RateLimiter {
         private void waitForRetry(Throwable t, Method method) throws Throwable {
             // Backoff for a random amount of time between 1 and 5 seconds
             try {
-                Thread.sleep(1000 + (int) (Math.random() * 4000));
+                Thread.sleep(1000 + (int) (new SecureRandom().nextDouble() * 4000));
             } catch (InterruptedException e) {
                 // On interrupt don't keep retrying, just throw the original exception
                 LOGGER.warn("S3 operation interrupted while retrying rate limited request");
