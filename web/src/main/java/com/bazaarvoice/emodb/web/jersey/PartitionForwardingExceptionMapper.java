@@ -8,6 +8,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 import javax.ws.rs.ext.Providers;
+import java.security.SecureRandom;
 import java.util.Random;
 
 /**
@@ -30,6 +31,6 @@ public class PartitionForwardingExceptionMapper implements ExceptionMapper<Parti
 
         // To prevent herding advise the caller to retry after 1 to 5 seconds, chosen randomly.
         return _providers.getExceptionMapper(ServiceUnavailableException.class)
-                .toResponse(new ServiceUnavailableException("Service unavailable, try again later", new Random().nextInt(5) + 1));
+                .toResponse(new ServiceUnavailableException("Service unavailable, try again later", new SecureRandom().nextInt(5) + 1));
     }
 }
