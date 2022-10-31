@@ -134,7 +134,7 @@ public class EmoServiceWithZK {
 
             setPermissionsFromFiles(permissionsYamls, emoConfigYaml);
         } catch (Throwable t) {
-            t.printStackTrace();
+            LoggerFactory.getLogger("org.apache.zookeeper").error("setPermissionsFromFiles failed", t);
         } finally {
             // The main web server command returns immediately--don't stop ZooKeeper/Cassandra in that case.
             if (zooKeeperServer != null && !(success && args.length > 0 && "server".equals(args[0]))) {
