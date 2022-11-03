@@ -309,7 +309,7 @@ public class S3ScanWriter extends TemporaryFileScanWriter {
             ObjectMetadata objectMetadata = new ObjectMetadata();
             objectMetadata.setContentType(MediaType.TEXT_PLAIN);
             objectMetadata.setContentLength(contents.length);
-            objectMetadata.setContentMD5(BinaryUtils.toBase64(Hashing.sha512().hashBytes(contents).asBytes()));
+            objectMetadata.setContentMD5(BinaryUtils.toBase64(Hashing.md5().hashBytes(contents).asBytes()));
 
             try {
                 _amazonS3.putObject(
