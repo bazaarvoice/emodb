@@ -60,6 +60,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class EmoServiceWithZK {
+
+    private static final Logger logger = (Logger) LoggerFactory.getLogger(EmoServiceWithZK.class);
+
     private static final ExecutorService service = Executors.newSingleThreadExecutor(
             new ThreadFactoryBuilder()
                     .setDaemon(true)
@@ -134,7 +137,7 @@ public class EmoServiceWithZK {
 
             setPermissionsFromFiles(permissionsYamls, emoConfigYaml);
         } catch (Throwable t) {
-            LoggerFactory.getLogger("org.apache.zookeeper").error("setPermissionsFromFiles failed", t);
+            logger.error("setPermissionsFromFiles failed", t.getStackTrace().toString());
         } finally {
             // The main web server command returns immediately--don't stop ZooKeeper/Cassandra in that case.
             if (zooKeeperServer != null && !(success && args.length > 0 && "server".equals(args[0]))) {
