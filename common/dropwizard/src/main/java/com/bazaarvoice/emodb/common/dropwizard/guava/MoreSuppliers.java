@@ -3,8 +3,8 @@ package com.bazaarvoice.emodb.common.dropwizard.guava;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 
+import java.security.SecureRandom;
 import java.util.PrimitiveIterator;
-import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -66,7 +66,7 @@ public final class MoreSuppliers {
             long maxDurationNanos = timeUnit.toNanos(maxDuration);
 
             _delegate = delegate;
-            _nanosDurations = new Random().longs(minDurationNanos, maxDurationNanos).iterator();
+            _nanosDurations = new SecureRandom().longs(minDurationNanos, maxDurationNanos).iterator();
         }
 
         @Override
