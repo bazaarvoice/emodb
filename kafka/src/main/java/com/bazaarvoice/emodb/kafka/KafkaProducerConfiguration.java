@@ -1,9 +1,10 @@
 package com.bazaarvoice.emodb.kafka;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.Optional;
+
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
+import java.util.Optional;
 
 public class KafkaProducerConfiguration {
     @Valid
@@ -15,6 +16,11 @@ public class KafkaProducerConfiguration {
     @NotNull
     @JsonProperty("batchSize")
     private Optional<Integer> _batchsize = Optional.empty();
+
+    @Valid
+    @NotNull
+    @JsonProperty("maxRequestSize")
+    private Integer _maxRequestSize = 15 * 1024 * 1024; // 15MB
 
     @Valid
     @NotNull
@@ -31,11 +37,16 @@ public class KafkaProducerConfiguration {
         return _batchsize;
     }
 
+
+    public Integer getMaxRequestSize() {
+        return _maxRequestSize;
+    }
+
     public Optional<Long> getLingerMs() {
         return _lingerMs;
     }
 
-    public String getProducerHealthCheckName(){
+    public String getProducerHealthCheckName() {
         return producerHealthCheckName;
     }
 }
