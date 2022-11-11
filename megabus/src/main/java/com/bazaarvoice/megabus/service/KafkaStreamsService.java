@@ -53,7 +53,7 @@ public abstract class KafkaStreamsService extends AbstractService implements Kaf
 
         _streamsConfiguration.put(StreamsConfig.producerPrefix(ProducerConfig.COMPRESSION_TYPE_CONFIG), Constants.PRODUCER_COMPRESSION_TYPE);
 
-        _streamsConfiguration.put(StreamsConfig.producerPrefix(ProducerConfig.MAX_REQUEST_SIZE_CONFIG), Constants.MAX_REQUEST_SIZE);
+        _streamsConfiguration.put(StreamsConfig.producerPrefix(ProducerConfig.MAX_REQUEST_SIZE_CONFIG), kafkaCluster.getProducerConfiguration().getMaxRequestSize());
 
         _streamsConfiguration.put(StreamsConfig.CLIENT_ID_CONFIG, instanceId + "-" + serviceName);
 

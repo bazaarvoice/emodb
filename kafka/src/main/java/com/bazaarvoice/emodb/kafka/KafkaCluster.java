@@ -19,4 +19,5 @@ public interface KafkaCluster {
 
     Collection<String> getAllTopics();
 
+    KafkaProducerConfiguration getProducerConfiguration();
 }

@@ -24,8 +24,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -86,7 +86,7 @@ public class DefaultKafkaCluster implements KafkaCluster {
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, _bootstrapServers);
         props.put(ProducerConfig.ACKS_CONFIG, Constants.ACKS_CONFIG);
         props.put(ProducerConfig.RETRIES_CONFIG, Constants.RETRIES_CONFIG);
-        props.put(ProducerConfig.MAX_REQUEST_SIZE_CONFIG, Constants.MAX_REQUEST_SIZE);
+        props.put(ProducerConfig.MAX_REQUEST_SIZE_CONFIG, _kafkaProducerConfiguration.getMaxRequestSize());
         props.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, Constants.PRODUCER_COMPRESSION_TYPE);
 
         props.put(ProducerConfig.CLIENT_ID_CONFIG, _instanceIdentifier);
@@ -108,7 +108,7 @@ public class DefaultKafkaCluster implements KafkaCluster {
 
         if (null != _saslConfiguration) {
             props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SaslConfiguration.PROTOCOL);
-            props.put(SaslConfigs.SASL_MECHANISM,SaslConfiguration.SASL_MECHANISM);
+            props.put(SaslConfigs.SASL_MECHANISM, SaslConfiguration.SASL_MECHANISM);
             props.put(SaslConfigs.SASL_JAAS_CONFIG, _saslConfiguration.getJaasConfig());
         }
 
@@ -132,5 +132,10 @@ public class DefaultKafkaCluster implements KafkaCluster {
     @Override
     public Collection<String> getAllTopics() {
         return topics;
+    }
+
+    @Override
+    public KafkaProducerConfiguration getProducerConfiguration() {
+        return _kafkaProducerConfiguration;
     }
 }
