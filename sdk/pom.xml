@@ -16,7 +16,7 @@
     <name>EmoDB SDK Maven Plugin</name>
 
     <properties>
-        <mavenVersion>3.6.3</mavenVersion>
+        <mavenVersion>3.8.2</mavenVersion>
         <mavenPluginAnnotationsVersion>3.6.0</mavenPluginAnnotationsVersion>
         <mavenPluginPluginVersion>3.6.0</mavenPluginPluginVersion>
     </properties>
