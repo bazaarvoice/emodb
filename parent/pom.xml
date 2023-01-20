@@ -6,7 +6,7 @@
         <groupId>com.bazaarvoice.commons</groupId>
         <artifactId>bv-opensource-super-pom</artifactId>
         <version>1.12</version>
-        <relativePath />
+        <relativePath/>
     </parent>
 
     <groupId>com.bazaarvoice.emodb</groupId>
@@ -42,7 +42,7 @@
         <jna.version>5.3.1</jna.version>
         <org.codehaus.jackson.version>1.9.13</org.codehaus.jackson.version>
         <metrics.version>3.0.2</metrics.version>
-        <ostrich.version>1.9.3</ostrich.version>
+        <ostrich.version>1.10.2</ostrich.version>
         <rison.version>2.6.3</rison.version>
         <rison-jersey2.version>2.9.10.2</rison-jersey2.version>
         <slf4j.version>1.7.36</slf4j.version>
@@ -932,9 +932,9 @@
                                     <version>[${java.minimum.version},)</version>
                                     <message>requires ${java.minimum.version}+</message>
                                 </requireJavaVersion>
-                                <dependencyConvergence />
-                                <requireUpperBoundDeps />
-                                <banDuplicatePomDependencyVersions />
+                                <dependencyConvergence/>
+                                <requireUpperBoundDeps/>
+                                <banDuplicatePomDependencyVersions/>
                                 <bannedDependencies>
                                     <excludes>
                                         <!-- This should not exist until DW 0.8.x+ upgrade -->
