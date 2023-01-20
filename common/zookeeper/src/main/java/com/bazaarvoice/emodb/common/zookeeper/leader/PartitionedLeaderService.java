@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -169,8 +170,8 @@ public class PartitionedLeaderService implements Managed {
         int excessLeadership = leadingPartitions.size() - _maxPartitionsLeader;
 
         while (excessLeadership > 0 && !leadingPartitions.isEmpty()) {
-            // This service owns more that it should given the new topology.  Voluntarily release the excess.
-            int leadingPartitionsIndex = (int) Math.floor(Math.random() * leadingPartitions.size());
+            // This service owns more that it should give the new topology.  Voluntarily release the excess.
+            int leadingPartitionsIndex = (int) Math.floor(new SecureRandom().nextDouble() * leadingPartitions.size());
             int partitionToRelease = leadingPartitions.remove(leadingPartitionsIndex);
             PartitionLeader partitionLeader = _partitionLeaders.get(partitionToRelease);
 

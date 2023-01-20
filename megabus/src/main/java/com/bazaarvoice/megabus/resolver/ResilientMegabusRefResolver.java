@@ -13,6 +13,7 @@ import com.bazaarvoice.megabus.service.ResilientService;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
+
 import java.time.Clock;
 import java.time.Duration;
 
@@ -22,14 +23,15 @@ public class ResilientMegabusRefResolver extends ResilientService {
 
 
     @Inject
-    public ResilientMegabusRefResolver(DataProvider dataProvider, @MegabusRefTopic Topic megabusRefTopic,
-                              @MegabusTopic Topic megabusResolvedTopic,
-                              @RetryRefTopic Topic retryRefTopic,
-                              @MissingRefTopic Topic missingRefTopic,
-                              KafkaCluster kafkaCluster, Clock clock,
-                              @SelfHostAndPort HostAndPort hostAndPort,
-                              @RefResolverConsumerGroup String refResolverConsumerGroup,
-                              MetricRegistry metricRegistry) {
+    public ResilientMegabusRefResolver(DataProvider dataProvider,
+                                       @MegabusRefTopic Topic megabusRefTopic,
+                                       @MegabusTopic Topic megabusResolvedTopic,
+                                       @RetryRefTopic Topic retryRefTopic,
+                                       @MissingRefTopic Topic missingRefTopic,
+                                       KafkaCluster kafkaCluster, Clock clock,
+                                       @SelfHostAndPort HostAndPort hostAndPort,
+                                       @RefResolverConsumerGroup String refResolverConsumerGroup,
+                                       MetricRegistry metricRegistry) {
         super(SERVICE_NAME,
                 () -> new MegabusRefResolver(dataProvider, megabusRefTopic, megabusResolvedTopic, retryRefTopic,
                         missingRefTopic, kafkaCluster, clock, hostAndPort, refResolverConsumerGroup, metricRegistry),

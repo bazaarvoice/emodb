@@ -628,7 +628,7 @@ public class LocalSubjectUserAccessControl implements SubjectUserAccessControl {
     private RuntimeException convertUncheckedException(Exception e) {
         if (Throwables.getRootCause(e) instanceof TimeoutException) {
             _lockTimeoutMeter.mark();
-            throw new ServiceUnavailableException("Failed to acquire update lock, try again later", new Random().nextInt(5) + 1);
+            throw new ServiceUnavailableException("Failed to acquire update lock, try again later", new SecureRandom().nextInt(5) + 1);
         }
         throw Throwables.propagate(e);
     }

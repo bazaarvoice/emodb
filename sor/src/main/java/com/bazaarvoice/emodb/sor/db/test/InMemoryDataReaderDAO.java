@@ -38,6 +38,7 @@ import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
 
 import javax.annotation.Nullable;
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
@@ -464,7 +465,7 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO {
                     } catch (ConcurrentModificationException e) {
                         // Back off for a random number of ms and try again
                         try {
-                            Thread.sleep((int) (Math.random() * 250));
+                            Thread.sleep((int) (new SecureRandom().nextDouble() * 250));
                         } catch (InterruptedException e2) { /* ignore */ }
                     }
                 }

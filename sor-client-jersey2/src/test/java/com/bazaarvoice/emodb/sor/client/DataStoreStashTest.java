@@ -116,7 +116,7 @@ public class DataStoreStashTest {
         StandardStashReader stashReader = mock(StandardStashReader.class);
 
         List<StashSplit> stashSplits = Lists.newArrayListWithCapacity(2);
-        for (int i=0; i < 2; i++) {
+        for (int i = 0; i < 2; i++) {
             StashSplit stashSplit = mock(StashSplit.class);
             when(stashSplit.toString()).thenReturn("split" + i);
             stashSplits.add(stashSplit);
@@ -216,7 +216,7 @@ public class DataStoreStashTest {
         when(stashReader.listTableMetadata()).thenReturn(ImmutableList.of(
                 new StashTableMetadata("bucket", "stash/table/foo/", "foo", ImmutableList.of(
                         new StashFileMetadata("bucket", "stash/table/foo/foo1.json.gz", 100)))
-                ).iterator());
+        ).iterator());
 
         DataStoreStash stash = new DataStoreStash(dataStore, stashReader);
         List<StashTableMetadata> stashTableMetadata = ImmutableList.copyOf(stash.listStashTableMetadata());

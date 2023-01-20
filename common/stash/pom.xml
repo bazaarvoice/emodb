@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.bazaarvoice.emodb</groupId>
         <artifactId>emodb-parent</artifactId>
-        <version>6.5.28-SNAPSHOT</version>
+        <version>6.5.30-SNAPSHOT</version>
         <relativePath>../../parent/pom.xml</relativePath>
     </parent>
 
@@ -79,7 +79,6 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <!-- Need to add system property to force default character encoding to be US-ASCII -->
-                    <argLine>@{argLine} -Dfile.encoding=US-ASCII</argLine> <!-- activate the JaCoCo javaagent -->
                 </configuration>
             </plugin>
         </plugins>

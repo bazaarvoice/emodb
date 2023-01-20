@@ -2,6 +2,7 @@ package com.bazaarvoice.megabus.resolver;
 
 import com.bazaarvoice.emodb.kafka.JsonPOJOSerde;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
+import com.bazaarvoice.emodb.kafka.KafkaProducerConfiguration;
 import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
@@ -52,6 +53,7 @@ public class MegabusRefResolverTest {
 
     static {
         when(kafkaCluster.getBootstrapServers()).thenReturn(kafkaEndpoint.toString());
+        when(kafkaCluster.getProducerConfiguration()).thenReturn(new KafkaProducerConfiguration());
     }
 
     private static final MegabusRefResolver refResolver = new MegabusRefResolver(
