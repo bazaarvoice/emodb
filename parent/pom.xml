@@ -880,7 +880,7 @@
             <plugin>
                 <groupId>org.sonatype.plugins</groupId>
                 <artifactId>nexus-staging-maven-plugin</artifactId>
-                <version>1.6.12</version>
+                <version>1.6.13</version>
                 <extensions>true</extensions>
                 <configuration>
                     <serverId>sonatype-nexus-staging</serverId>
@@ -891,7 +891,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.1.2</version>
+                <version>3.5.0</version>
                 <executions>
                     <execution>
                         <id>analyze</id>
@@ -909,6 +909,26 @@
                                 <ignoredDependency>org.slf4j:jcl-over-slf4j</ignoredDependency>
                                 <ignoredDependency>org.slf4j:log4j-over-slf4j</ignoredDependency>
                             </ignoredDependencies>
+                            <!-- ignore annotations for "non-test scoped" warnings -->
+                            <ignoredNonTestScopedDependencies>
+                                <ignoredNonTestScopedDependency>javax.ws.rs:jsr311-api</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>com.bazaarvoice.astyanax:astyanax-core</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>com.bazaarvoice.emodb:emodb-common-api</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>com.bazaarvoice.emodb:emodb-common-client</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>com.bazaarvoice.emodb:emodb-common-json</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>com.bazaarvoice.emodb:emodb-job-api</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>com.bazaarvoice.emodb:emodb-sor-api</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>com.sun.jersey:jersey-client</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>io.dropwizard:dropwizard-configuration</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>io.dropwizard:dropwizard-jackson</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>io.dropwizard:dropwizard-metrics</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>com.fasterxml.jackson.dataformat:jackson-dataformat-yaml</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>com.fasterxml.jackson.datatype:jackson-datatype-jsr310</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>org.apache.kafka:connect-json</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>org.apache.commons:commons-compress</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>org.apache.cassandra:cassandra-all</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>org.coursera:dropwizard-metrics-datadog</ignoredNonTestScopedDependency>
+                            </ignoredNonTestScopedDependencies>
                         </configuration>
                     </execution>
                 </executions>

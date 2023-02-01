@@ -16,7 +16,7 @@
     <name>EmoDB RESTful Web Server</name>
 
     <properties>
-        <docker-maven-plugin.version>0.35.0</docker-maven-plugin.version>
+        <docker-maven-plugin.version>0.40.3</docker-maven-plugin.version>
         <docker.build.dockerFile>Dockerfile</docker.build.dockerFile>
         <docker.build.skipRun>true</docker.build.skipRun>
         <docker.floating.tag>${project.version}</docker.floating.tag>
