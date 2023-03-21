@@ -30,8 +30,8 @@ public class BlobRoleInclusionTest extends BaseRoleRestHelper {
         close();
     }
 
-//    @Test
-    public void testBlobStoreSOAAccessible () { //FIXME
+    @Test
+    public void testBlobStoreSOAAccessible () {
         Set<String> configured = _config.getBlobStoreConfiguration().getValidTablePlacements();
         Collection<String> present = _blobStore.getTablePlacements("anonymous");
         configured.removeAll(present);
