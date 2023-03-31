@@ -41,8 +41,8 @@ public class MainRoleInclusionTest extends BaseRoleRestHelper {
         close();
     }
 
-//    @Test
-    public void testDataStoreSOAAccessible () { //FIXME
+    @Test
+    public void testDataStoreSOAAccessible () {
         Set<String> configured = _config.getDataStoreConfiguration().getValidTablePlacements();
         Collection<String> present = _dataStore.getTablePlacements(_apiKey);
         configured.removeAll(present);
@@ -54,8 +54,8 @@ public class MainRoleInclusionTest extends BaseRoleRestHelper {
         super.testDataStoreRESTAccessible();
     }
 
-//    @Test
-    public void testDatabusSOAAccessible () { //FIXME
+    @Test
+    public void testDatabusSOAAccessible () {
         Assert.assertNotNull(_databus.listSubscriptions(_apiKey, null, 1000));
     }
 
@@ -64,8 +64,8 @@ public class MainRoleInclusionTest extends BaseRoleRestHelper {
         super.testDatabusRESTAccessible();
     }
 
-//    @Test
-    public void testQueueServiceSOAAccessible () { //FIXME
+    @Test
+    public void testQueueServiceSOAAccessible () {
         Assert.assertEquals(_queueService.getClaimCount(_apiKey, "test"), 0);
     }
 
@@ -74,8 +74,8 @@ public class MainRoleInclusionTest extends BaseRoleRestHelper {
         super.testQueueServiceRESTAccessible();
     }
 
-//    @Test
-    public void testDedupQueueServiceSOAAccessible () { //FIXME
+    @Test
+    public void testDedupQueueServiceSOAAccessible () {
         Assert.assertEquals(_dedupQueueService.getMessageCount(_apiKey, "test"), 0);
     }
 
