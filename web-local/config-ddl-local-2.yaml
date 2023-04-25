@@ -32,14 +32,14 @@ systemOfRecord:
                keyspace: pii_eu
                table.delta_v2: pii_delta_v2
                table.history: pii_history
-                     
+
 databus:
    keyspaces:
-      databusdc2:
+      databus:
          replicationFactor: 1
          tables:
             default:
-               keyspace: databusdc2
+               keyspace: databus
 
 queue:
    keyspaces:
