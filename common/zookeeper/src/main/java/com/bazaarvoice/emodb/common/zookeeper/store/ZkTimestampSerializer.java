@@ -15,7 +15,7 @@ public class ZkTimestampSerializer implements ZkValueSerializer<Long> {
 
     @Override
     public Long fromString(String string) {
-        if (CharMatcher.DIGIT.matchesAllOf(string)) {
+        if (CharMatcher.digit().matchesAllOf(string)) {
             // Milliseconds value (eg. "1382620121882" for 2013-10-24 13:08:41.882 UTC)
             return Long.parseLong(string);
         } else {
