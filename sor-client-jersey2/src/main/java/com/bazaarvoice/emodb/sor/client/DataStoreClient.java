@@ -30,6 +30,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.PeekingIterator;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
@@ -63,6 +65,8 @@ public class DataStoreClient implements AuthDataStore {
     private final EmoClient _client;
     private final UriBuilder _dataStore;
     private final RetryPolicy<Object> _retryPolicy;
+    private static final Logger logger
+            = LoggerFactory.getLogger(DataStoreClient.class);
 
     public DataStoreClient(URI endPoint, EmoClient client, RetryPolicy<Object> retryPolicy) {
         _client = requireNonNull(client, "client");
@@ -111,6 +115,8 @@ public class DataStoreClient implements AuthDataStore {
                 .queryParam("audit", RisonHelper.asORison(audit))
                 .build();
         AtomicReference<URI> redirectURI = new AtomicReference<>();
+        logger.info("uri = {}",uri);
+        logger.info("uri = {}",uri.toString());
         try {
             Failsafe.with(_retryPolicy)
                     .onFailure(e -> {
@@ -164,6 +170,8 @@ public class DataStoreClient implements AuthDataStore {
         URI uri = _dataStore.clone()
                 .segment("_table", table)
                 .build();
+        logger.info("uri = {}",uri);
+        logger.info("uri = {}",uri.toString());
         boolean tableExists = Failsafe.with(_retryPolicy)
                 .get(() -> {
                     EmoResponse response = _client.resource(uri)
