@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.common.json.JsonHelper;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.testng.annotations.Test;
@@ -46,7 +47,6 @@ public class ChangeJsonTest {
         assertEquals(actual.getDelta(), delta);
         assertEquals(toMap(actual), toMap(expected));
     }
-
     @Test
     public void testLegacyCompactionJson() throws IOException {
         UUID changeId = TimeUUIDs.newUUID();
@@ -100,6 +100,7 @@ public class ChangeJsonTest {
     }
 
     private Map<String, Object> toMap(Change change) {
-        return _mapper.convertValue(change, Map.class);
+        TypeReference<Map<String,Object>> typeRef = new TypeReference<Map<String,Object>>() {};
+        return _mapper.convertValue(change, typeRef);
     }
 }
