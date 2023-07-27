@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.util.ISO8601Utils;
-import com.fasterxml.jackson.databind.util.StdDateFormat;
 import com.google.common.base.Throwables;
 
 import javax.annotation.Nullable;
