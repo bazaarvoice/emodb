@@ -16,7 +16,8 @@
     <name>EmoDB System of Record HTTP Client Jersey2.x</name>
 
     <properties>
-        <jackson.version>${jackson-jersey2.version}</jackson.version>
+        <jackson.version>${com.fasterxml.jackson.version}</jackson.version>
+        <jackson.jersey2.version>${jackson-jersey2.version}</jackson.jersey2.version>
         <guava.version>${guava-jersey2.version}</guava.version>
         <rison.version>${rison-jersey2.version}</rison.version>
     </properties>
@@ -69,6 +70,13 @@
             <artifactId>emodb-common-stash</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson</groupId>
+            <artifactId>jackson-bom</artifactId>
+            <version>${jackson.version}</version>
+            <scope>import</scope>
+            <type>pom</type>
+        </dependency>
 
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -96,6 +104,7 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
+            <version>${com.fasterxml.jackson.version}</version>
         </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>

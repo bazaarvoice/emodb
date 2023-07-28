@@ -15,7 +15,8 @@
     <name>EmoDB Jersey2 Client Classes</name>
 
     <properties>
-        <jackson.version>${jackson-jersey2.version}</jackson.version>
+        <jackson.version>${com.fasterxml.jackson.version}</jackson.version>
+        <jackson.jersey2.version>${jackson-jersey2.version}</jackson.jersey2.version>
         <guava.version>${guava-jersey2.version}</guava.version>
         <rison.version>${rison-jersey2.version}</rison.version>
     </properties>
