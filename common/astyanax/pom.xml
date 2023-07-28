@@ -26,6 +26,12 @@
             <groupId>com.bazaarvoice.emodb</groupId>
             <artifactId>emodb-common-json</artifactId>
             <version>${project.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.datatype</groupId>
+                    <artifactId>jackson-datatype-jdk8</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.bazaarvoice.ostrich</groupId>
