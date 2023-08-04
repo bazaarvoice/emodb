@@ -62,4 +62,53 @@ public class ScanRangeTest {
         // Shared endpoints but no overlap
         assertEquals(create(b, c).intersection(create(c, b)), empty);
     }
+
+    @Test
+    public void testUnion() {
+        ByteBuffer a = ByteBuffer.wrap(BaseEncoding.base16().decode("010000000000000064666F6F"));
+        ByteBuffer b = ByteBuffer.wrap(BaseEncoding.base16().decode("030000000000000064666F6F"));
+        ByteBuffer c = ByteBuffer.wrap(BaseEncoding.base16().decode("050000000000000064666F6F"));
+        ByteBuffer d = ByteBuffer.wrap(BaseEncoding.base16().decode("070000000000000064666F6F"));
+        ByteBuffer e = ByteBuffer.wrap(BaseEncoding.base16().decode("090000000000000064666F6F"));
+
+        // Non-wrapping tests
+
+        // Equality
+        assertEquals(create(a, b).union(create(a, b)), ImmutableList.of(create(a, b)));
+        // Shared start
+        assertEquals(create(a, c).union(create(a, b)), ImmutableList.of(create(a, c)));
+        // Shared end
+        assertEquals(create(a, c).union(create(b, c)), ImmutableList.of(create(a, c)));
+        // Partial overlap
+        assertEquals(create(a, c).union(create(b, d)), ImmutableList.of(create(a, d)));
+        // No overlap
+        assertEquals(create(a, b).union(create(c, d)), ImmutableList.of(create(a, b), create(c, d)));
+        // Shared endpoint but no overlap
+        assertEquals(create(a, b).union(create(b, c)), ImmutableList.of(create(a, c)));
+
+        // Wrapping tests
+
+        // Complete range, same endpoint
+        assertEquals(create(a, a).union(create(a, a)), ImmutableList.of(ScanRange.all()));
+        // Complete range, different endpoint
+        assertEquals(create(a, a).union(create(b, b)), ImmutableList.of(ScanRange.all()));
+        // Partial overlap with low-end
+        assertEquals(create(a, d).union(create(e, c)), ImmutableList.of(create(e, d)));
+        // Complete overlap with low-end
+        assertEquals(create(a, b).union(create(d, c)), ImmutableList.of(create(d, c)));
+        // Partial overlap with high-end
+        assertEquals(create(b, e).union(create(c, a)), ImmutableList.of(create(b, a)));
+        // Complete overlap with high-end
+        assertEquals(create(d, e).union(create(c, b)), ImmutableList.of(create(c, b)));
+        // Double overlapping with partial overlap
+        assertEquals(create(d, a).union(create(e, b)), ImmutableList.of(create(d, b)));
+        // Double overlapping with complete overlap
+        assertEquals(create(d, b).union(create(e, a)), ImmutableList.of(create(d, b)));
+        // Partial overlap on both ends
+        assertEquals(create(a, e).union(create(d, b)), ImmutableList.of(ScanRange.all()));
+        // No overlap
+        assertEquals(create(b, c).union(create(e, a)), ImmutableList.of(create(b, c), create(e, a)));
+        // Shared endpoints but no overlap
+        assertEquals(create(b, c).union(create(c, b)), ImmutableList.of(ScanRange.all()));
+    }
 }
