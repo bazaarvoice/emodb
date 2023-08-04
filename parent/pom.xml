@@ -6,7 +6,7 @@
         <groupId>com.bazaarvoice.commons</groupId>
         <artifactId>bv-opensource-super-pom</artifactId>
         <version>1.12</version>
-        <relativePath />
+        <relativePath/>
     </parent>
 
     <groupId>com.bazaarvoice.emodb</groupId>
@@ -31,14 +31,14 @@
         <curator.version>2.4.2</curator.version>
         <curator-jersey2.version>4.2.0</curator-jersey2.version>
         <curator-extensions.version>1.4.2</curator-extensions.version>
-        <dropwizard.version>0.7.1</dropwizard.version>
+        <dropwizard.version>2.1.6</dropwizard.version>
         <guava.version>20.0</guava.version>
         <guava-jersey2.version>27.0.1-jre</guava-jersey2.version>
         <guice.version>4.0</guice.version>
         <jackson.version>2.10.5</jackson.version>
         <jackson.databind.version>2.10.5.1</jackson.databind.version>
         <jackson-jersey2.version>2.10.2</jackson-jersey2.version>
-        <jetty.version>9.0.7.v20131107</jetty.version>
+        <jetty.version>9.4.51.v20230217</jetty.version>
         <jetty-jersey2.version>9.4.17.v20190418</jetty-jersey2.version>
         <jna.version>5.3.1</jna.version>
         <com.fasterxml.jackson.version>2.10.5</com.fasterxml.jackson.version>
@@ -968,9 +968,9 @@
                                     <version>[${java.minimum.version},)</version>
                                     <message>requires ${java.minimum.version}+</message>
                                 </requireJavaVersion>
-                                <dependencyConvergence />
-                                <requireUpperBoundDeps />
-                                <banDuplicatePomDependencyVersions />
+                                <dependencyConvergence/>
+                                <requireUpperBoundDeps/>
+                                <banDuplicatePomDependencyVersions/>
                                 <bannedDependencies>
                                     <excludes>
                                         <!-- This should not exist until DW 0.8.x+ upgrade -->
