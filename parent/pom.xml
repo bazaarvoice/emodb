@@ -917,6 +917,9 @@
                         <configuration>
                             <failOnWarning>true</failOnWarning>
                             <ignoreNonCompile>true</ignoreNonCompile>
+                            <ignoredUnusedDeclaredDependencies>
+                                <ignoredUnusedDeclaredDependency>javax.ws.rs:jsr311-api</ignoredUnusedDeclaredDependency>
+                            </ignoredUnusedDeclaredDependencies>
                             <ignoredDependencies>
                                 <!-- TODO migrate to jakarta.xml.bind -->
                                 <ignoredDependency>org.glassfish.jaxb:jaxb-runtime</ignoredDependency>
