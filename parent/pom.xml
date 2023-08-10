@@ -35,13 +35,13 @@
         <guava.version>20.0</guava.version>
         <guava-jersey2.version>27.0.1-jre</guava-jersey2.version>
         <guice.version>4.0</guice.version>
-        <jackson.version>2.10.5</jackson.version>
-        <jackson.databind.version>2.10.5.1</jackson.databind.version>
+        <jackson.version>2.9.1</jackson.version>
+        <jackson.databind.version>2.9.1</jackson.databind.version>
         <jackson-jersey2.version>2.10.2</jackson-jersey2.version>
         <jetty.version>9.0.7.v20131107</jetty.version>
         <jetty-jersey2.version>9.4.17.v20190418</jetty-jersey2.version>
         <jna.version>5.3.1</jna.version>
-        <com.fasterxml.jackson.version>2.10.5</com.fasterxml.jackson.version>
+        <com.fasterxml.jackson.version>2.9.1</com.fasterxml.jackson.version>
         <metrics.version>3.0.2</metrics.version>
         <ostrich.version>1.9.3</ostrich.version>
         <rison.version>2.9.10.2</rison.version>
@@ -917,6 +917,9 @@
                         <configuration>
                             <failOnWarning>true</failOnWarning>
                             <ignoreNonCompile>true</ignoreNonCompile>
+                            <ignoredUnusedDeclaredDependencies>
+                                <ignoredUnusedDeclaredDependency>javax.ws.rs:jsr311-api</ignoredUnusedDeclaredDependency>
+                            </ignoredUnusedDeclaredDependencies>
                             <ignoredDependencies>
                                 <!-- TODO migrate to jakarta.xml.bind -->
                                 <ignoredDependency>org.glassfish.jaxb:jaxb-runtime</ignoredDependency>
