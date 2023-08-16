@@ -18,7 +18,6 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.testng.annotations.Test;
 
 import java.util.*;

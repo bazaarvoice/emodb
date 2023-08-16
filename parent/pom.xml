@@ -24,7 +24,7 @@
     </scm>
 
     <properties>
-        <astyanax.version>3.8.0-bv13</astyanax.version>
+        <astyanax.version>3.8.0-bv14</astyanax.version>
         <dropwizard-metrics-datadog.version>1.1.13</dropwizard-metrics-datadog.version>
         <cassandra.version>3.11.12</cassandra.version>
         <cassandra-maven-plugin.version>${cassandra.version}.1</cassandra-maven-plugin.version>
@@ -901,6 +901,9 @@
                         <configuration>
                             <failOnWarning>true</failOnWarning>
                             <ignoreNonCompile>true</ignoreNonCompile>
+                            <ignoredUnusedDeclaredDependencies>
+                                <unusedDeclaredDependency>com.fasterxml.jackson.datatype:jackson-datatype-joda</unusedDeclaredDependency>
+                            </ignoredUnusedDeclaredDependencies>
                             <ignoredDependencies>
                                 <!-- TODO migrate to jakarta.xml.bind -->
                                 <ignoredDependency>org.glassfish.jaxb:jaxb-runtime</ignoredDependency>
