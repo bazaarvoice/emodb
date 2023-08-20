@@ -62,14 +62,14 @@ GEM
       ruby_dep (~> 1.2)
     mercenary (0.3.6)
     multipart-post (2.1.1)
-    nio4r (2.5.8)
+    nio4r (2.5.9)
     octokit (4.21.0)
       faraday (>= 0.9)
       sawyer (~> 0.8.0, >= 0.5.3)
     pathutil (0.16.2)
       forwardable-extended (~> 2.6)
     public_suffix (4.0.6)
-    puma (4.3.12)
+    puma (6.3.1)
       nio4r (~> 2.0)
     rack (1.6.12)
     rack-jekyll (0.5.0)
@@ -101,10 +101,10 @@ DEPENDENCIES
   jekyll-gist
   jekyll-sitemap
   kramdown
-  puma
+  puma (>= 5.6.7)
   rack-jekyll
   rake
   rouge
 
 BUNDLED WITH
-   1.16.3
+   1.17.3
