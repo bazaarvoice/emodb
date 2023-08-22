@@ -35,15 +35,16 @@
         <guava.version>20.0</guava.version>
         <guava-jersey2.version>27.0.1-jre</guava-jersey2.version>
         <guice.version>4.0</guice.version>
-        <jackson.version>2.6.7.5</jackson.version>
+        <jackson.version>2.9.10</jackson.version>
+        <jackson.databind.version>2.9.10.8</jackson.databind.version>
         <jackson-jersey2.version>2.10.2</jackson-jersey2.version>
         <jetty.version>9.0.7.v20131107</jetty.version>
         <jetty-jersey2.version>9.4.17.v20190418</jetty-jersey2.version>
         <jna.version>5.3.1</jna.version>
-        <org.codehaus.jackson.version>1.9.13</org.codehaus.jackson.version>
+        <com.fasterxml.jackson.version>2.9.10</com.fasterxml.jackson.version>
         <metrics.version>3.0.2</metrics.version>
         <ostrich.version>1.9.3</ostrich.version>
-        <rison.version>2.6.3</rison.version>
+        <rison.version>2.9.10.2</rison.version>
         <rison-jersey2.version>2.9.10.2</rison-jersey2.version>
         <slf4j.version>1.7.36</slf4j.version>
         <commons-io.version>2.7</commons-io.version>
@@ -227,14 +228,19 @@
                 <version>${astyanax.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-core-asl</artifactId>
-                <version>${org.codehaus.jackson.version}</version>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>${com.fasterxml.jackson.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-mapper-asl</artifactId>
-                <version>${org.codehaus.jackson.version}</version>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>${com.fasterxml.jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.databind.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.dropwizard</groupId>
