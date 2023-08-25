@@ -16,7 +16,6 @@
     <name>EmoDB Generic Client Classes Jersey2</name>
 
     <properties>
-        <jackson.version>${jackson-jersey2.version}</jackson.version>
         <guava.version>${guava-jersey2.version}</guava.version>
         <rison.version>${rison-jersey2.version}</rison.version>
     </properties>

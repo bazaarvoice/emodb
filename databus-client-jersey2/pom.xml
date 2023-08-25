@@ -21,7 +21,6 @@
         <guava.version>${guava-jersey2.version}</guava.version>
         <jetty.version>${jetty-jersey2.version}</jetty.version>
         <rison.version>${rison-jersey2.version}</rison.version>
-        <jackson.version>${jackson-jersey2.version}</jackson.version>
     </properties>
 
     <dependencies>

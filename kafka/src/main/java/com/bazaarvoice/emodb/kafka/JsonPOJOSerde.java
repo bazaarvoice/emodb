@@ -14,7 +14,7 @@ public class JsonPOJOSerde<T> implements Serde<T> {
 
     private static final ObjectMapper _mapper = new ObjectMapper();
     private final Class<T> _cls;
-    private final TypeReference _typeReference;
+    private final TypeReference<T> _typeReference;
 
     static {
         _mapper.registerModule(new JavaTimeModule());
