@@ -6,7 +6,11 @@
     <parent>
         <groupId>com.bazaarvoice.emodb</groupId>
         <artifactId>emodb-parent</artifactId>
+<<<<<<< HEAD
         <version>6.5.41-SNAPSHOT</version>
+=======
+        <version>6.5.38-SNAPSHOT</version>
+>>>>>>> main
         <relativePath>../../parent/pom.xml</relativePath>
     </parent>
 
@@ -50,6 +54,16 @@
         <dependency>
             <groupId>com.bazaarvoice.astyanax</groupId>
             <artifactId>astyanax-cassandra</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.codehaus.jackson</groupId>
+                    <artifactId>jackson-mapper-asl</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.codehaus.jackson</groupId>
+                    <artifactId>jackson-core-asl</artifactId>
+                </exclusion>
+            </exclusions>
             <scope>test</scope>
         </dependency>
         <dependency>
