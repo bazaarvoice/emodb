@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.bazaarvoice.emodb</groupId>
         <artifactId>emodb-parent</artifactId>
-        <version>6.5.38-SNAPSHOT</version>
+        <version>6.5.41-SNAPSHOT</version>
         <relativePath>../../parent/pom.xml</relativePath>
     </parent>
 
@@ -16,8 +16,6 @@
     <name>EmoDB Blob HTTP Jersey 2 Client</name>
 
     <properties>
-        <jackson.version>${com.fasterxml.jackson.version}</jackson.version>
-        <jackson.jersey2.version>${jackson-jersey2.version}</jackson.jersey2.version>
         <guava.version>${guava-jersey2.version}</guava.version>
         <rison.version>${rison-jersey2.version}</rison.version>
     </properties>
@@ -48,6 +46,24 @@
             <groupId>com.bazaarvoice.emodb</groupId>
             <artifactId>emodb-common-json</artifactId>
             <version>${project.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-annotations</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-core</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-annotations</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-databind</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.bazaarvoice.emodb</groupId>

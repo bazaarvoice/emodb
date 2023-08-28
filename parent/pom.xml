@@ -11,7 +11,7 @@
 
     <groupId>com.bazaarvoice.emodb</groupId>
     <artifactId>emodb-parent</artifactId>
-    <version>6.5.38-SNAPSHOT</version>
+    <version>6.5.41-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>EmoDB Parent</name>
@@ -20,7 +20,7 @@
         <connection>scm:git:git@github.com:bazaarvoice/emodb.git</connection>
         <developerConnection>scm:git:git@github.com:bazaarvoice/emodb.git</developerConnection>
         <url>scm:git:git@github.com:bazaarvoice/emodb.git</url>
-        <tag>emodb-6.5.34</tag>
+        <tag>emodb-6.5.30</tag>
     </scm>
 
     <properties>
@@ -35,13 +35,11 @@
         <guava.version>20.0</guava.version>
         <guava-jersey2.version>27.0.1-jre</guava-jersey2.version>
         <guice.version>4.0</guice.version>
-        <jackson.version>2.9.1</jackson.version>
-        <jackson.databind.version>2.9.1</jackson.databind.version>
-        <jackson-jersey2.version>2.10.2</jackson-jersey2.version>
+        <jackson.version>2.10.5</jackson.version>
+        <jackson.databind.version>2.10.5.1</jackson.databind.version>
         <jetty.version>9.0.7.v20131107</jetty.version>
         <jetty-jersey2.version>9.4.17.v20190418</jetty-jersey2.version>
         <jna.version>5.3.1</jna.version>
-        <com.fasterxml.jackson.version>2.9.1</com.fasterxml.jackson.version>
         <metrics.version>3.0.2</metrics.version>
         <ostrich.version>1.9.3</ostrich.version>
         <rison.version>2.9.10.2</rison.version>
@@ -51,7 +49,7 @@
         <commons-compress.version>1.21</commons-compress.version>
         <aws-sdk.version>1.11.1034</aws-sdk.version>
         <javassist.version>3.20.0-GA</javassist.version>
-        <jodatime-version>2.12.2</jodatime-version>
+        <jodatime-version>2.9.9</jodatime-version>
         <jersey.version>1.19.4</jersey.version>
         <jersey2.version>2.25.1</jersey2.version>
         <shiro.version>1.10.0</shiro.version>
@@ -230,27 +228,17 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-core</artifactId>
-                <version>${com.fasterxml.jackson.version}</version>
+                <version>${jackson.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-annotations</artifactId>
-                <version>${com.fasterxml.jackson.version}</version>
+                <version>${jackson.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
                 <version>${jackson.databind.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>com.fasterxml.jackson.core</groupId>
-                        <artifactId>jackson-core</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.fasterxml.jackson.core</groupId>
-                        <artifactId>jackson-annotations</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
             <dependency>
                 <groupId>io.dropwizard</groupId>
@@ -918,7 +906,7 @@
                             <failOnWarning>true</failOnWarning>
                             <ignoreNonCompile>true</ignoreNonCompile>
                             <ignoredUnusedDeclaredDependencies>
-                                <ignoredUnusedDeclaredDependency>javax.ws.rs:jsr311-api</ignoredUnusedDeclaredDependency>
+                                <unusedDeclaredDependency>com.fasterxml.jackson.datatype:jackson-datatype-joda</unusedDeclaredDependency>
                             </ignoredUnusedDeclaredDependencies>
                             <ignoredDependencies>
                                 <!-- TODO migrate to jakarta.xml.bind -->
