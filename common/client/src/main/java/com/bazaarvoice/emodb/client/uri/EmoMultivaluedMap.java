@@ -12,123 +12,35 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.ArrayList;
+import java.util.HashMap;
+import javax.ws.rs.core.AbstractMultivaluedMap;
+
 
 /**
  * Implementation of MultivaludedMap that has no dependencies on Jersey.
  */
-public class EmoMultivaluedMap<K, V> implements MultivaluedMap<K, V>{
+public class EmoMultivaluedMap<K, V> extends AbstractMultivaluedMap<K, V>{
 
-    private final ListMultimap<K, V> _map;
-
-    public static <K, V> EmoMultivaluedMap<K, V> create() {
-        return new EmoMultivaluedMap<>();
+    /**
+     * Initialize the backing store in the abstract parent multivalued map
+     * implementation.
+     *
+     * @throws NullPointerException in case the underlying {@code store} parameter
+     *                              is {@code null}.
+     */
+    public EmoMultivaluedMap() {
+        super(new HashMap<>());
     }
 
-    public static <K, V> EmoMultivaluedMap<K, V> copy(MultivaluedMap<K, V> other) {
-        EmoMultivaluedMap<K, V> map = new EmoMultivaluedMap<>();
-        for (Map.Entry<K, List<V>> entry : other.entrySet()) {
-            map.put(entry.getKey(), entry.getValue());
+    public EmoMultivaluedMap(MultivaluedMap<? extends K, ? extends V> map) {
+        this();
+        putAll(map);
+    }
+
+    private <T extends K, U extends V> void putAll(MultivaluedMap<T, U> map) {
+        for (Entry<T, List<U>> e : map.entrySet()) {
+            store.put(e.getKey(), new ArrayList<V>(e.getValue()));
         }
-        return map;
-    }
-
-    private EmoMultivaluedMap() {
-        _map = ArrayListMultimap.create();
-    }
-
-    @Override
-    public void putSingle(K key, V value) {
-        _map.replaceValues(key, ImmutableList.of(value));
-    }
-
-    @Override
-    public void add(K key, V value) {
-        _map.put(key, value);
-    }
-
-    @Override
-    public V getFirst(K key) {
-        List<V> values = _map.get(key);
-        if (values.isEmpty()) {
-            return null;
-        }
-        return values.get(0);
-    }
-
-    @Override
-    public int size() {
-        return _map.size();
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return _map.isEmpty();
-    }
-
-    @Override
-    public boolean containsKey(Object key) {
-        return _map.containsKey(key);
-    }
-
-    @Override
-    public boolean containsValue(Object value) {
-        return _map.containsValue(value);
-    }
-
-    @Override
-    public List<V> get(Object key) {
-        //noinspection unchecked
-        List<V> values =  _map.get((K) key);
-        if (values.isEmpty()) {
-            return null;
-        }
-        return values;
-    }
-
-    @Override
-    public List<V> put(K key, List<V> value) {
-        List<V> previous = _map.removeAll(key);
-        _map.putAll(key, value);
-        return previous.isEmpty() ? null : previous;
-    }
-
-    @Override
-    public List<V> remove(Object key) {
-        return _map.removeAll(key);
-    }
-
-    @Override
-    public void putAll(Map<? extends K, ? extends List<V>> m) {
-        for (K key : m.keySet()) {
-            _map.putAll(key, m.get(key));
-        }
-    }
-
-    @Override
-    public void clear() {
-        _map.clear();
-    }
-
-    @Override
-    public Set<K> keySet() {
-        return _map.keySet();
-    }
-
-    @Override
-    public Collection<List<V>> values() {
-        List<List<V>> values = Lists.newArrayList();
-        for (Map.Entry<K, Collection<V>> entry :_map.asMap().entrySet()) {
-            values.add((List<V>) entry.getValue());
-        }
-        return values;
-    }
-
-    @Override
-    public Set<Entry<K, List<V>>> entrySet() {
-        Set<Entry<K, List<V>>> entrySet = Sets.newLinkedHashSet();
-        for (Map.Entry<K, Collection<V>> entry :_map.asMap().entrySet()) {
-            entrySet.add(Maps.immutableEntry(entry.getKey(), (List<V>) entry.getValue()));
-        }
-        return entrySet;
     }
 }

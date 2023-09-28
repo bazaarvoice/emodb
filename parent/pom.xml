@@ -31,7 +31,7 @@
         <curator.version>2.4.2</curator.version>
         <curator-jersey2.version>4.2.0</curator-jersey2.version>
         <curator-extensions.version>1.4.2</curator-extensions.version>
-        <dropwizard.version>0.7.1</dropwizard.version>
+        <dropwizard.version>0.8.5</dropwizard.version>
         <guava.version>20.0</guava.version>
         <guava-jersey2.version>27.0.1-jre</guava-jersey2.version>
         <guice.version>4.0</guice.version>
@@ -50,7 +50,7 @@
         <aws-sdk.version>1.11.1034</aws-sdk.version>
         <javassist.version>3.20.0-GA</javassist.version>
         <jodatime-version>2.9.9</jodatime-version>
-        <jersey.version>1.19.4</jersey.version>
+        <jersey.version>2.25.1</jersey.version>
         <jersey2.version>2.25.1</jersey2.version>
         <shiro.version>1.10.0</shiro.version>
         <cassandra.driver.version>3.11.2</cassandra.driver.version>
@@ -102,6 +102,12 @@
                 <groupId>com.bazaarvoice.ostrich</groupId>
                 <artifactId>ostrich-core</artifactId>
                 <version>${ostrich.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.codahale.metrics</groupId>
+                        <artifactId>metrics-core</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.bazaarvoice.ostrich</groupId>
@@ -502,6 +508,12 @@
                 <version>${jersey2.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.glassfish.jersey</groupId>
+                <artifactId>jersey-bom</artifactId>
+                <version>${jersey.version}</version>
+                <type>pom</type>
+            </dependency>
+            <dependency>
                 <groupId>org.apache.cassandra</groupId>
                 <artifactId>cassandra-all</artifactId>
                 <version>${cassandra.version}</version>
@@ -709,6 +721,26 @@
                 <groupId>org.apache.shiro</groupId>
                 <artifactId>shiro-core</artifactId>
                 <version>${shiro.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.swagger</groupId>
+                <artifactId>swagger-jersey2-jaxrs</artifactId>
+                <version>${swagger.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.glassfish.jersey.core</groupId>
+                        <artifactId>jersey-server</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.glassfish.hk2.external</groupId>
+                        <artifactId>javax.inject</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.glassfish.jersey.containers</groupId>
+                        <artifactId>jersey-container-servlet-core</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <!-- Megabus dependencies -->
             <dependency>
@@ -1006,7 +1038,7 @@
                         <artifactId>maven-javadoc-plugin</artifactId>
                         <configuration>
                             <javadocExecutable>/usr/bin/javadoc</javadocExecutable>
-                            <additionalparam>-Xdoclint:none</additionalparam>
+                           <!-- <additionalparam>-Xdoclint:none</additionalparam> -->
                         </configuration>
                     </plugin>
                 </plugins>
