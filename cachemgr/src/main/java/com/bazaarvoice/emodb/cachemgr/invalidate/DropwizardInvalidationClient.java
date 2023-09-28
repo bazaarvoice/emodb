@@ -7,11 +7,13 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.HttpHeaders;
 import com.google.inject.Inject;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.api.representation.Form;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.Form;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
@@ -37,12 +39,12 @@ public class DropwizardInvalidationClient implements RemoteInvalidationClient {
     @Override
     public void invalidateAll(String invalidateUrl, InvalidationScope scope, InvalidationEvent event) {
         // Use Jersey to make an HTTP request to the server
-        WebResource invalidateResource = _client.resource(invalidateUrl);
-        MultivaluedMap<String,String> form = new Form();
-        form.putSingle("cache", event.getCache());
-        form.putSingle("scope", scope.name().toLowerCase());
+        WebTarget invalidateResource = _client.target(invalidateUrl);
+        Form form = new Form();
+        form.param("cache", event.getCache());
+        form.param("scope", scope.name().toLowerCase());
         if (event.hasKeys()) {
-            form.put("key", ImmutableList.copyOf(event.getKeys()));
+            event.getKeys().forEach(key -> form.param("key", key));
         }
 
         _log.debug("Invalidating cache at url {} with params: {}", invalidateUrl, form);
@@ -52,10 +54,9 @@ public class DropwizardInvalidationClient implements RemoteInvalidationClient {
             numAttempts++;
             try {
                 // Execute the HTTP request
-                invalidateResource
-                        .type(MediaType.APPLICATION_FORM_URLENCODED_TYPE)
+                invalidateResource.request()
                         .header(HttpHeaders.CONNECTION, "close")
-                        .post(form);
+                        .post(Entity.entity(form, MediaType.APPLICATION_FORM_URLENCODED_TYPE));;
                 return; // Success
             } catch (RuntimeException e) {
                 if (numAttempts >= NUM_ATTEMPTS) {

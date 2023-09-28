@@ -228,5 +228,10 @@
             <artifactId>jersey-client</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>javax.ws.rs-api</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>
