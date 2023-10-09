@@ -37,7 +37,7 @@ public class TableEventProcessor extends AbstractScheduledService {
 
     private static final int FUTURE_BATCH_SIZE = 10000;
 
-    private static final Logger _log = LoggerFactory.getLogger(TableEventProcessor.class);
+    private static final Logger logger = LoggerFactory.getLogger(TableEventProcessor.class);
 
     private final TableEventRegistry _tableEventRegistry;
     private final MetricRegistry _metricRegistry;
@@ -80,11 +80,13 @@ public class TableEventProcessor extends AbstractScheduledService {
     }
 
     private void processTableEvent(String table, String uuid, MegabusRef.RefType refType) {
-
         Iterator<Future<RecordMetadata>> futures =  _tableEventTools.getIdsForStorage(table, uuid)
                 .map(key -> new MegabusRef(table, key, TimeUUIDs.minimumUuid(), null, refType))
                 .map(ref -> {
                     String key = Coordinate.of(ref.getTable(), ref.getKey()).toString();
+                    if(table.contains("apikey")){
+                        logger.info("debugging mega-bus delay while provisioning apikey 1: = {}",key);
+                    }
                     return new ProducerRecord<String, JsonNode>(_topic.getName(),
                             Utils.toPositive(Utils.murmur2(key.getBytes())) % _topic.getPartitions(),
                             TimeUUIDs.newUUID().toString(),_objectMapper.valueToTree(Collections.singletonList(ref)));

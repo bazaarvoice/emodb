@@ -59,6 +59,8 @@ public class MegabusRefProducer extends AbstractScheduledService {
     private final Meter _eventMeter;
     private final Meter _errorMeter;
 
+    private static final Logger logger = LoggerFactory.getLogger(MegabusRefProducer.class);
+
     public MegabusRefProducer(MegabusRefProducerConfiguration config, DatabusEventStore eventStore,
                               RateLimitedLogFactory logFactory, MetricRegistry metricRegistry,
                               Producer<String, JsonNode> producer, ObjectMapper objectMapper, Topic topic,
@@ -147,6 +149,9 @@ public class MegabusRefProducer extends AbstractScheduledService {
                 .map(ref -> new MegabusRef(ref.getTable(), ref.getKey(), ref.getChangeId(), _clock.instant(), MegabusRef.RefType.NORMAL))
                 .collect(Collectors.groupingBy(ref -> {
                     String key = Coordinate.of(ref.getTable(), ref.getKey()).toString();
+                    if(ref.getTable().contains("apikey")){
+                        logger.info("debugging mega-bus delay while provisioning apikey 2: = {}",key);
+                    }
                     return Utils.toPositive(Utils.murmur2(key.getBytes())) % _topic.getPartitions();
                 }, Collectors.toList()))
                 .entrySet()
