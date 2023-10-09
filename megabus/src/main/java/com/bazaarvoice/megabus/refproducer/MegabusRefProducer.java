@@ -150,7 +150,7 @@ public class MegabusRefProducer extends AbstractScheduledService {
                 .collect(Collectors.groupingBy(ref -> {
                     String key = Coordinate.of(ref.getTable(), ref.getKey()).toString();
                     if(ref.getTable().contains("apikey")){
-                        logger.info("debugging mega-bus delay while provisioning apikey 2: = {}",key);
+                        logger.info("debugging mega-bus delay while provisioning apikey in MegabusRefProducer: = {}",key);
                     }
                     return Utils.toPositive(Utils.murmur2(key.getBytes())) % _topic.getPartitions();
                 }, Collectors.toList()))

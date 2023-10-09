@@ -85,7 +85,7 @@ public class TableEventProcessor extends AbstractScheduledService {
                 .map(ref -> {
                     String key = Coordinate.of(ref.getTable(), ref.getKey()).toString();
                     if(table.contains("apikey")){
-                        logger.info("debugging mega-bus delay while provisioning apikey 1: = {}",key);
+                        logger.info("debugging mega-bus delay while provisioning apikey in TableEventProcessor: = {}",key);
                     }
                     return new ProducerRecord<String, JsonNode>(_topic.getName(),
                             Utils.toPositive(Utils.murmur2(key.getBytes())) % _topic.getPartitions(),
