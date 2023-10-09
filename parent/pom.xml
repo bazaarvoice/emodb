@@ -40,7 +40,7 @@
         <jetty.version>9.0.7.v20131107</jetty.version>
         <jetty-jersey2.version>9.4.17.v20190418</jetty-jersey2.version>
         <jna.version>5.3.1</jna.version>
-        <metrics.version>3.0.2</metrics.version>
+        <metrics.version>3.1.1</metrics.version>
         <ostrich.version>1.9.3</ostrich.version>
         <rison.version>2.9.10.2</rison.version>
         <rison-jersey2.version>2.9.10.2</rison-jersey2.version>
@@ -127,32 +127,37 @@
 
             <!-- 3rd-party dependencies -->
             <dependency>
-                <groupId>com.codahale.metrics</groupId>
+                <groupId>org.glassfish.jersey.core</groupId>
+                <artifactId>jersey-common</artifactId>
+                <version>${jersey.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dropwizard.metrics</groupId>
                 <artifactId>metrics-annotation</artifactId>
                 <version>${metrics.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.codahale.metrics</groupId>
+                <groupId>io.dropwizard.metrics</groupId>
                 <artifactId>metrics-core</artifactId>
                 <version>${metrics.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.codahale.metrics</groupId>
+                <groupId>io.dropwizard.metrics</groupId>
                 <artifactId>metrics-servlets</artifactId>
                 <version>${metrics.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.codahale.metrics</groupId>
+                <groupId>io.dropwizard.metrics</groupId>
                 <artifactId>metrics-jvm</artifactId>
                 <version>${metrics.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.codahale.metrics</groupId>
+                <groupId>io.dropwizard.metrics</groupId>
                 <artifactId>metrics-logback</artifactId>
                 <version>${metrics.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.codahale.metrics</groupId>
+                <groupId>io.dropwizard.metrics</groupId>
                 <artifactId>metrics-healthchecks</artifactId>
                 <version>${metrics.version}</version>
             </dependency>
@@ -939,6 +944,14 @@
                             <ignoreNonCompile>true</ignoreNonCompile>
                             <ignoredUnusedDeclaredDependencies>
                                 <unusedDeclaredDependency>com.fasterxml.jackson.datatype:jackson-datatype-joda</unusedDeclaredDependency>
+                                <unusedDeclaredDependency>io.dropwizard:dropwizard-jersey</unusedDeclaredDependency>
+                                <unusedDeclaredDependency>io.dropwizard:dropwizard-util</unusedDeclaredDependency>
+                                <unusedDeclaredDependency>org.glassfish.jersey.core:jersey-common</unusedDeclaredDependency>
+                                <unusedDeclaredDependency>org.glassfish.jersey.core:jersey-client</unusedDeclaredDependency>
+                                <unusedDeclaredDependency>javax.validation:validation-api</unusedDeclaredDependency>
+                                <unusedDeclaredDependency>org.apache.httpcomponents:httpclient</unusedDeclaredDependency>
+                                <unusedDeclaredDependency>io.dropwizard:dropwizard-client</unusedDeclaredDependency>
+                                <unusedDeclaredDependency>io.dropwizard:dropwizard-jackson</unusedDeclaredDependency>
                             </ignoredUnusedDeclaredDependencies>
                             <ignoredDependencies>
                                 <!-- TODO migrate to jakarta.xml.bind -->
@@ -950,7 +963,7 @@
                             </ignoredDependencies>
                             <!-- ignore annotations for "non-test scoped" warnings -->
                             <ignoredNonTestScopedDependencies>
-                                <ignoredNonTestScopedDependency>javax.ws.rs:jsr311-api</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>javax.ws.rs:javax.ws.rs-api</ignoredNonTestScopedDependency>
                                 <ignoredNonTestScopedDependency>com.bazaarvoice.astyanax:astyanax-core</ignoredNonTestScopedDependency>
                                 <ignoredNonTestScopedDependency>com.bazaarvoice.emodb:emodb-common-api</ignoredNonTestScopedDependency>
                                 <ignoredNonTestScopedDependency>com.bazaarvoice.emodb:emodb-common-client</ignoredNonTestScopedDependency>
@@ -997,7 +1010,7 @@
                                 <bannedDependencies>
                                     <excludes>
                                         <!-- This should not exist until DW 0.8.x+ upgrade -->
-                                        <exclude>io.dropwizard.metrics:*</exclude>
+<!--                                        <exclude>io.dropwizard.metrics:*</exclude>-->
                                         <!-- This should not exist as it will force SLF4J calls to be delegated to log4j -->
                                         <exclude>org.slf4j:slf4j-log4j12</exclude>
                                         <!-- This should not exist as it will force SLF4J calls to be delegated to jul -->
