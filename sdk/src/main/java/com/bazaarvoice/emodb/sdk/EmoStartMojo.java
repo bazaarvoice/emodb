@@ -9,9 +9,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Closeables;
-import com.sun.jersey.api.client.Client;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.test.TestingServer;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -24,6 +23,11 @@ import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.resolution.ArtifactRequest;
 import org.eclipse.aether.resolution.ArtifactResolutionException;
 import org.twdata.maven.mojoexecutor.MojoExecutor;
+
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.core.MediaType;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -281,7 +285,7 @@ public class EmoStartMojo extends AbstractEmoMojo {
             return;
         }
 
-        Client client = Client.create();
+        Client client = ClientBuilder.newClient();
         try {
             // Parse the config file to get the admin URI and API key.  To support as much forward compatibility as
             // possible deserialize the yaml into the minimum representation required.
@@ -298,15 +302,16 @@ public class EmoStartMojo extends AbstractEmoMojo {
                         "name", role.getName(),
                         "permissions", ImmutableSet.copyOf(role.getPermissions()));
 
-                String response = client.resource(adminUri)
+                String response = client.target(adminUri)
                         .path("uac")
                         .path("1")
                         .path("role")
                         .path("_")
                         .path(name)
                         .queryParam("APIKey", adminApiKey)
-                        .type("application/x.json-create-role")
-                        .post(String.class, JsonHelper.asJson(entity));
+                        .request()
+                        .post(Entity.entity(JsonHelper.asJson(entity),
+                                new MediaType("application", "x.json-create-role")), String.class);
 
                 getLog().info("Response to create role " + name);
                 getLog().info(response);
@@ -322,14 +327,15 @@ public class EmoStartMojo extends AbstractEmoMojo {
                                 .map(role -> ImmutableMap.of("id", role))
                                 .collect(Collectors.toList()));
 
-                String response = client.resource(adminUri)
+                String response = client.target(adminUri)
                         .path("uac")
                         .path("1")
                         .path("api-key")
                         .queryParam("APIKey", adminApiKey)
                         .queryParam("key", value)
-                        .type("application/x.json-create-api-key")
-                        .post(String.class, JsonHelper.asJson(entity));
+                        .request()
+                        .post(Entity.entity(JsonHelper.asJson(entity),
+                                new MediaType("application", "x.json-create-api-key")), String.class);
 
                 getLog().info("Response to create API key " + value);
                 getLog().info(response);
@@ -337,7 +343,7 @@ public class EmoStartMojo extends AbstractEmoMojo {
         } catch (Exception e) {
             throw new MojoFailureException("Failed to initialize roles and API keys", e);
         } finally {
-            client.destroy();
+            client.close();
         }
     }
 
