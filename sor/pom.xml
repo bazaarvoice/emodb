@@ -122,16 +122,6 @@
             <groupId>com.bazaarvoice.emodb</groupId>
             <artifactId>emodb-table</artifactId>
             <version>${project.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.codahale.metrics</groupId>
-                    <artifactId>metrics-core</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.codahale.metrics</groupId>
-                    <artifactId>metrics-annotation</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
 
         <!-- 3rd-party dependencies -->
