@@ -26,7 +26,7 @@ import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.common.util.concurrent.AbstractService;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
-import com.sun.jersey.api.client.Client;
+import javax.ws.rs.client.Client;
 import io.dropwizard.lifecycle.ExecutorServiceManager;
 import io.dropwizard.lifecycle.Managed;
 import io.dropwizard.util.Duration;
