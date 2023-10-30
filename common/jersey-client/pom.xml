@@ -20,7 +20,7 @@
             <artifactId>emodb-common-client</artifactId>
             <version>${project.version}</version>
         </dependency>
-
+        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
         </dependency>
