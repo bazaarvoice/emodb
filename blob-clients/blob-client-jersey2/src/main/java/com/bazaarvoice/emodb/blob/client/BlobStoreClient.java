@@ -31,8 +31,6 @@ import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
@@ -66,8 +64,6 @@ import static java.util.Objects.requireNonNull;
  */
 //TODO add documentation for using the client once it is validated
 public class BlobStoreClient implements AuthBlobStore {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(BlobStoreClient.class);
 
     /**
      * Must match the service name in the EmoService class.
