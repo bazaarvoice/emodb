@@ -358,7 +358,7 @@
             <dependency>
                 <groupId>net.sourceforge.argparse4j</groupId>
                 <artifactId>argparse4j</artifactId>
-                <version>0.4.3</version>
+                <version>0.4.4</version>
             </dependency>
             <dependency>
                 <groupId>org.coursera</groupId>
@@ -953,6 +953,8 @@
                                 <unusedDeclaredDependency>org.apache.httpcomponents:httpclient</unusedDeclaredDependency>
                                 <unusedDeclaredDependency>io.dropwizard:dropwizard-client</unusedDeclaredDependency>
                                 <unusedDeclaredDependency>io.dropwizard:dropwizard-jackson</unusedDeclaredDependency>
+                                <unusedDeclaredDependency>io.dropwizard.metrics:metrics-core</unusedDeclaredDependency>
+                                <unusedDeclaredDependency>io.dropwizard:dropwizard-core</unusedDeclaredDependency>
                             </ignoredUnusedDeclaredDependencies>
                             <ignoredDependencies>
                                 <!-- TODO migrate to jakarta.xml.bind -->
