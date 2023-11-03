@@ -46,6 +46,10 @@
             <groupId>com.bazaarvoice.ostrich</groupId>
             <artifactId>ostrich-core</artifactId>
         </dependency>
+        <dependency>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>javax.ws.rs-api</artifactId>
+        </dependency>
 
         <!-- Third party dependencies -->
         <dependency>
@@ -63,10 +67,6 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>javax.ws.rs</groupId>
-            <artifactId>jsr311-api</artifactId>
         </dependency>
     </dependencies>
 </project>
