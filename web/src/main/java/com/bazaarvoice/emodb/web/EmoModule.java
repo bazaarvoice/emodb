@@ -152,7 +152,7 @@ import com.google.inject.ProvisionException;
 import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Named;
-import com.sun.jersey.api.client.Client;
+import javax.ws.rs.client.Client;
 import io.dropwizard.client.JerseyClientBuilder;
 import io.dropwizard.client.JerseyClientConfiguration;
 import io.dropwizard.server.ServerFactory;

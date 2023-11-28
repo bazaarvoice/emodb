@@ -7,7 +7,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.google.common.net.HostAndPort;
-import com.sun.jersey.api.client.ClientHandlerException;
+import javax.ws.rs.ProcessingException;
 import org.apache.http.conn.ConnectTimeoutException;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
@@ -125,7 +125,7 @@ public class PartitionAwareServiceFactoryTest {
 
     @Test
     public void testDelegateConnectionTimeoutException() throws Exception {
-        doThrow(new ClientHandlerException(new ConnectTimeoutException())).when(_delegate).doIt();
+        doThrow(new ProcessingException(new ConnectTimeoutException())).when(_delegate).doIt();
         TestInterface service = _serviceFactory.create(_remoteEndPoint);
 
         try {

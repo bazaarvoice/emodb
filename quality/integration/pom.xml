@@ -261,12 +261,12 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.codahale.metrics</groupId>
+            <groupId>io.dropwizard.metrics</groupId>
             <artifactId>metrics-core</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.codahale.metrics</groupId>
+            <groupId>io.dropwizard.metrics</groupId>
             <artifactId>metrics-healthchecks</artifactId>
             <scope>test</scope>
         </dependency>
