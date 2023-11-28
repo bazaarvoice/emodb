@@ -5,8 +5,9 @@ import com.bazaarvoice.emodb.client.EmoClient;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.StashRunTimeInfo;
 import com.bazaarvoice.emodb.sor.api.StashTimeKey;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.UniformInterfaceException;
+import org.glassfish.jersey.client.ClientResponse;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.WebApplicationException;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -49,7 +50,7 @@ public class CompactionControlClient implements CompactionControlSource {
                     .type(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
                     .post();
-        } catch (UniformInterfaceException e) {
+        } catch (WebApplicationException e) {
             throw convertException(e);
         }
     }
@@ -68,7 +69,7 @@ public class CompactionControlClient implements CompactionControlSource {
                     .type(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
                     .delete();
-        } catch (UniformInterfaceException e) {
+        } catch (WebApplicationException e) {
             throw convertException(e);
         }
     }
@@ -87,7 +88,7 @@ public class CompactionControlClient implements CompactionControlSource {
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
                     .get(StashRunTimeInfo.class);
-        } catch (UniformInterfaceException e) {
+        } catch (WebApplicationException e) {
             throw convertException(e);
         }
     }
@@ -102,7 +103,7 @@ public class CompactionControlClient implements CompactionControlSource {
                     .type(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
                     .get(Map.class);
-        } catch (UniformInterfaceException e) {
+        } catch (WebApplicationException e) {
             throw convertException(e);
         }
     }
@@ -120,18 +121,18 @@ public class CompactionControlClient implements CompactionControlSource {
                     .type(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
                     .get(Map.class);
-        } catch (UniformInterfaceException e) {
+        } catch (WebApplicationException e) {
             throw convertException(e);
         }
     }
 
-    private RuntimeException convertException(UniformInterfaceException e) {
-        ClientResponse response = e.getResponse();
-        String exceptionType = response.getHeaders().getFirst("X-BV-Exception");
+    private RuntimeException convertException(WebApplicationException e) {
+        Response response = e.getResponse();
+        String exceptionType = (String) response.getHeaders().getFirst("X-BV-Exception");
 
         if (response.getStatus() == Response.Status.BAD_REQUEST.getStatusCode() &&
                 IllegalArgumentException.class.getName().equals(exceptionType)) {
-            return new IllegalArgumentException(response.getEntity(String.class), e);
+            return new IllegalArgumentException(response.readEntity(String.class), e);
         }
         return e;
     }
