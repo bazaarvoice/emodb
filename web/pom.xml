@@ -399,10 +399,22 @@
         <dependency>
             <groupId>io.dropwizard</groupId>
             <artifactId>dropwizard-jetty</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.eclipse.jetty</groupId>
+                    <artifactId>jetty-server</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>io.dropwizard</groupId>
             <artifactId>dropwizard-lifecycle</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.eclipse.jetty</groupId>
+                    <artifactId>jetty-server</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>io.dropwizard</groupId>
@@ -505,6 +517,12 @@
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-security</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.eclipse.jetty</groupId>
+                    <artifactId>jetty-server</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
