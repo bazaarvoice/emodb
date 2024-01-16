@@ -501,6 +501,11 @@
                 <version>${jersey2.version}</version>
             </dependency>
             <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-secretsmanager</artifactId>
+                <version>${aws-sdk.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.apache.cassandra</groupId>
                 <artifactId>cassandra-all</artifactId>
                 <version>${cassandra.version}</version>
