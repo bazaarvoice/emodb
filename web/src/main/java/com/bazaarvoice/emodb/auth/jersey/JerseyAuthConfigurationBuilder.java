@@ -2,7 +2,6 @@ package com.bazaarvoice.emodb.auth.jersey;
 
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyAuthenticationTokenGenerator;
 import com.google.common.collect.ImmutableList;
-import com.sun.jersey.spi.container.ResourceFilterFactory;
 import org.apache.shiro.mgt.SecurityManager;
 
 import static java.util.Objects.requireNonNull;
@@ -28,9 +27,8 @@ import static java.util.Objects.requireNonNull;
                         AuthenticationExceptionHandler.class,
                         AuthorizationExceptionHandler.class,
                         UnauthorizedExceptionMapper.class,
-                        new AuthenticatedSubjectProvider(securityManager)
+                        new AuthenticatedSubjectFeature(securityManager)
                 ),
-                ImmutableList.<ResourceFilterFactory>of(new AuthResourceFilterFactory(securityManager, tokenGenerator))
-        );
+                ImmutableList.of(new AuthDynamicFeature(securityManager, tokenGenerator)));
     }
 }

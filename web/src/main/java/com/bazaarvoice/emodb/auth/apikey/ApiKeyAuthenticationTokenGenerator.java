@@ -15,7 +15,7 @@ public class ApiKeyAuthenticationTokenGenerator implements AuthenticationTokenGe
     public ApiKeyAuthenticationToken createToken(ContainerRequestContext context) {
         String apiKey = context.getHeaders().getFirst(ApiKeyRequest.AUTHENTICATION_HEADER);
         if (Strings.isNullOrEmpty(apiKey)) {
-            apiKey = (String) context.getProperty(ApiKeyRequest.AUTHENTICATION_PARAM);
+            apiKey = context.getUriInfo().getQueryParameters().getFirst(ApiKeyRequest.AUTHENTICATION_PARAM);
             if (Strings.isNullOrEmpty(apiKey)) {
                 return null;
             }
