@@ -12,6 +12,8 @@ import com.bazaarvoice.emodb.plugin.PluginConfiguration;
 import com.bazaarvoice.emodb.queue.QueueConfiguration;
 import com.bazaarvoice.emodb.sor.DataStoreConfiguration;
 import com.bazaarvoice.emodb.web.auth.AuthorizationConfiguration;
+import com.bazaarvoice.emodb.web.auth.config.AWSConfig;
+import com.bazaarvoice.emodb.web.auth.config.SecretsConfig;
 import com.bazaarvoice.emodb.web.scanner.config.ScannerConfiguration;
 import com.bazaarvoice.megabus.MegabusConfiguration;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -114,6 +116,29 @@ public class EmoConfiguration extends Configuration {
         return _serviceMode == null ? EmoServiceMode.STANDARD_ALL : _serviceMode;
     }
 
+    public AWSConfig getAwsConfig() {
+        return awsConfig;
+    }
+
+    public void setAwsConfig(AWSConfig awsConfig) {
+        this.awsConfig = awsConfig;
+    }
+
+    @JsonProperty
+    @NotNull
+    private AWSConfig awsConfig;
+
+    public SecretsConfig getSecretsConfig() {
+        return secretsConfig;
+    }
+
+    public void setSecretsConfig(SecretsConfig secretsConfig) {
+        this.secretsConfig = secretsConfig;
+    }
+
+    @JsonProperty
+    private SecretsConfig secretsConfig;
+
     public EmoConfiguration setServiceMode(EmoServiceMode serviceMode) {
         _serviceMode = serviceMode;
         return this;
@@ -206,6 +231,7 @@ public class EmoConfiguration extends Configuration {
 
     public EmoConfiguration setAuthorizationConfiguration(AuthorizationConfiguration authorizationConfiguration) {
         _authorizationConfiguration = authorizationConfiguration;
+
         return this;
     }
 

@@ -1,7 +1,11 @@
 package com.bazaarvoice.emodb.web.auth;
 
+import com.bazaarvoice.emodb.web.EmoConfiguration;
+import com.bazaarvoice.emodb.web.auth.service.SecretsManager;
+import com.bazaarvoice.emodb.web.auth.service.serviceimpl.SecretsManagerImpl;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableSet;
-
+import com.google.inject.Inject;
 import javax.validation.constraints.NotNull;
 import java.util.Set;
 
@@ -15,6 +19,11 @@ public class AuthorizationConfiguration {
     private final static String DEFAULT_PERMISSION_TABLE = "__auth:permissions";
     private final static String DEFAULT_ROLE_TABLE = "__auth:roles";
     private final static String DEFAULT_ROLE_GROUP_TABLE = "__auth:role_groups";
+   @Inject
+    private SecretsManager secretsManager;
+    public void setEmoConfiguration(EmoConfiguration emoConfiguration){
+        secretsManager = new SecretsManagerImpl(emoConfiguration);
+    }
 
     // Table for storing API keys
     @NotNull
@@ -32,10 +41,10 @@ public class AuthorizationConfiguration {
     @NotNull
     private String _roleGroupTable = DEFAULT_ROLE_GROUP_TABLE;
     // EmoDB administrator
-    @NotNull
+//    @NotNull
     private String _adminApiKey;
     // Replication key used for replicating across data centers
-    @NotNull
+//    @NotNull
     private String _replicationApiKey;
 
     // Set of roles assigned for anonymous user.  If the set is empty anonymous access is disabled.
@@ -94,8 +103,12 @@ public class AuthorizationConfiguration {
         return _adminApiKey;
     }
 
-    public AuthorizationConfiguration setAdminApiKey(String adminApiKey) {
-        _adminApiKey = adminApiKey;
+    public AuthorizationConfiguration setAdminApiKey() {
+        try {
+        _adminApiKey = secretsManager.getEmodbAuthKeys("emodb/authkeys","adminApiKey");
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        };
         return this;
     }
 
@@ -103,8 +116,12 @@ public class AuthorizationConfiguration {
         return _replicationApiKey;
     }
 
-    public AuthorizationConfiguration setReplicationApiKey(String replicationApiKey) {
-        _replicationApiKey = replicationApiKey;
+    public AuthorizationConfiguration setReplicationApiKey() {
+        try {
+            _replicationApiKey = secretsManager.getEmodbAuthKeys("emodb/authkeys","replicationApiKey");
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        };
         return this;
     }
 

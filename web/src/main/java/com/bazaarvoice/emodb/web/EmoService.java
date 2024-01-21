@@ -160,7 +160,10 @@ public class EmoService extends Application<EmoConfiguration> {
         _cluster = _configuration.getCluster();
         _serviceMode = _configuration.getServiceMode();
         _log.info("mode {}", _serviceMode);
+        configuration.getAuthorizationConfiguration().setEmoConfiguration(configuration);
 
+        configuration.getAuthorizationConfiguration().setAdminApiKey();
+        configuration.getAuthorizationConfiguration().setReplicationApiKey();
         // Create cassandra schema before starting Emo. This is a no-op if schemas are already created.
         CuratorFramework curator = _configuration.getZooKeeperConfiguration().newCurator();
         try {

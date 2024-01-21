@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.web.auth.serviceimpl;
+package com.bazaarvoice.emodb.web.auth.service.serviceimpl;
 
 public class ApplicationConstants {
     //Error codes

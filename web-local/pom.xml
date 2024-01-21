@@ -21,6 +21,7 @@
         <config.file>config-local.yaml</config.file>
         <ddl.file>config-ddl-local.yaml</ddl.file>
         <permissions.file />
+        <exec.cleanupDaemonThreads>false</exec.cleanupDaemonThreads>
     </properties>
 
     <dependencies>
