@@ -231,6 +231,11 @@ auth:
   anonymousRoles:
   - anonymous
 
+#Aws config
+awsConfig:
+  profile: emodb-nexus-qa
+  region: eu-west-1
+
 # Configure the HTTP server that listens for inbound requests
 server:
   applicationConnectors:

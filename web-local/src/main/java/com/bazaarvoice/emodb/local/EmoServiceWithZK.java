@@ -15,12 +15,15 @@ import com.bazaarvoice.emodb.uac.client.UserAccessControlFixedHostDiscoverySourc
 import com.bazaarvoice.emodb.web.EmoConfiguration;
 import com.bazaarvoice.emodb.web.EmoService;
 import com.bazaarvoice.emodb.web.auth.ApiKeyEncryption;
+import com.bazaarvoice.emodb.web.auth.service.SecretsManager;
+import com.bazaarvoice.emodb.web.auth.service.serviceimpl.SecretsManagerImpl;
 import com.bazaarvoice.emodb.web.guice.SelfHostAndPortModule;
 import com.bazaarvoice.emodb.web.util.EmoServiceObjectMapperFactory;
 import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.pool.ServicePoolProxies;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -31,10 +34,7 @@ import com.google.common.io.Files;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.inject.AbstractModule;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.Key;
+import com.google.inject.*;
 import com.google.inject.Module;
 import io.dropwizard.server.ServerFactory;
 import net.sourceforge.argparse4j.ArgumentParsers;
@@ -62,6 +62,11 @@ import java.util.concurrent.TimeUnit;
 public class EmoServiceWithZK {
 
     private static final Logger logger = (Logger) LoggerFactory.getLogger(EmoServiceWithZK.class);
+    @Inject
+    private static SecretsManager secretsManager;
+    public void setEmoConfiguration(EmoConfiguration emoConfiguration){
+        secretsManager = new SecretsManagerImpl(emoConfiguration);
+    }
 
     private static final ExecutorService service = Executors.newSingleThreadExecutor(
             new ThreadFactoryBuilder()
@@ -207,7 +212,7 @@ public class EmoServiceWithZK {
         }
     }
 
-    private static void setPermissionsFromFiles(List<String> permissionsYamls, String emoConfigYamlPath) {
+    private static void setPermissionsFromFiles(List<String> permissionsYamls, String emoConfigYamlPath) throws JsonProcessingException {
         if (permissionsYamls.isEmpty()) {
             return;
         }
@@ -242,7 +247,8 @@ public class EmoServiceWithZK {
         Injector injector = Guice.createInjector(module);
         HostAndPort selfHostAndPort = injector.getInstance(Key.get(HostAndPort.class, SelfHostAndPort.class));
         ApiKeyEncryption apiKeyEncryption = injector.getInstance(ApiKeyEncryption.class);
-        String adminApiKey = emoConfig.getAuthorizationConfiguration().getAdminApiKey();
+       // String adminApiKey = emoConfig.getAuthorizationConfiguration().getAdminApiKey();
+        String adminApiKey =  secretsManager.getEmodbAuthKeys("emodb/authkeys","adminApiKey");
         try {
             adminApiKey = apiKeyEncryption.decrypt(adminApiKey);
         } catch (Exception e) {

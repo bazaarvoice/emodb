@@ -105,7 +105,8 @@ public class AuthorizationConfiguration {
 
     public AuthorizationConfiguration setAdminApiKey() {
         try {
-        _adminApiKey = secretsManager.getEmodbAuthKeys("emodb/authkeys","adminApiKey");
+            System.out.println("====> enter 5");
+            _adminApiKey = secretsManager.getEmodbAuthKeys("emodb/authkeys","adminApiKey");
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         };

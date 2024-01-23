@@ -1,7 +1,10 @@
 package com.bazaarvoice.emodb.sdk;
 
 import com.bazaarvoice.emodb.common.json.JsonHelper;
+import com.bazaarvoice.emodb.web.EmoConfiguration;
 import com.bazaarvoice.emodb.web.auth.ApiKeyEncryption;
+import com.bazaarvoice.emodb.web.auth.service.SecretsManager;
+import com.bazaarvoice.emodb.web.auth.service.serviceimpl.SecretsManagerImpl;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -9,6 +12,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Closeables;
+import com.google.inject.Inject;
 import com.sun.jersey.api.client.Client;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -51,6 +55,11 @@ public class EmoStartMojo extends AbstractEmoMojo {
     private int cassandraJmxPort;
     private int cassandraStoragePort;
     private int cassandraNativeTransportPort;
+    @Inject
+    private SecretsManager secretsManager;
+    public void setEmoConfiguration(EmoConfiguration emoConfiguration){
+        secretsManager = new SecretsManagerImpl(emoConfiguration);
+    }
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
@@ -288,7 +297,8 @@ public class EmoStartMojo extends AbstractEmoMojo {
             ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
             MinimalEmoConfiguration config = objectMapper.readValue(new File(emoConfigurationDirectory(), "config.yaml"), MinimalEmoConfiguration.class);
             URI adminUri = getEmoUri(config);
-            String adminApiKey = getAdminApiKey(config);
+           // String adminApiKey = getAdminApiKey(config);
+            String adminApiKey =  secretsManager.getEmodbAuthKeys("emodb/authkeys","adminApiKey");
 
             for (RoleParameter role : roles) {
                 String name = requireNonNull(role.getName(), "Role configuration must include a name");
@@ -345,9 +355,10 @@ public class EmoStartMojo extends AbstractEmoMojo {
         return URI.create(String.format("http://localhost:%d", config.server.applicationConnectors.get(0).port));
     }
 
-    private String getAdminApiKey(MinimalEmoConfiguration config) {
-        return new ApiKeyEncryption(config.cluster).decrypt(config.auth.adminApiKey);
-    }
+//    private String getAdminApiKey(MinimalEmoConfiguration config) {
+//        System.out.println("====> enter 3");
+//        return new ApiKeyEncryption(config.cluster).decrypt(config.auth.adminApiKey);
+//    }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class MinimalEmoConfiguration {
