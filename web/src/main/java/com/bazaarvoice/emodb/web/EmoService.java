@@ -21,6 +21,8 @@ import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.bazaarvoice.emodb.sor.core.DataStoreAsync;
 import com.bazaarvoice.emodb.web.auth.EncryptConfigurationApiKeyCommand;
+import com.bazaarvoice.emodb.web.auth.service.SecretsManager;
+import com.bazaarvoice.emodb.web.auth.service.serviceimpl.SecretsManagerImpl;
 import com.bazaarvoice.emodb.web.cli.PurgeDatabusEventsCommand;
 import com.bazaarvoice.emodb.web.ddl.CreateKeyspacesCommand;
 import com.bazaarvoice.emodb.web.ddl.DdlConfiguration;
@@ -62,10 +64,7 @@ import com.codahale.metrics.servlets.PingServlet;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.io.Closeables;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.Key;
-import com.google.inject.TypeLiteral;
+import com.google.inject.*;
 import io.dropwizard.Application;
 import io.dropwizard.configuration.ConfigurationException;
 import io.dropwizard.configuration.ConfigurationFactory;
@@ -160,10 +159,10 @@ public class EmoService extends Application<EmoConfiguration> {
         _cluster = _configuration.getCluster();
         _serviceMode = _configuration.getServiceMode();
         _log.info("mode {}", _serviceMode);
-        configuration.getAuthorizationConfiguration().setEmoConfiguration(configuration);
 
-        configuration.getAuthorizationConfiguration().setAdminApiKey();
-        configuration.getAuthorizationConfiguration().setReplicationApiKey();
+        SecretsManager secretsManager = new SecretsManagerImpl(configuration);
+        configuration.getAuthorizationConfiguration().setAdminApiKey(secretsManager.getEmodbAuthKeys(configuration.getSecretsConfig().getSecretName(),"adminApiKey"));
+        configuration.getAuthorizationConfiguration().setReplicationApiKey(secretsManager.getEmodbAuthKeys(configuration.getSecretsConfig().getSecretName(),"replicationApiKey"));
         // Create cassandra schema before starting Emo. This is a no-op if schemas are already created.
         CuratorFramework curator = _configuration.getZooKeeperConfiguration().newCurator();
         try {

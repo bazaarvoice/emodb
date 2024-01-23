@@ -297,7 +297,7 @@ public class EmoStartMojo extends AbstractEmoMojo {
             ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
             MinimalEmoConfiguration config = objectMapper.readValue(new File(emoConfigurationDirectory(), "config.yaml"), MinimalEmoConfiguration.class);
             URI adminUri = getEmoUri(config);
-           // String adminApiKey = getAdminApiKey(config);
+            config.auth.adminApiKey = secretsManager.getEmodbAuthKeys("emodb/authkeys","adminApiKey");
             String adminApiKey =  secretsManager.getEmodbAuthKeys("emodb/authkeys","adminApiKey");
 
             for (RoleParameter role : roles) {

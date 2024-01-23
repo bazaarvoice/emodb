@@ -37,7 +37,6 @@ public class SecretsManagerImpl implements SecretsManager {
     }
 
     public String getEmodbAuthKeys(String secretName, String secretId) throws AwsValuesMissingOrInvalidException, JsonProcessingException {
-        System.out.println("====> enter 4");
         if (StringUtils.isBlank(secretName)){
             throw new AwsValuesMissingOrInvalidException(MISSING_OR_INVALID_AWS_VALUES);
         }

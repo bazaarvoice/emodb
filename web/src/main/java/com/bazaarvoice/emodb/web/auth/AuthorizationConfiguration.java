@@ -19,11 +19,7 @@ public class AuthorizationConfiguration {
     private final static String DEFAULT_PERMISSION_TABLE = "__auth:permissions";
     private final static String DEFAULT_ROLE_TABLE = "__auth:roles";
     private final static String DEFAULT_ROLE_GROUP_TABLE = "__auth:role_groups";
-   @Inject
-    private SecretsManager secretsManager;
-    public void setEmoConfiguration(EmoConfiguration emoConfiguration){
-        secretsManager = new SecretsManagerImpl(emoConfiguration);
-    }
+
 
     // Table for storing API keys
     @NotNull
@@ -103,13 +99,8 @@ public class AuthorizationConfiguration {
         return _adminApiKey;
     }
 
-    public AuthorizationConfiguration setAdminApiKey() {
-        try {
-            System.out.println("====> enter 5");
-            _adminApiKey = secretsManager.getEmodbAuthKeys("emodb/authkeys","adminApiKey");
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        };
+    public AuthorizationConfiguration setAdminApiKey(String adminApiKey) {
+        _adminApiKey = adminApiKey;
         return this;
     }
 
@@ -117,12 +108,8 @@ public class AuthorizationConfiguration {
         return _replicationApiKey;
     }
 
-    public AuthorizationConfiguration setReplicationApiKey() {
-        try {
-            _replicationApiKey = secretsManager.getEmodbAuthKeys("emodb/authkeys","replicationApiKey");
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        };
+    public AuthorizationConfiguration setReplicationApiKey(String replicationApiKey) {
+        _replicationApiKey = replicationApiKey;
         return this;
     }
 

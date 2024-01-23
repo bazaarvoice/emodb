@@ -15,6 +15,7 @@ import com.bazaarvoice.emodb.uac.client.UserAccessControlFixedHostDiscoverySourc
 import com.bazaarvoice.emodb.web.EmoConfiguration;
 import com.bazaarvoice.emodb.web.EmoService;
 import com.bazaarvoice.emodb.web.auth.ApiKeyEncryption;
+import com.bazaarvoice.emodb.web.auth.AuthorizationConfiguration;
 import com.bazaarvoice.emodb.web.auth.service.SecretsManager;
 import com.bazaarvoice.emodb.web.auth.service.serviceimpl.SecretsManagerImpl;
 import com.bazaarvoice.emodb.web.guice.SelfHostAndPortModule;
@@ -223,6 +224,9 @@ public class EmoServiceWithZK {
 
         try {
             emoConfig = objectMapper.readValue(new File(emoConfigYamlPath), EmoConfiguration.class);
+            emoConfig.setAuthorizationConfiguration(new AuthorizationConfiguration().setAdminApiKey(secretsManager.getEmodbAuthKeys(emoConfig.getSecretsConfig().getSecretName(),"adminApiKey"))
+                    .setReplicationApiKey(secretsManager.getEmodbAuthKeys(emoConfig.getSecretsConfig().getSecretName(),"replicationApiKey")));
+
         } catch (Exception e) {
             System.err.println("Failed to EmoDB configuration from file " + emoConfigYamlPath);
             e.printStackTrace(System.err);
@@ -247,8 +251,7 @@ public class EmoServiceWithZK {
         Injector injector = Guice.createInjector(module);
         HostAndPort selfHostAndPort = injector.getInstance(Key.get(HostAndPort.class, SelfHostAndPort.class));
         ApiKeyEncryption apiKeyEncryption = injector.getInstance(ApiKeyEncryption.class);
-       // String adminApiKey = emoConfig.getAuthorizationConfiguration().getAdminApiKey();
-        String adminApiKey =  secretsManager.getEmodbAuthKeys("emodb/authkeys","adminApiKey");
+        String adminApiKey = emoConfig.getAuthorizationConfiguration().getAdminApiKey();
         try {
             adminApiKey = apiKeyEncryption.decrypt(adminApiKey);
         } catch (Exception e) {

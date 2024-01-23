@@ -124,8 +124,8 @@ public class EmoConfiguration extends Configuration {
         this.awsConfig = awsConfig;
     }
 
-    @JsonProperty
     @NotNull
+    @JsonProperty("awsConfig")
     private AWSConfig awsConfig;
 
     public SecretsConfig getSecretsConfig() {
@@ -136,7 +136,7 @@ public class EmoConfiguration extends Configuration {
         this.secretsConfig = secretsConfig;
     }
 
-    @JsonProperty
+    @JsonProperty("secretsConfig")
     private SecretsConfig secretsConfig;
 
     public EmoConfiguration setServiceMode(EmoServiceMode serviceMode) {
