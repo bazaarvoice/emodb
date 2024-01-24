@@ -163,6 +163,15 @@ auth:
   anonymousRoles:
   - anonymous
 
+#Aws config
+awsConfig:
+  profile: emodb-nexus-qa
+  region: eu-west-1
+
+#Secrets Config
+secretsConfig:
+  secretName: emodb/authkeys
+
 scanner:
   scanStatusTable: "__system_scan_upload"
   scannerApiKey: "local_admin"

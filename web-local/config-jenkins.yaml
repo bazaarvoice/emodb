@@ -186,8 +186,8 @@ auth:
   # The admin and replication API keys must be encrypted using the encrypt-configuration-api-key command
   # The unencrypted values are included below to make local testing easier.  It should go without saying that
   # IN A PRODUCTION ENVIRONMENT DO NOT INCLUDE THE UNENCRYPTED KEYS IN THIS FILE!
-  adminApiKey:       ""  # local_admin
-  replicationApiKey: ""  # local_replication
+#  adminApiKey:       ""  # local_admin
+#  replicationApiKey: ""  # local_replication
   anonymousRoles:
   - anonymous
 
@@ -195,6 +195,10 @@ auth:
 awsConfig:
   profile: emodb-nexus-qa
   region: eu-west-1
+
+#Secrets Config
+secretsConfig:
+  secretName: emodb/authkeys
 
 # Configure the HTTP server that listens for inbound requests
 server:

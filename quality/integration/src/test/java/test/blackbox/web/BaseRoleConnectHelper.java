@@ -70,7 +70,8 @@ public abstract class BaseRoleConnectHelper implements Closeable {
         try {
             _configFileResource = requireNonNull(configFileResource, "configFileResource");
             _config = requireNonNull(getConfigurationFromResource(), "EmoConfiguration");
-
+            System.out.println("Stash role adminkey====>    "+_config.getAuthorizationConfiguration().getAdminApiKey());
+            System.out.println("Stash role replication key====>    "+_config.getAuthorizationConfiguration().getReplicationApiKey());
         } catch (Exception e) {
             Assert.fail(e.getMessage());
         }
@@ -278,7 +279,8 @@ public abstract class BaseRoleConnectHelper implements Closeable {
         URI uri = builder.build();
 
         //curl -XPOST http://localhost:8581/tasks/invalidate
-        System.out.println(uri.toASCIIString());
+        System.out.println("Printing URI : >>> " + uri.toASCIIString());
+
 
         Client client = getClient();
         client.resource(uri)

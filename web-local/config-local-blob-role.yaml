@@ -193,6 +193,10 @@ awsConfig:
   profile: emodb-nexus-qa
   region: eu-west-1
 
+#Secrets Config
+secretsConfig:
+  secretName: emodb/authkeys
+
 # Configure the HTTP server that listens for inbound requests
 server:
   applicationConnectors:
