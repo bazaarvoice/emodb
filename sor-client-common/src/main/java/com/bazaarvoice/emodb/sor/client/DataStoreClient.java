@@ -36,7 +36,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.PeekingIterator;
 import org.apache.commons.codec.binary.Base64;
-
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -73,6 +74,7 @@ public class DataStoreClient implements AuthDataStore {
 
     private final EmoClient _client;
     private final UriBuilder _dataStore;
+    private static final Logger logger = LoggerFactory.getLogger(DataStoreClient.class);
 
     public DataStoreClient(URI endPoint, EmoClient client) {
         _client = requireNonNull(client, "client");
@@ -125,6 +127,7 @@ public class DataStoreClient implements AuthDataStore {
                 .queryParam("options", RisonHelper.asORison(options))
                 .queryParam("audit", RisonHelper.asORison(audit))
                 .build();
+        logger.info("URL -{}",uri.toString());
         for (int attempt = 0; ; attempt++) {
             try {
                 _client.resource(uri)
@@ -139,6 +142,7 @@ public class DataStoreClient implements AuthDataStore {
                     uri = e.getResponse().getLocation();
                     continue;
                 }
+                logger.info("exception -{},Response -{}",e.toString(), e.getResponse().toString());
                 throw convertException(e);
             }
         }
