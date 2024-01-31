@@ -284,7 +284,7 @@ public class EmoStartMojo extends AbstractEmoMojo {
     private void initializeRolesAndApiKeys() throws MojoFailureException {
         List<RoleParameter> roles = this.roles != null ? Arrays.asList(this.roles) : ImmutableList.<RoleParameter>of();
         List<ApiKeyParameter> apiKeys = this.apiKeys != null ? Arrays.asList(this.apiKeys) : ImmutableList.<ApiKeyParameter>of();
-
+        System.out.println("Apikeys ==>"+apiKeys);
         if (roles.isEmpty() && apiKeys.isEmpty()) {
             // Nothing to create
             return;
