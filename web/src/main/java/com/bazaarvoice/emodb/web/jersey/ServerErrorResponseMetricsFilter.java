@@ -2,11 +2,11 @@ package com.bazaarvoice.emodb.web.jersey;
 
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
-import com.sun.jersey.spi.container.ContainerRequest;
-import com.sun.jersey.spi.container.ContainerResponse;
-import com.sun.jersey.spi.container.ContainerResponseFilter;
-
+import javax.ws.rs.container.ContainerRequestContext;
+import javax.ws.rs.container.ContainerResponseContext;
+import javax.ws.rs.container.ContainerResponseFilter;
 import javax.ws.rs.core.Response;
+import java.io.IOException;
 
 /**
  * By default DropWizard includes a metric tracking all 5xx errors returned by the application:
@@ -33,9 +33,9 @@ public class ServerErrorResponseMetricsFilter implements ContainerResponseFilter
     }
 
     @Override
-    public ContainerResponse filter(ContainerRequest request, ContainerResponse response) {
-        if (response.getStatusType().getFamily() == Response.Status.Family.SERVER_ERROR) {
-            switch (response.getStatus()) {
+    public void filter(ContainerRequestContext requestContext, ContainerResponseContext responseContext) throws IOException {
+        if (responseContext.getStatusInfo().getFamily() == Response.Status.Family.SERVER_ERROR) {
+            switch (responseContext.getStatus()) {
                 case 500:
                     _meter500.mark();
                     break;
@@ -47,6 +47,5 @@ public class ServerErrorResponseMetricsFilter implements ContainerResponseFilter
                     break;
             }
         }
-        return response;
     }
 }

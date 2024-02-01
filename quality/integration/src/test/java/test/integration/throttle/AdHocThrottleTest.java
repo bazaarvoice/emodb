@@ -39,7 +39,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.sun.jersey.spi.container.ContainerRequest;
+import javax.ws.rs.container.ContainerRequestContext;
 import io.dropwizard.testing.junit.ResourceTestRule;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -147,9 +147,9 @@ public class AdHocThrottleTest extends ResourceTest {
         // Set up the regulator supplier provided to Jersey to defer an instance created specifically for this test.
         final AdHocConcurrentRequestRegulatorSupplier regulatorSupplier =
                 new AdHocConcurrentRequestRegulatorSupplier(_adHocThrottleManager, new MetricRegistry());
-        when(_deferringRegulatorSupplier.forRequest(any(ContainerRequest.class))).thenAnswer(
+        when(_deferringRegulatorSupplier.forRequest(any(ContainerRequestContext.class))).thenAnswer(
                 (Answer<ConcurrentRequestRegulator>) invocation -> {
-                    ContainerRequest request = (ContainerRequest) invocation.getArguments()[0];
+                    ContainerRequestContext request = (ContainerRequestContext) invocation.getArguments()[0];
                     return regulatorSupplier.forRequest(request);
                 });
     }

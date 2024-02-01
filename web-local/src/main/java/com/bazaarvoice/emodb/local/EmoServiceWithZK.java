@@ -58,6 +58,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import javax.ws.rs.client.Client;
+import io.dropwizard.client.JerseyClientBuilder;
 
 public class EmoServiceWithZK {
 
@@ -252,9 +254,14 @@ public class EmoServiceWithZK {
         }
 
         // Create a client for the local EmoDB service
+        final Client client = new JerseyClientBuilder(metricRegistry)
+                .using(Executors.newSingleThreadExecutor())
+                .using(objectMapper)
+                .build(cluster);
+
         UserAccessControl uac = ServicePoolBuilder.create(UserAccessControl.class)
                 .withHostDiscoverySource(new UserAccessControlFixedHostDiscoverySource("http://localhost:" + selfHostAndPort.getPort()))
-                .withServiceFactory(UserAccessControlClientFactory.forCluster(cluster, metricRegistry).usingCredentials(adminApiKey))
+                .withServiceFactory(UserAccessControlClientFactory.forClusterAndHttpClient(cluster, client).usingCredentials(adminApiKey))
                 .withMetricRegistry(metricRegistry)
                 .buildProxy(new ExponentialBackoffRetry(5, 50, 1000, TimeUnit.MILLISECONDS));
 
