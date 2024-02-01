@@ -3,7 +3,7 @@ package com.bazaarvoice.emodb.web.throttling;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.Maps;
-import com.sun.jersey.spi.container.ContainerRequest;
+import javax.ws.rs.container.ContainerRequestContext;
 
 import java.util.Optional;
 import java.util.concurrent.ConcurrentMap;
@@ -28,8 +28,8 @@ public class AdHocConcurrentRequestRegulatorSupplier implements ConcurrentReques
     }
 
     @Override
-    public ConcurrentRequestRegulator forRequest(ContainerRequest request) {
-        return forRequest(request.getMethod(), request.getPath());
+    public ConcurrentRequestRegulator forRequest(ContainerRequestContext request) {
+        return forRequest(request.getMethod(), request.getUriInfo().getPath());
     }
 
     public ConcurrentRequestRegulator forRequest(String method, String path) {

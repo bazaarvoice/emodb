@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.web.throttling;
 
-import com.sun.jersey.spi.container.ContainerRequest;
+import javax.ws.rs.container.ContainerRequestContext;
 
 import static java.util.Objects.requireNonNull;
 
@@ -16,7 +16,7 @@ public class InstanceConcurrentRequestRegulatorSupplier implements ConcurrentReq
     }
 
     @Override
-    public ConcurrentRequestRegulator forRequest(ContainerRequest request) {
+    public ConcurrentRequestRegulator forRequest(ContainerRequestContext request) {
         return _requestRegulator;
     }
 }
