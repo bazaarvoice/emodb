@@ -178,7 +178,8 @@ public class SecurityModule extends PrivateModule {
     @Singleton
     @ReplicationKey
     String provideReplicationKey(AuthorizationConfiguration config, ApiKeyEncryption encryption) {
-        return configurationKeyAsPlaintext(config.getReplicationApiKey(), encryption, "replication");
+//       return configurationKeyAsPlaintext(config.getReplicationApiKey(), encryption, "replication");
+        return config.getReplicationApiKey();
     }
 
     @Provides
@@ -193,7 +194,8 @@ public class SecurityModule extends PrivateModule {
     @Exposed
     @Named("AdminKey")
     String provideAdminKey(AuthorizationConfiguration config, ApiKeyEncryption encryption) {
-        return configurationKeyAsPlaintext(config.getAdminApiKey(), encryption, "admin");
+        //        return configurationKeyAsPlaintext(config.getAdminApiKey(), encryption, "admin");
+        return config.getAdminApiKey();
     }
 
     private String configurationKeyAsPlaintext(String key, ApiKeyEncryption encryption, String description) {
