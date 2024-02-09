@@ -122,7 +122,7 @@ auth:
   # The admin and replication API keys must be encrypted using the encrypt-configuration-api-key command
   # The unencrypted values are included below to make local testing easier.  It should go without saying that
   # IN A PRODUCTION ENVIRONMENT DO NOT INCLUDE THE UNENCRYPTED KEYS IN THIS FILE!
-  adminApiKey:       "zl+p3AU4/EgT8OtR0ZmLrkL70j0SklugAzd+xxYR1Dz/rioe5aXo4yay7sKi7PSKD59h7/HumH7442nGhlR2rw"  # local_admin
+  adminApiKey:       "local_admin"  # local_admin
   replicationApiKey: "iuOPUIfI0lyxRrNZ9j9Aa68m1yrALBbVMw8kdqb6FVhSwMgOXVsuUblLr9nL73D4xpMVEZZHZr50pCBy1gbjDg"  # local_replication
   compControlApiKey: "local_admin" # compaction-control
   anonymousRoles:
