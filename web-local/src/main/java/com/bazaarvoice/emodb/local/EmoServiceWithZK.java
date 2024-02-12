@@ -241,15 +241,15 @@ public class EmoServiceWithZK {
 
         Injector injector = Guice.createInjector(module);
         HostAndPort selfHostAndPort = injector.getInstance(Key.get(HostAndPort.class, SelfHostAndPort.class));
-        ApiKeyEncryption apiKeyEncryption = injector.getInstance(ApiKeyEncryption.class);
+ //       ApiKeyEncryption apiKeyEncryption = injector.getInstance(ApiKeyEncryption.class);
         String adminApiKey = emoConfig.getAuthorizationConfiguration().getAdminApiKey();
-        try {
-            adminApiKey = apiKeyEncryption.decrypt(adminApiKey);
-        } catch (Exception e) {
-            if (ApiKeyEncryption.isPotentiallyEncryptedApiKey(adminApiKey)) {
-                throw e;
-            }
-        }
+//        try {
+//            adminApiKey = apiKeyEncryption.decrypt(adminApiKey);
+//        } catch (Exception e) {
+//            if (ApiKeyEncryption.isPotentiallyEncryptedApiKey(adminApiKey)) {
+//                throw e;
+//            }
+//        }
 
         // Create a client for the local EmoDB service
         UserAccessControl uac = ServicePoolBuilder.create(UserAccessControl.class)

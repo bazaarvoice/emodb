@@ -346,7 +346,8 @@ public class EmoStartMojo extends AbstractEmoMojo {
     }
 
     private String getAdminApiKey(MinimalEmoConfiguration config) {
-        return new ApiKeyEncryption(config.cluster).decrypt(config.auth.adminApiKey);
+        //        return new ApiKeyEncryption(config.cluster).decrypt(config.auth.adminApiKey);
+        return config.auth.adminApiKey;
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
