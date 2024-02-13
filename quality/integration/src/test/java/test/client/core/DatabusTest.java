@@ -67,6 +67,12 @@ import static test.client.commons.utils.UserAccessControlUtils.createApiKey;
 import static test.client.commons.utils.UserAccessControlUtils.createRole;
 import static test.client.commons.utils.UserAccessControlUtils.padKey;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.dropwizard.client.JerseyClientBuilder;
+import io.dropwizard.client.JerseyClientConfiguration;
+import javax.ws.rs.client.Client;
+import java.util.concurrent.Executors;
+
 @Test(timeOut = 360000)
 @Guice(moduleFactory = TestModuleFactory.class)
 public class DatabusTest {
@@ -102,6 +108,9 @@ public class DatabusTest {
     @Inject
     @Named("runID")
     private String runID;
+
+    @Inject
+    private JerseyClientConfiguration clientConfiguration;
 
     @BeforeTest(alwaysRun = true)
     public void beforeTest() {
@@ -1035,12 +1044,17 @@ public class DatabusTest {
         return eventKeys;
     }
 
-    private static Databus createNewDatabusClient(String apiKey, String clusterName, String emodbHost) {
+    private Databus createNewDatabusClient(String apiKey, String clusterName, String emodbHost) {
         MetricRegistry metricRegistry = new MetricRegistry(); // This is usually a singleton passed
+        Client client = new JerseyClientBuilder(metricRegistry)
+                .using(this.clientConfiguration)
+                .using(Executors.newSingleThreadExecutor())
+                .using(new ObjectMapper())
+                .build("DatabusClient");
 
         return ServicePoolBuilder.create(Databus.class)
                 .withHostDiscoverySource(new DatabusFixedHostDiscoverySource(emodbHost))
-                .withServiceFactory(DatabusClientFactory.forCluster(clusterName, new MetricRegistry()).usingCredentials(apiKey))
+                .withServiceFactory(DatabusClientFactory.forClusterAndHttpClient(clusterName, client).usingCredentials(apiKey))
                 .withMetricRegistry(metricRegistry)
                 .buildProxy(new ExponentialBackoffRetry(5, 50, 1000, TimeUnit.MILLISECONDS));
     }

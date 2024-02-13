@@ -42,10 +42,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
-import com.sun.jersey.api.client.GenericType;
-import com.sun.jersey.spi.inject.SingletonTypeInjectableProvider;
 import io.dropwizard.testing.junit.ResourceTestRule;
 import org.apache.http.conn.ConnectTimeoutException;
+import org.glassfish.hk2.api.Factory;
+import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -57,11 +57,10 @@ import javax.servlet.AsyncContext;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.Context;
+import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.lang.reflect.Type;
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
@@ -77,7 +76,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -174,12 +172,12 @@ public class DatabusJerseyTest extends ResourceTest {
 
     @Test
     public void testListSubscriptions1() {
-        when(_local.listSubscriptions(isSubject(), nullable(String.class), eq(Long.MAX_VALUE))).thenReturn(Collections.emptyIterator());
+        when(_local.listSubscriptions(isSubject(), isNull(), eq(Long.MAX_VALUE))).thenReturn(Collections.emptyIterator());
 
         Iterator<Subscription> actual = databusClient().listSubscriptions(null, Long.MAX_VALUE);
 
         assertFalse(actual.hasNext());
-        verify(_local).listSubscriptions(isSubject(), nullable(String.class), eq(Long.MAX_VALUE));
+        verify(_local).listSubscriptions(isSubject(), isNull(), eq(Long.MAX_VALUE));
         verifyNoMoreInteractions(_local);
     }
 
@@ -455,8 +453,9 @@ public class DatabusJerseyTest extends ResourceTest {
 
             // Must make API call directly since only older databus clients don't automatically include tags
             // and the current databus client always does.
-            actual = _resourceTestRule.client().resource("/bus/1/queue-name/peek")
+            actual = _resourceTestRule.client().target("/bus/1/queue-name/peek")
                     .queryParam("limit", "123")
+                    .request()
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, APIKEY_DATABUS)
                     .get(new GenericType<List<Event>>() {});
@@ -507,9 +506,10 @@ public class DatabusJerseyTest extends ResourceTest {
 
             // Must make API call directly since only older databus clients don't automatically include tags
             // and the current databus client always does.
-            actual = _resourceTestRule.client().resource("/bus/1/queue-name/poll")
+            actual = _resourceTestRule.client().target("/bus/1/queue-name/poll")
                     .queryParam("limit", "123")
                     .queryParam("ttl", "15")
+                    .request()
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, APIKEY_DATABUS)
                     .get(new GenericType<List<Event>>() {});
@@ -834,7 +834,7 @@ public class DatabusJerseyTest extends ResourceTest {
 
         verify(_local).replayAsyncSince(isSubject(), eq("queue-name"), isNull());
         verifyNoMoreInteractions(_local);
-        assertEquals("replayId1", replayId);
+        assertEquals(replayId, "replayId1");
     }
 
     @Test
@@ -845,7 +845,7 @@ public class DatabusJerseyTest extends ResourceTest {
 
         verify(_local).replayAsyncSince(isSubject(), eq("queue-name"), eq(now));
         verifyNoMoreInteractions(_local);
-        assertEquals("replayId1", replayId);
+        assertEquals(replayId, "replayId1");
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -864,8 +864,8 @@ public class DatabusJerseyTest extends ResourceTest {
 
         verify(_local).getReplayStatus(isSubject(), eq("replayId1"));
         verifyNoMoreInteractions(_local);
-        assertEquals("queue-name", status.getSubscription());
-        assertEquals(ReplaySubscriptionStatus.Status.IN_PROGRESS, status.getStatus());
+        assertEquals(status.getSubscription(), "queue-name");
+        assertEquals(status.getStatus(), ReplaySubscriptionStatus.Status.IN_PROGRESS);
     }
 
     @Test
@@ -876,7 +876,7 @@ public class DatabusJerseyTest extends ResourceTest {
 
         verify(_local).moveAsync(isSubject(), eq("queue-src"), eq("queue-dest"));
         verifyNoMoreInteractions(_local);
-        assertEquals("moveId1", moveId);
+        assertEquals(moveId, "moveId1");
     }
 
     @Test
@@ -888,9 +888,9 @@ public class DatabusJerseyTest extends ResourceTest {
 
         verify(_local).getMoveStatus(isSubject(), eq("moveId1"));
         verifyNoMoreInteractions(_local);
-        assertEquals("queue-src", status.getFrom());
-        assertEquals("queue-dest", status.getTo());
-        assertEquals(MoveSubscriptionStatus.Status.IN_PROGRESS, status.getStatus());
+        assertEquals(status.getFrom(), "queue-src");
+        assertEquals(status.getTo(), "queue-dest");
+        assertEquals(status.getStatus(), MoveSubscriptionStatus.Status.IN_PROGRESS);
     }
 
     @Test
@@ -944,9 +944,27 @@ public class DatabusJerseyTest extends ResourceTest {
         assertEquals(actual.getEventTtl(), expected.getEventTtl());
     }
 
-    public static class ContextInjectableProvider<T> extends SingletonTypeInjectableProvider<Context, T> {
-        public ContextInjectableProvider(Type type, T instance) {
-            super(type, instance);
+    public static class InjectableContextBinder<T> extends AbstractBinder {
+        private final T _instance;
+        public InjectableContextBinder(T instance) {
+            _instance = instance;
+        }
+        @Override
+        protected void configure() {
+            bindFactory(new InjectableContextFactory<T>(_instance));
+        }
+        private static class InjectableContextFactory<T> implements Factory<T> {
+            private final T _instance1;
+            InjectableContextFactory(T instance) {
+                _instance1 = instance;
+            }
+            @Override
+            public T provide() {
+                return _instance1;
+            }
+            @Override
+            public void dispose(T instance) {
+            }
         }
     }
 }

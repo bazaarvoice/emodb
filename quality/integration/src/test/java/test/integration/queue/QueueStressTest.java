@@ -20,6 +20,8 @@ import io.dropwizard.logging.LoggingFactory;
 import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.dropwizard.client.JerseyClientBuilder;
 
 import javax.validation.Validation;
 import java.io.File;
@@ -32,6 +34,8 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import javax.ws.rs.client.Client;
+import java.util.concurrent.ExecutorService;
 
 import static java.lang.String.format;
 
@@ -159,8 +163,12 @@ public class QueueStressTest {
         CuratorFramework curator = configuration.getZooKeeperConfiguration().newCurator();
         curator.start();
 
-        QueueClientFactory queueFactory = QueueClientFactory.forClusterAndHttpConfiguration(
-                configuration.getCluster(), configuration.getHttpClientConfiguration(), metricRegistry);
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        Client client = new JerseyClientBuilder(metricRegistry).using(configuration.getHttpClientConfiguration()).using(executorService, new ObjectMapper()).build("dw");
+
+        QueueClientFactory queueFactory = QueueClientFactory.forClusterAndHttpClient(
+                configuration.getCluster(), client);
+
         AuthQueueService authQueueService = ServicePoolBuilder.create(AuthQueueService.class)
                 .withServiceFactory(queueFactory)
                 .withHostDiscovery(new ZooKeeperHostDiscovery(curator, queueFactory.getServiceName(), metricRegistry))

@@ -105,6 +105,8 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import org.glassfish.jersey.client.JerseyClientBuilder;
+import javax.ws.rs.client.Client;
 
 public class CasBlobStoreTest {
 
@@ -192,6 +194,8 @@ public class CasBlobStoreTest {
                 bind(CompactionControlSource.class).annotatedWith(LocalCompactionControl.class).toInstance(mock(CompactionControlSource.class));
 
                 bind(Environment.class).toInstance(mock(Environment.class));
+
+                bind(Client.class).toInstance(JerseyClientBuilder.createClient());
 
                 EmoServiceMode serviceMode = EmoServiceMode.STANDARD_ALL;
                 install(new SelfHostAndPortModule());

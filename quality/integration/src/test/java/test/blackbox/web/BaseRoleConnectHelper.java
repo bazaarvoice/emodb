@@ -27,7 +27,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.io.Closer;
 import com.google.common.net.HttpHeaders;
-import com.sun.jersey.api.client.Client;
+
 import io.dropwizard.client.JerseyClientBuilder;
 import io.dropwizard.configuration.ConfigurationFactory;
 import io.dropwizard.jetty.ConnectorFactory;
@@ -52,6 +52,13 @@ import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+
+
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 /**
  * Blackbox tests run against actual EmoDB / C* processes started by mvn using emodb-sdk.
@@ -98,9 +105,8 @@ public abstract class BaseRoleConnectHelper implements Closeable {
 
     protected AuthBlobStore getBlobStoreViaOstrich() throws Exception {
 
-        BlobStoreClientFactory clientFactory =
-                BlobStoreClientFactory.forClusterAndHttpConfiguration(
-                        _config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+        BlobStoreClientFactory.forClusterAndHttpClient(
+                _config.getCluster(), getClient());
 
         CuratorFramework curator = _config.getZooKeeperConfiguration().newCurator();
         curator.start();
@@ -118,7 +124,7 @@ public abstract class BaseRoleConnectHelper implements Closeable {
     protected AuthBlobStore getBlobStoreViaFixedHost() throws JsonProcessingException {
 
         BlobStoreClientFactory clientFactory =
-                BlobStoreClientFactory.forClusterAndHttpConfiguration(_config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                BlobStoreClientFactory.forClusterAndHttpClient(_config.getCluster(), getClient());
 
         return ServicePoolBuilder.create(AuthBlobStore.class)
                 .withHostDiscoverySource(new BlobStoreFixedHostDiscoverySource(getServiceBaseURI()))
@@ -132,8 +138,8 @@ public abstract class BaseRoleConnectHelper implements Closeable {
     protected AuthDataStore getDataStoreViaOstrich() throws Exception {
 
         DataStoreClientFactory clientFactory =
-                DataStoreClientFactory.forClusterAndHttpConfiguration(
-                        _config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                DataStoreClientFactory.forClusterAndHttpClient(
+                        _config.getCluster(), getClient());
 
         CuratorFramework curator = _config.getZooKeeperConfiguration().newCurator();
         curator.start();
@@ -151,8 +157,8 @@ public abstract class BaseRoleConnectHelper implements Closeable {
     protected AuthDataStore getDataStoreViaFixedHost() throws Exception {
 
         DataStoreClientFactory clientFactory =
-                DataStoreClientFactory.forClusterAndHttpConfiguration(
-                        _config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                DataStoreClientFactory.forClusterAndHttpClient(
+                        _config.getCluster(), getClient());
 
         return ServicePoolBuilder.create(AuthDataStore.class)
                 .withHostDiscoverySource(new DataStoreFixedHostDiscoverySource(getServiceBaseURI()))
@@ -166,8 +172,8 @@ public abstract class BaseRoleConnectHelper implements Closeable {
     protected AuthDatabus getDatabusViaOstrich() throws Exception {
 
         DatabusClientFactory clientFactory =
-                DatabusClientFactory.forClusterAndHttpConfiguration(
-                        _config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                DatabusClientFactory.forClusterAndHttpClient(
+                        _config.getCluster(), getClient());
 
         CuratorFramework curator = _config.getZooKeeperConfiguration().newCurator();
         curator.start();
@@ -186,7 +192,7 @@ public abstract class BaseRoleConnectHelper implements Closeable {
     protected AuthDatabus getDatabusViaFixedHost() throws JsonProcessingException {
 
         DatabusClientFactory clientFactory =
-                DatabusClientFactory.forClusterAndHttpConfiguration(_config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                DatabusClientFactory.forClusterAndHttpClient(_config.getCluster(), getClient());
 
         return ServicePoolBuilder.create(AuthDatabus.class)
                 .withHostDiscoverySource(new DatabusFixedHostDiscoverySource(getServiceBaseURI()))
@@ -200,8 +206,8 @@ public abstract class BaseRoleConnectHelper implements Closeable {
     protected AuthQueueService getQueueServiceViaOstrich() throws Exception {
 
         QueueClientFactory clientFactory =
-                QueueClientFactory.forClusterAndHttpConfiguration(
-                        _config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                QueueClientFactory.forClusterAndHttpClient(
+                        _config.getCluster(), getClient());
 
         CuratorFramework curator = _config.getZooKeeperConfiguration().newCurator();
         curator.start();
@@ -219,7 +225,7 @@ public abstract class BaseRoleConnectHelper implements Closeable {
     protected AuthQueueService getQueueServiceViaFixedHost() throws JsonProcessingException {
 
         QueueClientFactory clientFactory =
-                QueueClientFactory.forClusterAndHttpConfiguration(_config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                QueueClientFactory.forClusterAndHttpClient(_config.getCluster(), getClient());
 
         return ServicePoolBuilder.create(AuthQueueService.class)
                 .withHostDiscoverySource(new QueueFixedHostDiscoverySource(getServiceBaseURI()))
@@ -233,8 +239,8 @@ public abstract class BaseRoleConnectHelper implements Closeable {
     protected AuthDedupQueueService getDedupQueueServiceViaOstrich() throws Exception {
 
         DedupQueueClientFactory clientFactory =
-                DedupQueueClientFactory.forClusterAndHttpConfiguration(
-                        _config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                DedupQueueClientFactory.forClusterAndHttpClient(
+                        _config.getCluster(), getClient());
 
         CuratorFramework curator = _config.getZooKeeperConfiguration().newCurator();
         curator.start();
@@ -281,10 +287,14 @@ public abstract class BaseRoleConnectHelper implements Closeable {
         System.out.println(uri.toASCIIString());
 
         Client client = getClient();
-        client.resource(uri)
-                .type(MediaType.APPLICATION_JSON_TYPE)
+        Response response = client.target(uri)
+                .request()
                 .header(HttpHeaders.AUTHORIZATION, null)
-                .post();
+                .post(Entity.json(null));
+
+        if (!response.getStatusInfo().getFamily().equals(Response.Status.Family.SUCCESSFUL)) {
+            throw new WebApplicationException(response);
+        }
     }
 
     protected List<?> httpGetServicePortAsList(Map<String, Object> params, String... segments) throws Exception {
@@ -299,7 +309,8 @@ public abstract class BaseRoleConnectHelper implements Closeable {
         URI uri = builder.build();
         System.out.println(uri.toASCIIString());
 
-        return client.resource(uri)
+        return client.target(uri)
+                .request()
                 .accept(MediaType.APPLICATION_JSON_TYPE)
                 .get(List.class);
     }

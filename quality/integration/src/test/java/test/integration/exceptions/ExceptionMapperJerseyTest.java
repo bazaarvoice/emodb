@@ -20,7 +20,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.UncheckedExecutionException;
-import com.sun.jersey.api.client.ClientResponse;
+import javax.ws.rs.core.Response;
 import io.dropwizard.testing.junit.ResourceTestRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -49,79 +49,79 @@ public class ExceptionMapperJerseyTest extends ResourceTest {
     @Test
     public void testIllegalArgumentException() {
         String actual = callException("IllegalArgumentException", 400, IllegalArgumentException.class, String.class);
-        assertEquals("illegal-argument-message", actual);
+        assertEquals(actual, "illegal-argument-message");
     }
 
     @Test
     public void testBlobNotFoundException() {
         BlobNotFoundException actual = callException("BlobNotFoundException", 404, BlobNotFoundException.class, BlobNotFoundException.class);
-        assertEquals("blob-message", actual.getMessage());
-        assertEquals("blob-id", actual.getBlobId());
+        assertEquals(actual.getMessage(), "blob-message");
+        assertEquals(actual.getBlobId(), "blob-id");
     }
 
     @Test
     public void testFacadeExistsException() {
         FacadeExistsException actual = callException("FacadeExistsException", 409, FacadeExistsException.class, FacadeExistsException.class);
-        assertEquals("facade-message", actual.getMessage());
-        assertEquals("facade-table", actual.getTable());
-        assertEquals("facade-placement", actual.getPlacement());
+        assertEquals(actual.getMessage(), "facade-message");
+        assertEquals(actual.getTable(), "facade-table");
+        assertEquals(actual.getPlacement(), "facade-placement");
     }
 
     @Test
     public void testRangeNotSatisfiableException() {
         RangeNotSatisfiableException actual = callException("RangeNotSatisfiableException", 416, RangeNotSatisfiableException.class, RangeNotSatisfiableException.class);
-        assertEquals("range-message", actual.getMessage());
-        assertEquals(1000, actual.getOffset());
-        assertEquals(100, actual.getLength());
+        assertEquals(actual.getMessage(), "range-message");
+        assertEquals(actual.getOffset(), 1000);
+        assertEquals(actual.getLength(), 100);
     }
 
     @Test
     public void testReadOnlyQueueException() {
         String actual = callException("ReadOnlyQueueException", 503, ReadOnlyQueueException.class, String.class);
-        assertEquals("Server does not manage the specified resource at this time.", actual);
+        assertEquals(actual, "Server does not manage the specified resource at this time.");
     }
 
     @Test
     public void testTableExistsException() {
         TableExistsException actual = callException("TableExistsException", 409, TableExistsException.class, TableExistsException.class);
-        assertEquals("table-message", actual.getMessage());
-        assertEquals("table-name", actual.getTable());
+        assertEquals(actual.getMessage(), "table-message");
+        assertEquals(actual.getTable(), "table-name");
     }
 
     @Test
     public void testUnknownFacadeException() {
         UnknownFacadeException actual = callException("UnknownFacadeException", 404, UnknownFacadeException.class, UnknownFacadeException.class);
-        assertEquals("facade-message", actual.getMessage());
-        assertEquals("facade-name", actual.getFacade());
+        assertEquals(actual.getMessage(), "facade-message");
+        assertEquals(actual.getFacade(), "facade-name");
     }
 
     @Test
     public void testUnknownSubscriptionException() {
         UnknownSubscriptionException actual = callException("UnknownSubscriptionException", 404, UnknownSubscriptionException.class, UnknownSubscriptionException.class);
-        assertEquals("subscription-message", actual.getMessage());
-        assertEquals("subscription-name", actual.getSubscription());
+        assertEquals(actual.getMessage(), "subscription-message");
+        assertEquals(actual.getSubscription(), "subscription-name");
     }
 
     @Test
     public void testUnknownTableException() {
         UnknownTableException actual = callException("UnknownTableException", 404, UnknownTableException.class, UnknownTableException.class);
-        assertEquals("table-message", actual.getMessage());
-        assertEquals("table-name", actual.getTable());
+        assertEquals(actual.getMessage(), "table-message");
+        assertEquals(actual.getTable(), "table-name");
     }
 
     @Test
     public void testUnknownPlacementException() {
         UnknownPlacementException actual = callException("UnknownPlacementException", 404, UnknownPlacementException.class, UnknownPlacementException.class);
         // The message gets rewritten by the exception mapper to the following
-        assertEquals("Table table-name is stored in a locally inaccessible placement: placement-name", actual.getMessage());
-        assertEquals("placement-name", actual.getPlacement());
-        assertEquals("table-name", actual.getTable());
+        assertEquals(actual.getMessage(), "Table table-name is stored in a locally inaccessible placement: placement-name");
+        assertEquals(actual.getPlacement(), "placement-name");
+        assertEquals(actual.getTable(), "table-name");
     }
 
     @Test
     public void testSecurityException() {
         String actual = callException("SecurityException", 403, SecurityException.class, String.class);
-        assertEquals("security-message", actual);
+        assertEquals(actual, "security-message");
     }
 
     @Test
@@ -129,7 +129,7 @@ public class ExceptionMapperJerseyTest extends ResourceTest {
         com.bazaarvoice.emodb.queue.api.UnknownMoveException actual = callException(
                 "UnknownQueueMoveException", 404, com.bazaarvoice.emodb.queue.api.UnknownMoveException.class,
                 com.bazaarvoice.emodb.queue.api.UnknownMoveException.class);
-        assertEquals("queue-name", actual.getId());
+        assertEquals(actual.getId(), "queue-name");
     }
 
     @Test
@@ -137,13 +137,13 @@ public class ExceptionMapperJerseyTest extends ResourceTest {
         com.bazaarvoice.emodb.databus.api.UnknownMoveException actual = callException(
                 "UnknownDatabusMoveException", 404, com.bazaarvoice.emodb.databus.api.UnknownMoveException.class,
                 com.bazaarvoice.emodb.databus.api.UnknownMoveException.class);
-        assertEquals("subscription-name", actual.getId());
+        assertEquals(actual.getId(), "subscription-name");
     }
 
     @Test
     public void testUnknownDatabusReplayException() {
         UnknownReplayException actual = callException("UnknownDatabusReplayException", 404, UnknownReplayException.class, UnknownReplayException.class);
-        assertEquals("subscription-name", actual.getId());
+        assertEquals(actual.getId(), "subscription-name");
     }
 
     @Test
@@ -155,44 +155,45 @@ public class ExceptionMapperJerseyTest extends ResourceTest {
     @Test
     public void testStashNotAvailableException() {
         StashNotAvailableException actual = callException("StashNotAvailableException", 404, StashNotAvailableException.class, StashNotAvailableException.class);
-        assertEquals("stash-message", actual.getMessage());
+        assertEquals(actual.getMessage(), "stash-message");
     }
 
     @Test
     public void testDeltaSizeLimitException() {
         DeltaSizeLimitException actual = callException("DeltaSizeLimitException", 400, DeltaSizeLimitException.class, DeltaSizeLimitException.class);
-        assertEquals("size-message", actual.getMessage());
-        assertEquals(1000, actual.getSize());
+        assertEquals(actual.getMessage(), "size-message");
+        assertEquals(actual.getSize(), 1000);
     }
 
     @Test
     public void testAuditSizeLimitException() {
         AuditSizeLimitException actual = callException("AuditSizeLimitException", 400, AuditSizeLimitException.class, AuditSizeLimitException.class);
-        assertEquals("size-message", actual.getMessage());
-        assertEquals(1000, actual.getSize());
+        assertEquals(actual.getMessage(), "size-message");
+        assertEquals(actual.getSize(), 1000);
     }
 
     @Test
     public void testUncheckedExecutionException() {
         String actual = callException("UncheckedExecutionException", 403, SecurityException.class, String.class);
-        assertEquals("unchecked-source-message", actual);
+        assertEquals(actual, "unchecked-source-message");
     }
 
     private <T> T callException(String path, int expectedStatus, Class<? extends Exception> expectedException, Class<T> entityType) {
-        ClientResponse response = _resourceTestRule.client()
-                .resource("/exception/" + path)
-                .get(ClientResponse.class);
+        Response response = _resourceTestRule.client()
+                .target("/exception/" + path)
+                .request()
+                .get();
 
         assertEquals(expectedStatus, response.getStatus());
         assertEquals(expectedException.getName(), response.getHeaders().getFirst("X-BV-Exception"));
 
         if (String.class.equals(entityType)) {
-            assertEquals(MediaType.TEXT_PLAIN_TYPE, response.getType());
+            assertEquals(MediaType.TEXT_PLAIN_TYPE, response.getMediaType());
         } else {
-            assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+            assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getMediaType());
         }
 
-        return response.getEntity(entityType);
+        return response.readEntity(entityType);
 
     }
 
