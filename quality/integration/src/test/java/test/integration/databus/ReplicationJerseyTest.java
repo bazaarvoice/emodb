@@ -10,12 +10,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
-import com.sun.jersey.api.client.UniformInterfaceException;
 import io.dropwizard.testing.junit.ResourceTestRule;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 import java.net.URI;
 import java.util.List;
@@ -84,7 +84,7 @@ public class ReplicationJerseyTest extends ResourceTest {
         try {
             replicationClient(APIKEY_UNAUTHORIZED).delete("channel", ids);
             fail();
-        } catch (UniformInterfaceException e) {
+        } catch (WebApplicationException e) {
             if (e.getResponse().getStatus() != Response.Status.FORBIDDEN.getStatusCode()) {
                 throw e;
             }
@@ -103,7 +103,7 @@ public class ReplicationJerseyTest extends ResourceTest {
         try {
             replicationClient("completely-unknown-key").delete("channel", ids);
             fail();
-        } catch (UniformInterfaceException e) {
+        } catch (WebApplicationException e) {
             if (e.getResponse().getStatus() != Response.Status.FORBIDDEN.getStatusCode()) {
                 throw e;
             }

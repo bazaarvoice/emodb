@@ -32,20 +32,13 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
-import com.sun.jersey.api.client.filter.HTTPBasicAuthFilter;
-import com.sun.jersey.client.apache4.ApacheHttpClient4;
-import com.sun.jersey.client.apache4.ApacheHttpClient4Handler;
-import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
-import com.sun.jersey.client.apache4.config.DefaultApacheHttpClient4Config;
-import io.dropwizard.client.HttpClientBuilder;
-import io.dropwizard.client.HttpClientConfiguration;
+
 import io.dropwizard.util.Duration;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
-import org.apache.http.client.HttpClient;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,6 +50,12 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.requireNonNull;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.dropwizard.client.JerseyClientBuilder;
+import io.dropwizard.client.JerseyClientConfiguration;
+import javax.ws.rs.client.Client;
+import java.util.concurrent.Executors;
 
 public class BaseTestsModule extends AbstractModule {
     private static final Logger LOGGER = LoggerFactory.getLogger(BaseTestsModule.class);
@@ -100,41 +99,47 @@ public class BaseTestsModule extends AbstractModule {
 
     @Provides
     @Singleton
-    private HttpClientConfiguration createHttpClientConfiguration(@Named("clientHttpTimeout") String clientHttpTimeout,
+    private  JerseyClientConfiguration createClientConfiguration(@Named("clientHttpTimeout") String clientHttpTimeout,
                                                                   @Named("clientHttpKeepAlive") String clientHttpKeepAlive) {
-        HttpClientConfiguration httpClientConfiguration = new HttpClientConfiguration();
+        JerseyClientConfiguration httpClientConfiguration = new JerseyClientConfiguration();
         LOGGER.debug("Setting httpClientConfiguration timeout to {} seconds", clientHttpTimeout);
         httpClientConfiguration.setConnectionTimeout(Duration.seconds(10));
-        httpClientConfiguration.setTimeout(Duration.seconds(Integer.parseInt(clientHttpTimeout)));
+        httpClientConfiguration.setTimeout(Duration.seconds(Integer.valueOf(clientHttpTimeout)));
         LOGGER.debug("Setting httpClientConfiguration keepAlive to {} seconds", clientHttpKeepAlive);
-        httpClientConfiguration.setKeepAlive(Duration.seconds(Integer.parseInt(clientHttpKeepAlive)));
+        httpClientConfiguration.setKeepAlive(Duration.seconds(Integer.valueOf(clientHttpKeepAlive)));
+        httpClientConfiguration.setGzipEnabledForRequests(false);
         return httpClientConfiguration;
     }
 
     @Provides
     @Singleton
-    private ApacheHttpClient4 createA4Client(HttpClientConfiguration httpClientConfiguration) {
-        HttpClient httpClient = new HttpClientBuilder(new MetricRegistry()).using(httpClientConfiguration).build("Gatekeeper");
-        ApacheHttpClient4Handler handler = new ApacheHttpClient4Handler(httpClient, null, true);
-        ApacheHttpClient4Config config = new DefaultApacheHttpClient4Config();
+    private Client createClient(JerseyClientConfiguration httpClientConfiguration, CredentialsProvider credentialsProvider) {
+        return new JerseyClientBuilder(new MetricRegistry())
+                .using(httpClientConfiguration)
+                .using(Executors.newSingleThreadExecutor())
+                .using(new ObjectMapper())
+                .using(credentialsProvider)
+                .build("Gatekeeper");
+    }
+
+    @Provides
+    @Singleton
+    private CredentialsProvider getCredentialsProvider() {
         CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
         credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials("drop", "admin"));
-        config.getProperties().put(ApacheHttpClient4Config.PROPERTY_CREDENTIALS_PROVIDER, credentialsProvider);
-        ApacheHttpClient4 a4Client = new ApacheHttpClient4(handler, config);
-        a4Client.addFilter(new HTTPBasicAuthFilter("drop", "admin"));
-        return a4Client;
+        return credentialsProvider;
     }
 
     @Provides
     @Singleton
     @Named("emodbHost")
-    private String getEmodbHost(@Named("clusterName") String clusterName, HttpClientConfiguration httpClientConfiguration,
+    private String getEmodbHost(@Named("clusterName") String clusterName, Client client,
                                   @Named("curator") CuratorFramework curator) {
         requireNonNull(clusterName);
-        requireNonNull(httpClientConfiguration);
+        requireNonNull(client);
         requireNonNull(curator);
 
-        DataStoreClientFactory factory = DataStoreClientFactory.forClusterAndHttpConfiguration(clusterName, httpClientConfiguration, new MetricRegistry());
+        DataStoreClientFactory factory = DataStoreClientFactory.forClusterAndHttpClient(clusterName, client);
         Iterator<ServiceEndPoint> serviceEndPoints = new ZooKeeperHostDiscovery(curator, factory.getServiceName(), new MetricRegistry()).getHosts().iterator();
         String emodbHost = "http://" + serviceEndPoints.next().getId();
         LOGGER.info("emodbHost: " + emodbHost);
@@ -156,9 +161,8 @@ public class BaseTestsModule extends AbstractModule {
 
     @Provides
     private AuthDataStore createAuthDataStore(@Named("curator") CuratorFramework curator,
-                                                HttpClientConfiguration httpClientConfiguration, @Named("clusterName") String clusterName) {
-        ServiceFactory<AuthDataStore> factory = DataStoreClientFactory
-                .forClusterAndHttpConfiguration(clusterName, httpClientConfiguration, new MetricRegistry());
+                                              Client client, @Named("clusterName") String clusterName) {
+        ServiceFactory<AuthDataStore> factory = DataStoreClientFactory.forClusterAndHttpClient(clusterName, client);
         return createService(AuthDataStore.class, factory, curator);
     }
 
@@ -176,9 +180,9 @@ public class BaseTestsModule extends AbstractModule {
     @Provides
     @ApiKeyTestDataStore
     private DataStore createApiDataStore(@Named("apiKey") String apiKey, @Named("clusterName") String clusterName,
-                                           @Named("curator") CuratorFramework curator, ApacheHttpClient4 a4Client) {
+                                           @Named("curator") CuratorFramework curator, Client client) {
         ServiceFactory<DataStore> factory = DataStoreClientFactory
-                .forClusterAndHttpClient(clusterName, a4Client)
+                .forClusterAndHttpClient(clusterName, client)
                 .usingCredentials(apiKey);
         return createService(DataStore.class, factory, curator);
     }
@@ -188,10 +192,8 @@ public class BaseTestsModule extends AbstractModule {
      */
 
     @Provides
-    private AuthDatabus createAuthDatabus(@Named("curator") CuratorFramework curator,
-                                            HttpClientConfiguration httpClientConfiguration, @Named("clusterName") String clusterName) {
-        ServiceFactory<AuthDatabus> factory = DatabusClientFactory
-                .forClusterAndHttpConfiguration(clusterName, httpClientConfiguration, new MetricRegistry());
+    private AuthDatabus createAuthDatabus(@Named("curator") CuratorFramework curator, Client client, @Named("clusterName") String clusterName) {
+        ServiceFactory<AuthDatabus> factory = DatabusClientFactory.forClusterAndHttpClient(clusterName, client);
         return createService(AuthDatabus.class, factory, curator);
     }
 
@@ -213,10 +215,9 @@ public class BaseTestsModule extends AbstractModule {
 
     @Provides
     private AuthUserAccessControl creteAuthUserAccessControl(@Named("curator") CuratorFramework curator, @Named("clusterName") String clusterName,
-                                                               HttpClientConfiguration httpClientConfiguration) {
+                                                             Client client) {
 
-        ServiceFactory<AuthUserAccessControl> factory = UserAccessControlClientFactory
-                .forClusterAndHttpConfiguration(clusterName, httpClientConfiguration, new MetricRegistry());
+        ServiceFactory<AuthUserAccessControl> factory = UserAccessControlClientFactory.forClusterAndHttpClient(clusterName, client);
         return createService(AuthUserAccessControl.class, factory, curator);
     }
 
@@ -239,9 +240,9 @@ public class BaseTestsModule extends AbstractModule {
     @Singleton
     private QueueService createQueueService(@Named("clusterName") String clusterName, @Named("curator") CuratorFramework curator,
                                               @Named("apiKey") String apiKey,
-                                              HttpClientConfiguration httpClientConfiguration) {
+                                            Client client) {
         ServiceFactory<QueueService> factory = QueueClientFactory
-                .forClusterAndHttpConfiguration(clusterName, httpClientConfiguration, new MetricRegistry())
+                .forClusterAndHttpClient(clusterName, client)
                 .usingCredentials(apiKey);
         return createService(QueueService.class, factory, curator);
     }
@@ -252,9 +253,9 @@ public class BaseTestsModule extends AbstractModule {
     @Provides
     @Singleton
     private DedupQueueService createDedupQueueService(@Named("clusterName") String clusterName, @Named("curator") CuratorFramework curator,
-                                                        @Named("apiKey") String apiKey, HttpClientConfiguration httpClientConfiguration) {
+                                                        @Named("apiKey") String apiKey,  Client client) {
         ServiceFactory<DedupQueueService> factory = DedupQueueClientFactory
-                .forClusterAndHttpConfiguration(clusterName, httpClientConfiguration, new MetricRegistry())
+                .forClusterAndHttpClient(clusterName, client)
                 .usingCredentials(apiKey);
         return createService(DedupQueueService.class, factory, curator);
     }
@@ -264,10 +265,8 @@ public class BaseTestsModule extends AbstractModule {
      */
 
     @Provides
-    private AuthBlobStore createAuthBlobStore(@Named("curator") CuratorFramework curator,
-                                                HttpClientConfiguration httpClientConfiguration, @Named("clusterName") String clusterName) {
-        ServiceFactory<AuthBlobStore> factory = BlobStoreClientFactory
-                .forClusterAndHttpConfiguration(clusterName, httpClientConfiguration, new MetricRegistry());
+    protected AuthBlobStore createAuthBlobStore(@Named("curator") CuratorFramework curator, Client client, @Named("clusterName") String clusterName) {
+        ServiceFactory<AuthBlobStore> factory = BlobStoreClientFactory.forClusterAndHttpClient(clusterName, client);
         return createService(AuthBlobStore.class, factory, curator);
     }
 

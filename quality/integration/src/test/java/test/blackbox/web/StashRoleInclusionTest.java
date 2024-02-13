@@ -22,7 +22,7 @@ import static org.testng.Assert.assertNull;
 /**
  * Verifies access to SOA endpoints, REST resources and Tasks included with SCANNER.
  */
-public class StashRoleInclusionTest extends BaseRoleRestHelper {
+public class    StashRoleInclusionTest extends BaseRoleRestHelper {
 
     AuthDataStore _dataStore;
 

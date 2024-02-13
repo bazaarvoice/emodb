@@ -66,6 +66,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
+import org.glassfish.jersey.client.JerseyClientBuilder;
 import org.mockito.ArgumentCaptor;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -83,6 +84,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
+import javax.ws.rs.client.Client;
 
 public class CasDatabusTest {
     private SimpleLifeCycleRegistry _lifeCycle;
@@ -176,6 +178,8 @@ public class CasDatabusTest {
 
                 bind(String.class).annotatedWith(CompControlApiKey.class).toInstance("CompControlApiKey");
                 bind(CompactionControlSource.class).annotatedWith(LocalCompactionControl.class).toInstance(mock(CompactionControlSource.class));
+
+                bind(Client.class).toInstance(JerseyClientBuilder.createClient());
 
                 bind(Environment.class).toInstance(new Environment("emodb", Jackson.newObjectMapper(),
                         Validation.buildDefaultValidatorFactory().getValidator(),
