@@ -54,9 +54,15 @@ Minimal Java client without ZooKeeper or Dropwizard:
 String emodbHost = "localhost:8080";  // Adjust to point to the EmoDB server.
 String apiKey = "xyz";  // Use the API key provided by EmoDB
 MetricRegistry metricRegistry = new MetricRegistry(); // This is usually a singleton passed
+
+Client jerseyClient = new JerseyClientBuilder(metricRegistry)
+        .using(Executors.newSingleThreadExecutor())
+        .using(Jackson.newObjectMapper())
+        .build("DatabusClient");
+        
 Databus databus = ServicePoolBuilder.create(Databus.class)
                 .withHostDiscoverySource(new DatabusFixedHostDiscoverySource(emodbHost))
-                .withServiceFactory(DatabusClientFactory.forCluster("local_default", metricRegistry).usingCredentials(apiKey))
+                .withServiceFactory(DatabusClientFactory.forClusterAndHttpClient(clusterName, jerseyClient).usingCredentials(apiKey))
                 .withMetricRegistry(metricRegistry)
                 .buildProxy(new ExponentialBackoffRetry(5, 50, 1000, TimeUnit.MILLISECONDS));
 
