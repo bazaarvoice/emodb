@@ -306,9 +306,6 @@ public class DatabusClient implements Databus, Closeable {
                     .queryParam("partitioned", _partitionSafe)
                     .build();
             _log.debug("Uri for acknowledge call:{} ", uri.toString());
-
-            _log.info("entering point");
-            _log.info("event keys {}",eventKeys);
             Failsafe.with(_retryPolicy)
                     .run(() -> _client.resource(uri)
                             .type(MediaType.APPLICATION_JSON_TYPE)
@@ -318,6 +315,7 @@ public class DatabusClient implements Databus, Closeable {
             throw new RuntimeException(e);
         } catch (Exception e) {
             _log.error("error occured from acknowledge ",e);
+            throw new RuntimeException(e);
         }
     }
 
