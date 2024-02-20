@@ -93,7 +93,7 @@ public class BlobStoreClient implements AuthBlobStore {
      * Delay after which streaming connections are automatically closed if the caller doesn't begin reading the stream.
      * The caller can still read the contents after this time elapses but will incur a new round-trip request/response.
      */
-    private static final Duration BLOB_CONNECTION_CLOSED_TIMEOUT = Duration.ofSeconds(2);
+    private static final Duration BLOB_CONNECTION_CLOSED_TIMEOUT = Duration.ofSeconds(6);
 
     private final EmoClient _client;
     private final UriBuilder _blobStore;
