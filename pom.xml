@@ -18,7 +18,7 @@
         <connection>scm:git:git@github.com:bazaarvoice/emodb.git</connection>
         <developerConnection>scm:git:git@github.com:bazaarvoice/emodb.git</developerConnection>
         <url>scm:git:git@github.com:bazaarvoice/emodb.git</url>
-        <tag>emodb-6.5.65</tag>
+        <tag>emodb-6.5.66</tag>
     </scm>
 
     <modules>
