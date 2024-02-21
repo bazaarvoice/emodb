@@ -909,6 +909,7 @@
                             <ignoredUnusedDeclaredDependencies>
                                 <unusedDeclaredDependency>com.fasterxml.jackson.datatype:jackson-datatype-joda</unusedDeclaredDependency>
                                 <unusedDeclaredDependency>io.netty:netty-all</unusedDeclaredDependency>
+                                <unusedDeclaredDependency>org.eclipse.jetty:jetty-server</unusedDeclaredDependency>
                             </ignoredUnusedDeclaredDependencies>
                             <ignoredDependencies>
                                 <!-- TODO migrate to jakarta.xml.bind -->
