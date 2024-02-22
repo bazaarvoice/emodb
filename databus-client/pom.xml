@@ -39,13 +39,8 @@
         <dependency>
             <groupId>com.bazaarvoice.ostrich</groupId>
             <artifactId>ostrich-dropwizard</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.eclipse.jetty</groupId>
-                    <artifactId>jetty-server</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
+
         <!-- 3rd-party dependencies -->
         <dependency>
             <groupId>com.codahale.metrics</groupId>
