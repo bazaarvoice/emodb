@@ -340,14 +340,20 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
      */
     private Iterator<Column<ByteBuffer>> readManifestForChannel(final String channel, final boolean weak) {
         final ByteBuffer oldestSlab = weak ? _oldestSlab.getIfPresent(channel) : null;
-        final ConsistencyLevel consistency;
+        ConsistencyLevel consistency = ConsistencyLevel.CL_LOCAL_ONE ;//CL_LOCAL_QUORUM;;
 
         RangeBuilder range = new RangeBuilder().setLimit(50);
         if (oldestSlab != null) {
             range.setStart(oldestSlab);
-            consistency = ConsistencyLevel.CL_LOCAL_ONE;
         } else {
-            consistency = ConsistencyLevel.CL_LOCAL_QUORUM;
+
+            try{
+                String _sysConsistency = System.getProperty("read-consistency");
+                consistency = ConsistencyLevel.valueOf(_sysConsistency);
+                _log.info("reading from env variable" , consistency.toString());
+            } catch(Exception e){
+                _log.error("encountered exception while parsing ", e);
+            }
         }
 
         final Iterator<Column<ByteBuffer>> manifestColumns = executePaginated(
@@ -400,7 +406,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
         // Using a lower consistency level could result in (a) duplicate events because we miss deletes and (b)
         // incorrectly closing or deleting slabs when slabs look empty if we miss adds.
         ColumnList<Integer> eventColumns = execute(
-                _keyspace.prepareQuery(ColumnFamilies.SLAB, ConsistencyLevel.CL_ONE)
+                _keyspace.prepareQuery(ColumnFamilies.SLAB, ConsistencyLevel.CL_LOCAL_ONE)
                         .getKey(slabId)
                         .withColumnRange(start, Constants.OPEN_SLAB_MARKER, false, Integer.MAX_VALUE));
 
