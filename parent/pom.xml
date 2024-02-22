@@ -37,7 +37,7 @@
         <guice.version>4.0</guice.version>
         <jackson.version>2.10.5</jackson.version>
         <jackson.databind.version>2.10.5.1</jackson.databind.version>
-        <jetty.version>9.2.25.v20180606</jetty.version>
+        <jetty.version>9.0.7.v20131107</jetty.version>
         <jetty-jersey2.version>9.4.17.v20190418</jetty-jersey2.version>
         <jna.version>5.3.1</jna.version>
         <metrics.version>3.0.2</metrics.version>
@@ -300,6 +300,11 @@
                 <groupId>io.dropwizard</groupId>
                 <artifactId>dropwizard-jersey</artifactId>
                 <version>${dropwizard.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-bom</artifactId>
+                <version>${jetty.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.glassfish.web</groupId>
@@ -909,7 +914,6 @@
                             <ignoredUnusedDeclaredDependencies>
                                 <unusedDeclaredDependency>com.fasterxml.jackson.datatype:jackson-datatype-joda</unusedDeclaredDependency>
                                 <unusedDeclaredDependency>io.netty:netty-all</unusedDeclaredDependency>
-                                <unusedDeclaredDependency>org.eclipse.jetty:jetty-server</unusedDeclaredDependency>
                             </ignoredUnusedDeclaredDependencies>
                             <ignoredDependencies>
                                 <!-- TODO migrate to jakarta.xml.bind -->
