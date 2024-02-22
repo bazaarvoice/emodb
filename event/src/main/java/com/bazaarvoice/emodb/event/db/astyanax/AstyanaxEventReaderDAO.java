@@ -400,7 +400,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
         // Using a lower consistency level could result in (a) duplicate events because we miss deletes and (b)
         // incorrectly closing or deleting slabs when slabs look empty if we miss adds.
         ColumnList<Integer> eventColumns = execute(
-                _keyspace.prepareQuery(ColumnFamilies.SLAB, ConsistencyLevel.CL_LOCAL_QUORUM)
+                _keyspace.prepareQuery(ColumnFamilies.SLAB, ConsistencyLevel.CL_ONE)
                         .getKey(slabId)
                         .withColumnRange(start, Constants.OPEN_SLAB_MARKER, false, Integer.MAX_VALUE));
 
