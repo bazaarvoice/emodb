@@ -97,6 +97,7 @@ public class Jersey2EmoResource implements EmoResource {
 
             return null;
         } catch (WebApplicationException e) {
+            LOG.error("Error response is- {},{}",e.getResponse(),e.toString());
             throw asEmoClientException(e);
         }
     }
@@ -130,6 +131,7 @@ public class Jersey2EmoResource implements EmoResource {
             }
             return EntityHelper.getEntity(response.readEntity(InputStream.class), responseType);
         } catch (WebApplicationException e) {
+            LOG.error("Response type is {} [{}]", responseType.toString(), responseType.toGenericString());
             throw asEmoClientException(e);
         }
     }

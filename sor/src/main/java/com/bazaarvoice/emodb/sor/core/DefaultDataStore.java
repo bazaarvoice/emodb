@@ -710,6 +710,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                 }
 
                 if (table.isFacade() && !isFacade) {
+                    _log.error("Access denied  Unauthorized attempt to update a facade,tablename-{}, key-{}",tableName,key);
                     throw new SecurityException("Access denied. Unauthorized attempt to update a facade.");
                 }
 
