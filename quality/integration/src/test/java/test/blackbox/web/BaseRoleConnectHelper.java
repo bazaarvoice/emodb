@@ -102,10 +102,9 @@ public abstract class BaseRoleConnectHelper implements Closeable {
     }
 
     // BlobStore
-
     protected AuthBlobStore getBlobStoreViaOstrich() throws Exception {
 
-        BlobStoreClientFactory.forClusterAndHttpClient(
+        BlobStoreClientFactory clientFactory = BlobStoreClientFactory.forClusterAndHttpClient(
                 _config.getCluster(), getClient());
 
         CuratorFramework curator = _config.getZooKeeperConfiguration().newCurator();

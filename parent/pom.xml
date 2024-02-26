@@ -37,7 +37,7 @@
         <guice.version>4.0</guice.version>
         <jackson.version>2.10.5</jackson.version>
         <jackson.databind.version>2.10.5.1</jackson.databind.version>
-        <jetty.version>9.0.7.v20131107</jetty.version>
+        <jetty.version>9.4.17.v20190418</jetty.version>
         <jetty-jersey2.version>9.4.17.v20190418</jetty-jersey2.version>
         <jna.version>5.3.1</jna.version>
         <metrics.version>3.1.1</metrics.version>
@@ -60,6 +60,7 @@
         <failsafe.dev.version>3.2.4</failsafe.dev.version>
         <zookeeper.version>3.4.14</zookeeper.version>
         <zookeeper-jersey2.version>3.5.6</zookeeper-jersey2.version>
+        <swagger.version>1.5.13</swagger.version>
 
         <nexus.autoReleaseAfterClose>true</nexus.autoReleaseAfterClose>
         <skipDependencyChecks>true</skipDependencyChecks>
@@ -706,7 +707,7 @@
                 <artifactId>jna</artifactId>
                 <version>${jna.version}</version>
             </dependency>
-            <dependency>
+           <!-- <dependency>
                 <groupId>com.sun.jersey.contribs</groupId>
                 <artifactId>jersey-apache-client4</artifactId>
                 <version>${jersey.version}</version>
@@ -725,7 +726,7 @@
                 <groupId>com.sun.jersey</groupId>
                 <artifactId>jersey-server</artifactId>
                 <version>${jersey.version}</version>
-            </dependency>
+            </dependency>-->
             <dependency>
                 <groupId>org.apache.shiro</groupId>
                 <artifactId>shiro-core</artifactId>
