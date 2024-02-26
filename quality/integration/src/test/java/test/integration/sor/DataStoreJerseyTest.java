@@ -59,8 +59,6 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.collect.UnmodifiableIterator;
-import com.sun.jersey.api.client.GenericType;
-import com.sun.jersey.api.client.UniformInterfaceException;
 import io.dropwizard.testing.junit.ResourceTestRule;
 import org.junit.After;
 import org.junit.Rule;
@@ -102,6 +100,9 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.core.GenericType;
 
 /**
  * Tests the api calls made via the Jersey HTTP client {@link DataStoreClient} are
@@ -235,7 +236,7 @@ public class DataStoreJerseyTest extends ResourceTest {
 
         {
             final Collection<String> result = sorClient(APIKEY_READ_TABLES_A).getSplits("a-table-1", 10);
-            assertTrue(result.size() == 1);
+            assertEquals(result.size(), 1);
             assertEquals(splits.get(0), result.iterator().next());
             verify(_server).getSplits("a-table-1", 10);
         }
@@ -872,7 +873,8 @@ public class DataStoreJerseyTest extends ResourceTest {
         URI uri = UriBuilder.fromUri("/sor/1")
                 .segment("table-name", "row-key", "timeline")
                 .build();
-        List<Change> actual = _resourceTestRule.client().resource(uri)
+        List<Change> actual = _resourceTestRule.client().target(uri)
+                .request()
                 .accept(MediaType.APPLICATION_JSON_TYPE)
                 .header(ApiKeyRequest.AUTHENTICATION_HEADER, APIKEY_TABLE)
                 .get(new GenericType<List<Change>>() {
@@ -903,7 +905,8 @@ public class DataStoreJerseyTest extends ResourceTest {
                 .queryParam("end", format.format(end.toInstant()))
                 .queryParam("reversed", "false")
                 .build();
-        _resourceTestRule.client().resource(uri)
+        _resourceTestRule.client().target(uri)
+                .request()
                 .accept(MediaType.APPLICATION_JSON_TYPE)
                 .header(ApiKeyRequest.AUTHENTICATION_HEADER, APIKEY_TABLE)
                 .get(new GenericType<List<Change>>() {
@@ -929,7 +932,8 @@ public class DataStoreJerseyTest extends ResourceTest {
                 .queryParam("start", format.format(start.toInstant()))
                 .queryParam("end", format.format(end.toInstant()))
                 .build();
-        _resourceTestRule.client().resource(uri)
+        _resourceTestRule.client().target(uri)
+                .request()
                 .accept(MediaType.APPLICATION_JSON_TYPE)
                 .header(ApiKeyRequest.AUTHENTICATION_HEADER, APIKEY_TABLE)
                 .get(new GenericType<List<Change>>() {
@@ -1050,10 +1054,11 @@ public class DataStoreJerseyTest extends ResourceTest {
         when(_server.getSplit("table-name", "split-name", null, Long.MAX_VALUE, true, ReadConsistency.STRONG)).thenReturn(slowIterator);
 
         // We need to examine the actual JSON response, so call the API directly
-        String response = _resourceTestRule.client().resource("/sor/1/_split/table-name/split-name")
+        String response = _resourceTestRule.client().target("/sor/1/_split/table-name/split-name")
                 .queryParam("limit", "2")
                 .queryParam("includeDeletes", "false")
                 .queryParam("consistency", ReadConsistency.STRONG.toString())
+                .request()
                 .header(ApiKeyRequest.AUTHENTICATION_HEADER, APIKEY_TABLE)
                 .get(String.class);
 
@@ -1298,25 +1303,21 @@ public class DataStoreJerseyTest extends ResourceTest {
         jsonMaps.get(0).put("key", "");
         String json = JsonHelper.asJson(jsonMaps);
 
-        try {
-            // Again, we can't use the sorClient() because of the Update constructor check, so use the Jersey client directly
-            URI uri = UriBuilder.fromUri("/sor/1")
-                    .segment("_stream")
-                    .queryParam("batch", 0)
-                    .queryParam("table", updates.get(0).getTable())
-                    .queryParam("key", updates.get(0).getKey())
-                    .queryParam("audit", RisonHelper.asORison(updates.get(0).getAudit()))
-                    .queryParam("consistency", updates.get(0).getConsistency())
-                    .build();
-            _resourceTestRule.client().resource(uri)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, APIKEY_TABLE)
-                    .type(MediaType.APPLICATION_JSON_TYPE)
-                    .post(json);
-            fail();
-        } catch (UniformInterfaceException e) {
-            assertEquals(Response.Status.BAD_REQUEST.getStatusCode(),e.getResponse().getStatus());
-            assertEquals(e.getResponse().getHeaders().getFirst("X-BV-Exception"), JsonStreamProcessingException.class.getName());
-        }
+        // Again, we can't use the sorClient() because of the Update constructor check, so use the Jersey client directly
+        URI uri = UriBuilder.fromUri("/sor/1")
+                .segment("_stream")
+                .queryParam("batch", 0)
+                .queryParam("table", updates.get(0).getTable())
+                .queryParam("key", updates.get(0).getKey())
+                .queryParam("audit", RisonHelper.asORison(updates.get(0).getAudit()))
+                .queryParam("consistency", updates.get(0).getConsistency())
+                .build();
+        Response response = _resourceTestRule.client().target(uri)
+                .request()
+                .header(ApiKeyRequest.AUTHENTICATION_HEADER, APIKEY_TABLE)
+                .post(Entity.json(json));
+        assertEquals(response.getStatus(), Response.Status.BAD_REQUEST.getStatusCode());
+        assertEquals(response.getHeaders().getFirst("X-BV-Exception"), JsonStreamProcessingException.class.getName());
 
         //noinspection unchecked
         verify(_server).updateAll(any(Iterable.class), anySet());

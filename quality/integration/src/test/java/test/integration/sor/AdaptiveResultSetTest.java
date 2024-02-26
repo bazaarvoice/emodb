@@ -34,7 +34,7 @@ import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
 /**
- * This unit test verifies that {@link AdaptiveResultSet} used by {@link com.bazaarvoice.emodb.sor.db.astyanax.CqlDataReaderDAO}
+ * This unit test verifies that {@link AdaptiveResultSet} used by {@link com.bazaarvoice.emodb.sor.db.astyanax}
  * works correctly.  Ideally CqlDataReader would be tested directly but variability in underlying data due to table
  * sharding, delta formats, and compaction make this difficult to control.  This unit test therefore only tests
  * AdaptiveResultSet in a controlled environment.  One can then extrapolate that it works in the data reader context

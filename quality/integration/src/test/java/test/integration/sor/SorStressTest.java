@@ -52,6 +52,10 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.dropwizard.client.JerseyClientBuilder;
+import javax.ws.rs.client.Client;
+import java.util.concurrent.ExecutorService;
 
 import static java.lang.String.format;
 
@@ -205,8 +209,12 @@ public class SorStressTest  {
         CuratorFramework curator = configuration.getZooKeeperConfiguration().newCurator();
         curator.start();
 
-        DataStoreClientFactory dataStoreFactory = DataStoreClientFactory.forClusterAndHttpConfiguration(
-                configuration.getCluster(), configuration.getHttpClientConfiguration(), metricRegistry);
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        Client client = new JerseyClientBuilder(metricRegistry).using(configuration.getHttpClientConfiguration()).using(executorService, new ObjectMapper()).build("dw");
+
+        DataStoreClientFactory dataStoreFactory = DataStoreClientFactory.forClusterAndHttpClient(
+                configuration.getCluster(), client);
+
         AuthDataStore authDataStore = ServicePoolBuilder.create(AuthDataStore.class)
                 .withServiceFactory(dataStoreFactory)
                 .withHostDiscovery(new ZooKeeperHostDiscovery(curator, dataStoreFactory.getServiceName(), metricRegistry))
@@ -215,8 +223,8 @@ public class SorStressTest  {
                 .buildProxy(new ExponentialBackoffRetry(5, 50, 1000, TimeUnit.MILLISECONDS));
         DataStore dataStore = DataStoreAuthenticator.proxied(authDataStore).usingCredentials(apiKey);
 
-        DatabusClientFactory databusFactory = DatabusClientFactory.forClusterAndHttpConfiguration(
-                configuration.getCluster(), configuration.getHttpClientConfiguration(), metricRegistry);
+        DatabusClientFactory databusFactory = DatabusClientFactory.forClusterAndHttpClient(
+                configuration.getCluster(), client);
         AuthDatabus authDatabus = ServicePoolBuilder.create(AuthDatabus.class)
                 .withServiceFactory(databusFactory)
                 .withHostDiscovery(new ZooKeeperHostDiscovery(curator, databusFactory.getServiceName(), metricRegistry))

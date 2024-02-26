@@ -100,6 +100,10 @@ import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
+import org.glassfish.jersey.client.JerseyClientBuilder;
+import javax.ws.rs.client.Client;
+import static org.testng.Assert.assertFalse;
+
 public class CasDataStoreTest {
     private static final String TABLE = "test" + UUID.randomUUID().toString();
 
@@ -177,7 +181,7 @@ public class CasDataStoreTest {
 
                 bind(String.class).annotatedWith(CompControlApiKey.class).toInstance("CompControlApiKey");
                 bind(CompactionControlSource.class).annotatedWith(LocalCompactionControl.class).toInstance(mock(CompactionControlSource.class));
-
+                bind(Client.class).toInstance(JerseyClientBuilder.createClient());
                 bind(Environment.class).toInstance(new Environment("emodb", Jackson.newObjectMapper(),
                         Validation.buildDefaultValidatorFactory().getValidator(),
                         new MetricRegistry(), ClassLoader.getSystemClassLoader()));
@@ -457,7 +461,7 @@ public class CasDataStoreTest {
         boolean found = false;
         while (tableIter.hasNext()) {
             Table table = tableIter.next();
-            assertTrue(!table.getName().startsWith("__")); // No internal tables
+            assertFalse(table.getName().startsWith("__")); // No internal tables
             if (TABLE.equals(table.getName())) {
                 assertEquals(table.getOptions(), new TableOptionsBuilder().setPlacement("ugc_global:ugc").build());
                 assertEquals(table.getTemplate(), ImmutableMap.of());
