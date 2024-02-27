@@ -265,7 +265,7 @@ public class DatabusResource1 {
                                        List<String> eventKeys,
                                        @Authenticated Subject subject) {
         // Check for null parameters, which will throw a 400, otherwise it throws a 5xx error
-        checkArgument(eventKeys != null, "Missing event keys");
+        checkArgument(eventKeys.isEmpty(), "Missing event keys");
         getClient(partitioned).acknowledge(subject, subscription, eventKeys);
         return SuccessResponse.instance();
     }
