@@ -80,6 +80,7 @@ public class Jersey2EmoResource implements EmoResource {
     private <T> T send(String method, @Nullable Object entity) {
         try {
             Response response;
+            LOG.info("HI Anand -msg from Prakhar");
             if (entity == null) {
                 response = builder().method(method);
             } else {
@@ -97,6 +98,7 @@ public class Jersey2EmoResource implements EmoResource {
 
             return null;
         } catch (WebApplicationException e) {
+            LOG.error("Error response is- {},{}",e.getResponse(),e.toString());
             throw asEmoClientException(e);
         }
     }
