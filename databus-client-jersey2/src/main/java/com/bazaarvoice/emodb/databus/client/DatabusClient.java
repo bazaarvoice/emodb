@@ -314,8 +314,8 @@ public class DatabusClient implements Databus, Closeable {
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         } catch (EmoClientException e) {
-            _log.error("Error occured from Acknowledge API",e.getMessage());
-            _log.error("Error occured from Acknowledge API",e.getLocalizedMessage());
+            _log.error("Error occured from Acknowledge A",e.getMessage());
+            _log.error("Error occured from Acknowledge AP",e.getLocalizedMessage());
             _log.error("Error occured from Acknowledge API",e.getResponse().toString());
             throw new RuntimeException(e);
         } catch (Exception e) {
