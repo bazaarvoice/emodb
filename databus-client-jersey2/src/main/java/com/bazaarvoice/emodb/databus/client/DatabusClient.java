@@ -306,20 +306,18 @@ public class DatabusClient implements Databus, Closeable {
                     .queryParam("partitioned", _partitionSafe)
                     .build();
             _log.info("Uri for acknowledge call:{} ", uri.toString());
+            _log.info("details"+Entity.entity(eventKeys, "application/x.json-condition").toString());
             Failsafe.with(_retryPolicy)
                     .run(() -> _client.resource(uri)
                             .type(MediaType.APPLICATION_JSON_TYPE)
                             .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                            .post(eventKeys));
+                            .post(Entity.entity(eventKeys, "application/json")));
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         } catch (EmoClientException e) {
-            _log.error("here 1:"+eventKeys);
-            _log.error("here 2:"+_apiKey);
-            _log.error("here 3:"+subscription);
-            _log.error("Error occured from Acknowledge A",e.getMessage());
-            _log.error("Error occured from Acknowledge AP",e.getLocalizedMessage());
-            _log.error("Error occured from Acknowledge API",e.getResponse().toString());
+            _log.error("here 1"+eventKeys);
+            _log.error("here 2"+_apiKey);
+            _log.error("here 3"+subscription);
             throw new RuntimeException(e);
         } catch (Exception e) {
             _log.error("Error occured from Acknowledge",e);
