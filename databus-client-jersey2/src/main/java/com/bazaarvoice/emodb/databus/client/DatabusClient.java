@@ -313,8 +313,13 @@ public class DatabusClient implements Databus, Closeable {
                             .post(Entity.entity(eventKeys, "application/json")));
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
+        } catch (EmoClientException e) {
+            _log.error("Error occured from Acknowledge API",e.getMessage());
+            _log.error("Error occured from Acknowledge API",e.getLocalizedMessage());
+            _log.error("Error occured from Acknowledge API",e.getResponse().toString());
+            throw new RuntimeException(e);
         } catch (Exception e) {
-            _log.error("Error occured from Acknowledge API",e);
+            _log.error("Error occured from Acknowledge",e);
             throw new RuntimeException(e);
         }
     }
