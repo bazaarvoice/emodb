@@ -296,7 +296,7 @@ public class DatabusClient implements Databus, Closeable {
 
 
     @Override
-    public void acknowledge(String subscription, Collection<String> eventKeys) {
+    public void acknowledge(String subscription, Collection<String> eventKeys)  {
         requireNonNull(subscription, "subscription");
         requireNonNull(eventKeys, "eventKeys");
         try {
@@ -305,7 +305,7 @@ public class DatabusClient implements Databus, Closeable {
                     .path("ack")
                     .queryParam("partitioned", _partitionSafe)
                     .build();
-            _log.debug("Uri for acknowledge call:{} ", uri.toString());
+            _log.info("Uri for acknowledge call:{} ", uri.toString());
             Failsafe.with(_retryPolicy)
                     .run(() -> _client.resource(uri)
                             .type(MediaType.APPLICATION_JSON_TYPE)
@@ -314,6 +314,9 @@ public class DatabusClient implements Databus, Closeable {
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         } catch (EmoClientException e) {
+            _log.error("here 1"+eventKeys);
+            _log.error("here 2"+_apiKey);
+            _log.error("here 3"+subscription);
             _log.error("Error occured from Acknowledge A",e.getMessage());
             _log.error("Error occured from Acknowledge AP",e.getLocalizedMessage());
             _log.error("Error occured from Acknowledge API",e.getResponse().toString());
