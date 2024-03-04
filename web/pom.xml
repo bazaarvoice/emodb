@@ -718,26 +718,7 @@
                                 <goals>
                                     <goal>stop</goal>
                                 </goals>
-                                <configuration>
-                                    <ignoredUnusedDeclaredDependencies>
-                                        <ignoredUnusedDeclaredDependency>com.bazaarvoice.emodb:emodb-job-api:jar:6.5.84-SNAPSHOT:compile</ignoredUnusedDeclaredDependency>
-                                    </ignoredUnusedDeclaredDependencies>
-                                    <ignoredUnusedDeclaredDependencies>
-                                        <ignoredUnusedDeclaredDependency>org.apache.commons:commons-compress:jar:1.21:compile</ignoredUnusedDeclaredDependency>
-                                    </ignoredUnusedDeclaredDependencies>
-                                    <ignoredUnusedDeclaredDependencies>
-                                        <ignoredUnusedDeclaredDependency>org.apache.cassandra:cassandra-all:jar:3.11.12:compile</ignoredUnusedDeclaredDependency>
-                                    </ignoredUnusedDeclaredDependencies>
-                                    <ignoredUnusedDeclaredDependencies>
-                                        <ignoredUnusedDeclaredDependency>com.bazaarvoice.astyanax:astyanax-core:jar:3.8.0-bv14:compile</ignoredUnusedDeclaredDependency>
-                                    </ignoredUnusedDeclaredDependencies>
-                                    <ignoredUnusedDeclaredDependencies>
-                                        <ignoredUnusedDeclaredDependency>org.coursera:dropwizard-metrics-datadog:jar:1.1.13:compile</ignoredUnusedDeclaredDependency>
-                                    </ignoredUnusedDeclaredDependencies>
-                                    <ignoredUnusedDeclaredDependencies>
-                                        <ignoredUnusedDeclaredDependency>io.dropwizard:dropwizard-metrics:jar:0.7.1:compile</ignoredUnusedDeclaredDependency>
-                                    </ignoredUnusedDeclaredDependencies>
-                                </configuration>
+
                             </execution>
                             <execution>
                                 <id>build</id>
