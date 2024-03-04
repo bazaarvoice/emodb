@@ -43,7 +43,6 @@ import java.util.Map;
 import java.util.TimeZone;
 
 import static java.util.Objects.requireNonNull;
-import static jersey.repackaged.com.google.common.base.Preconditions.checkArgument;
 
 
 /**
