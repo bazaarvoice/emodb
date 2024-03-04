@@ -20,6 +20,7 @@ import com.bazaarvoice.emodb.databus.api.UnknownSubscriptionException;
 import com.bazaarvoice.emodb.databus.client.discovery.EmoServiceDiscovery;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import org.slf4j.Logger;
@@ -41,8 +42,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.TimeZone;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
+import static jersey.repackaged.com.google.common.base.Preconditions.checkArgument;
 
 
 /**
@@ -294,7 +295,6 @@ public class DatabusClient implements Databus, Closeable {
         }
     }
 
-
     @Override
     public void acknowledge(String subscription, Collection<String> eventKeys)  {
         requireNonNull(subscription, "subscription");
@@ -305,19 +305,20 @@ public class DatabusClient implements Databus, Closeable {
                     .path("ack")
                     .queryParam("partitioned", _partitionSafe)
                     .build();
-            _log.info("Uri for acknowledge call:{} ", uri.toString());
-            _log.info("details"+Entity.entity(eventKeys, "application/x.json-condition").toString());
+            _log.debug("Uri for acknowledge call:{} ", uri.toString());
+            ObjectMapper objectMapper = new ObjectMapper();
+            String eventKeyJSON = objectMapper.writeValueAsString(eventKeys);
+            _log.info("event value "+eventKeyJSON);
             Failsafe.with(_retryPolicy)
                     .run(() -> _client.resource(uri)
                             .type(MediaType.APPLICATION_JSON_TYPE)
                             .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                            .post(Entity.entity(eventKeys, "application/json")));
+                            .post(Entity.entity(eventKeyJSON, "application/json")));
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         } catch (EmoClientException e) {
             _log.error("here 1"+eventKeys);
             _log.error("here 2"+_apiKey);
-            _log.error("here 3"+subscription);
             throw new RuntimeException(e);
         } catch (Exception e) {
             _log.error("Error occured from Acknowledge",e);
