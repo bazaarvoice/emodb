@@ -313,12 +313,11 @@ public class DatabusClient implements Databus, Closeable {
                     .run(() -> _client.resource(uri)
                             .type(MediaType.APPLICATION_JSON_TYPE)
                             .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                            .post(Entity.entity(eventKeyJSON, "application/json")));
+                            .post(eventKeyJSON));
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         } catch (EmoClientException e) {
             _log.error("here 1"+eventKeys);
-            _log.error("here 2"+_apiKey);
             throw new RuntimeException(e);
         } catch (Exception e) {
             _log.error("Error occured from Acknowledge",e);
