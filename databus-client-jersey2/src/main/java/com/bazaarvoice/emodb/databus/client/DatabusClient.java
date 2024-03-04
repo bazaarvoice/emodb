@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import javax.ws.rs.ClientErrorException;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -313,11 +314,11 @@ public class DatabusClient implements Databus, Closeable {
                     .run(() -> _client.resource(uri)
                             .type(MediaType.APPLICATION_JSON_TYPE)
                             .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                            .post(eventKeyJSON));
+                            .post(Entity.entity(eventKeyJSON, "application/json")));
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         } catch (EmoClientException e) {
-            _log.error("here 1"+eventKeys);
+            _log.error("error here "+(e.getResponse().getEntity(String.class)));
             throw new RuntimeException(e);
         } catch (Exception e) {
             _log.error("Error occured from Acknowledge",e);
