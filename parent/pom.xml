@@ -931,6 +931,7 @@
                                 <ignoredNonTestScopedDependency>com.bazaarvoice.emodb:emodb-common-api</ignoredNonTestScopedDependency>
                                 <ignoredNonTestScopedDependency>com.bazaarvoice.emodb:emodb-common-client</ignoredNonTestScopedDependency>
                                 <ignoredNonTestScopedDependency>com.bazaarvoice.emodb:emodb-common-json</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>com.bazaarvoice.emodb:emodb-job-api</ignoredNonTestScopedDependency>
                                 <ignoredNonTestScopedDependency>com.bazaarvoice.emodb:emodb-sor-api</ignoredNonTestScopedDependency>
                                 <ignoredNonTestScopedDependency>com.sun.jersey:jersey-client</ignoredNonTestScopedDependency>
                                 <ignoredNonTestScopedDependency>io.dropwizard:dropwizard-configuration</ignoredNonTestScopedDependency>
