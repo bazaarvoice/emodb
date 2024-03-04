@@ -923,7 +923,7 @@
                                 <ignoredDependency>org.slf4j:jul-to-slf4j</ignoredDependency>
                                 <ignoredDependency>org.slf4j:jcl-over-slf4j</ignoredDependency>
                                 <ignoredDependency>org.slf4j:log4j-over-slf4j</ignoredDependency>
-                            </ignoredDependencies>com.bazaarvoice.emodb:emodb-job-api
+                            </ignoredDependencies>
                             <!-- ignore annotations for "non-test scoped" warnings -->
                             <ignoredNonTestScopedDependencies>
                                 <ignoredNonTestScopedDependency>javax.ws.rs:jsr311-api</ignoredNonTestScopedDependency>
