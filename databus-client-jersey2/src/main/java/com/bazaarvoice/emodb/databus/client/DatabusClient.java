@@ -306,23 +306,23 @@ public class DatabusClient implements Databus, Closeable {
                     .path("ack")
                     .queryParam("partitioned", _partitionSafe)
                     .build();
-            _log.debug("Uri for acknowledge call:{} ", uri.toString());
+            _log.info("LOGS::Uri for acknowledge call:{} ", uri.toString());
             ObjectMapper objectMapper = new ObjectMapper();
             String eventKeyJSON = objectMapper.writeValueAsString(eventKeys);
-            _log.info("event value --->"+eventKeyJSON);
+            _log.info("LOGS::event value --->"+eventKeyJSON);
             Failsafe.with(_retryPolicy)
                     .run(() -> _client.resource(uri)
-                            .accept(MediaType.APPLICATION_JSON_TYPE)
                             .type(MediaType.APPLICATION_JSON_TYPE)
                             .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                            .post(Entity.entity(eventKeyJSON, MediaType.APPLICATION_JSON)));
+                            .post(Entity.json(eventKeyJSON)));
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         } catch (EmoClientException e) {
             _log.error("client exception here ");
             _log.error("here 1"+eventKeys);
             _log.error("here 2"+_apiKey);
-            _log.error("error here "+(e.getResponse()));
+            _log.error("error here "+(e.getMessage()));
+            _log.error("error here "+(e.getStackTrace()));
             throw new RuntimeException(e);
         } catch (Exception e) {
             _log.error("Error occured from Acknowledge ",e.getMessage());
