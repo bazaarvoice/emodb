@@ -309,16 +309,17 @@ public class DatabusClient implements Databus, Closeable {
             _log.debug("Uri for acknowledge call:{} ", uri.toString());
             ObjectMapper objectMapper = new ObjectMapper();
             String eventKeyJSON = objectMapper.writeValueAsString(eventKeys);
-            _log.info("event value "+eventKeyJSON);
+            _log.info("event value --->"+eventKeyJSON);
             Failsafe.with(_retryPolicy)
                     .run(() -> _client.resource(uri)
                             .type(MediaType.APPLICATION_JSON_TYPE)
                             .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                            .post(Entity.entity(eventKeyJSON, "application/json")));
+                            .post(Entity.entity(eventKeyJSON, "application/x.json-condition")));
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         } catch (EmoClientException e) {
-            _log.error("error here "+(e.getResponse().getEntity(String.class)));
+            _log.error("client exception");
+            _log.error("error here "+(e.getResponse()));
             throw new RuntimeException(e);
         } catch (Exception e) {
             _log.error("Error occured from Acknowledge",e);
