@@ -341,6 +341,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
     private Iterator<Column<ByteBuffer>> readManifestForChannel(final String channel, final boolean weak) {
         final ByteBuffer oldestSlab = weak ? _oldestSlab.getIfPresent(channel) : null;
         final ConsistencyLevel consistency;
+        
         RangeBuilder range = new RangeBuilder().setLimit(50);
         if (oldestSlab != null) {
             range.setStart(oldestSlab);
@@ -398,6 +399,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
         // Event add and delete write with local quorum, so read with local quorum to get a consistent view of things.
         // Using a lower consistency level could result in (a) duplicate events because we miss deletes and (b)
         // incorrectly closing or deleting slabs when slabs look empty if we miss adds.
+
         ColumnList<Integer> eventColumns = execute(
                 _keyspace.prepareQuery(ColumnFamilies.SLAB, ConsistencyLevel.CL_TWO)
                         .getKey(slabId)
