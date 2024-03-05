@@ -718,6 +718,7 @@
                                 <goals>
                                     <goal>stop</goal>
                                 </goals>
+
                             </execution>
                             <execution>
                                 <id>build</id>

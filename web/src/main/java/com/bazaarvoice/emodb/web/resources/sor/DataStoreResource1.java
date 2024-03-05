@@ -294,6 +294,7 @@ public class DataStoreResource1 {
     public Map<String, Object> getTableTemplate(@PathParam ("table") String table,
                                                 @QueryParam ("debug") BooleanParam debug) {
         Map<String, Object> template = _dataStore.getTableTemplate(table);
+        _log.info("Hi Anana i am here");
         // if debugging, sort the json result so it's easier to understand in a browser
         return optionallyOrdered(template, debug);
     }

@@ -909,6 +909,12 @@
                             <ignoredUnusedDeclaredDependencies>
                                 <unusedDeclaredDependency>com.fasterxml.jackson.datatype:jackson-datatype-joda</unusedDeclaredDependency>
                                 <unusedDeclaredDependency>io.netty:netty-all</unusedDeclaredDependency>
+                                <unusedDeclaredDependency>io.dropwizard:dropwizard-metrics</unusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>org.coursera:dropwizard-metrics-datadog</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>com.bazaarvoice.astyanax:astyanax-core</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>com.bazaarvoice.emodb:emodb-job-api</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>org.apache.commons:commons-compress</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>org.apache.cassandra:cassandra-all</ignoredUnusedDeclaredDependency>
                             </ignoredUnusedDeclaredDependencies>
                             <ignoredDependencies>
                                 <!-- TODO migrate to jakarta.xml.bind -->
