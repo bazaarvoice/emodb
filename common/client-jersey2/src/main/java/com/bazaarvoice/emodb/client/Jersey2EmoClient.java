@@ -3,8 +3,12 @@ package com.bazaarvoice.emodb.client;
 import com.bazaarvoice.emodb.client.EmoClient;
 import com.bazaarvoice.emodb.client.EmoResource;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
+import org.glassfish.jersey.filter.LoggingFilter;
+import org.glassfish.jersey.logging.*;
 import javax.ws.rs.client.Client;
 import java.net.URI;
+import java.util.logging.Logger;
+
 
 import static java.util.Objects.requireNonNull;
 
