@@ -315,7 +315,7 @@ public class DatabusClient implements Databus, Closeable {
                     .run(() -> _client.resource(uri)
                             .type(MediaType.APPLICATION_JSON_TYPE)
                             .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                            .post(Entity.json(eventKeyJSON)));
+                            .post(Entity.entity(eventKeys, "application/x.json-condition")));
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         } catch (EmoClientException e) {
