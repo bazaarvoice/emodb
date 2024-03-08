@@ -320,8 +320,8 @@ public class DatabusClient implements Databus, Closeable {
             throw new RuntimeException(e);
         } catch (EmoClientException e) {
             _log.error("client exception here ");
-            _log.error("here 1"+eventKeys);
-            _log.error("here 2"+_apiKey);
+            _log.error("here 1::"+eventKeys);
+            _log.error("here 2::"+_apiKey);
             _log.error("error here "+(e.getMessage()));
             _log.error("error here ===---> {} ",e.getResponse().toString());
             throw new RuntimeException(e);
