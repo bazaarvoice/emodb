@@ -306,6 +306,7 @@ public class DatabusClient implements Databus, Closeable {
                     .path("ack")
                     .queryParam("partitioned", _partitionSafe)
                     .build();
+            System.out.println("testing....."+ uri.toString());
             _log.info("LOGS::Uri for acknowledge call:{} ", uri.toString());
             ObjectMapper objectMapper = new ObjectMapper();
             String eventKeyJSON = objectMapper.writeValueAsString(eventKeys);
@@ -322,10 +323,11 @@ public class DatabusClient implements Databus, Closeable {
             _log.error("here 1"+eventKeys);
             _log.error("here 2"+_apiKey);
             _log.error("error here "+(e.getMessage()));
-            _log.error("error here "+(e.getStackTrace()));
+            _log.error("error here ===---> {} ",e.getResponse().toString());
             throw new RuntimeException(e);
         } catch (Exception e) {
-            _log.error("Error occured from Acknowledge ",e.getMessage());
+            _log.error("Error occured from Acknowledge {} ",e.getMessage());
+            e.printStackTrace();
             throw new RuntimeException(e.getMessage());
         }
     }

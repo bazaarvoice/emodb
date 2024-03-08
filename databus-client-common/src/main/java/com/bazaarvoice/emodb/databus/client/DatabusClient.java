@@ -270,6 +270,7 @@ public class DatabusClient implements AuthDatabus {
     @Override
     public void acknowledge(String apiKey, @PartitionKey String subscription, Collection<String> eventKeys) {
         requireNonNull(subscription, "subscription");
+        System.out.println("Testing Jersey 1: ");
         requireNonNull(eventKeys, "eventKeys");
         try {
             URI uri = _databus.clone()
