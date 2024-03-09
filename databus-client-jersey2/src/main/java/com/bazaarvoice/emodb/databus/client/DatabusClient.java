@@ -324,6 +324,7 @@ public class DatabusClient implements Databus, Closeable {
             _log.error("here 2::"+_apiKey);
             _log.error("error here "+(e.getMessage()));
             _log.error("error here ===---> {} ",e.getResponse().toString());
+            e.printStackTrace();
             throw new RuntimeException(e);
         } catch (Exception e) {
             _log.error("Error occured from Acknowledge {} ",e.getMessage());
