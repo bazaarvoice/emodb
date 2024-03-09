@@ -21,4 +21,11 @@ public class EmoClientException extends RuntimeException {
     public EmoResponse getResponse() {
         return _response;
     }
+
+    @Override
+    public String toString() {
+        return "EmoClientException{" +
+                "_response=" + _response +
+                '}';
+    }
 }

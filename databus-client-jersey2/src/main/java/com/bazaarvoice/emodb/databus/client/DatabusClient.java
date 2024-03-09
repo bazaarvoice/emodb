@@ -19,6 +19,7 @@ import com.bazaarvoice.emodb.databus.api.UnknownReplayException;
 import com.bazaarvoice.emodb.databus.api.UnknownSubscriptionException;
 import com.bazaarvoice.emodb.databus.client.discovery.EmoServiceDiscovery;
 import com.bazaarvoice.emodb.sor.condition.Condition;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.failsafe.Failsafe;
@@ -315,7 +316,7 @@ public class DatabusClient implements Databus, Closeable {
                     .run(() -> _client.resource(uri)
                             .type(MediaType.APPLICATION_JSON_TYPE)
                             .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                            .post(Entity.entity(eventKeys, "application/x.json-condition")));
+                            .post(Entity.entity(eventKeyJSON, "application/x.json-condition")));
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         } catch (EmoClientException e) {
@@ -323,13 +324,14 @@ public class DatabusClient implements Databus, Closeable {
             _log.error("here 1::"+eventKeys);
             _log.error("here 2::"+_apiKey);
             _log.error("error here "+(e.getMessage()));
-            _log.error("error here ===---> {} ",e.getResponse().toString());
+            _log.error("error here 1 ===---> {} ",e.getResponse().getEntity(String.class));
+            _log.error("exception is:: {}", e.toString());
+//            _log.error("error here 2 ===---> {} ",e.getResponse().getEntityInputStream());
+//            _log.error("error here 3 ===---> {} ",e.getResponse().getStatus());
             e.printStackTrace();
             throw new RuntimeException(e);
-        } catch (Exception e) {
-            _log.error("Error occured from Acknowledge {} ",e.getMessage());
-            e.printStackTrace();
-            throw new RuntimeException(e.getMessage());
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
         }
     }
 
