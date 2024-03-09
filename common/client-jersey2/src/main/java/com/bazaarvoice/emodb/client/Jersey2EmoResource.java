@@ -167,7 +167,7 @@ public class Jersey2EmoResource implements EmoResource {
     private EmoClientException asEmoClientException(WebApplicationException e)
             throws EmoClientException {
         LOG.error("throwing emoException:: {}",e.getResponse().readEntity(String.class));
-        throw new EmoClientException(e.getMessage(), e, toEmoResponse(e.getResponse().readEntity(String.class)));
+        throw new EmoClientException(e.getMessage(), e, toEmoResponse(e.getResponse()));
     }
 
     @Override
