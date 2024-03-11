@@ -326,8 +326,6 @@ public class DatabusClient implements Databus, Closeable {
             _log.error("error here "+(e.getMessage()));
             _log.error("error here 1 ===---> {} ",e.getResponse().getEntity(String.class));
             _log.error("exception is:: {}", e.toString());
-//            _log.error("error here 2 ===---> {} ",e.getResponse().getEntityInputStream());
-//            _log.error("error here 3 ===---> {} ",e.getResponse().getStatus());
             e.printStackTrace();
             throw new RuntimeException(e);
         } catch (JsonProcessingException e) {

@@ -22,10 +22,4 @@ public class EmoClientException extends RuntimeException {
         return _response;
     }
 
-    @Override
-    public String toString() {
-        return "EmoClientException{" +
-                "_response=" + _response +
-                '}';
-    }
 }

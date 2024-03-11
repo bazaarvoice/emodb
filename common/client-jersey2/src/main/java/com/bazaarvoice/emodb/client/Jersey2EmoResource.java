@@ -83,13 +83,10 @@ public class Jersey2EmoResource implements EmoResource {
             if (entity == null) {
                 response = builder().method(method);
             } else {
-                LOG.info("calling invocation method::  {}",entity);
                 response = builder().method(method, Entity.entity(entity, type()));
-                LOG.info("received response:: {}", response.readEntity(String.class));
             }
             // This is as per jax-rs invocation builder code.
             if (!response.getStatusInfo().getFamily().equals(Response.Status.Family.SUCCESSFUL)) {
-                LOG.error("not successfull:: {}",response.readEntity(String.class));
                 throw new WebApplicationException(response);
             } else {
                 // hack: we can call response.close but it generates errors on the server

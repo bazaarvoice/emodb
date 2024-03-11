@@ -79,11 +79,5 @@ public class Jersey2EmoResponse implements EmoResponse {
     public Date getLastModified() {
         return _response.getLastModified();
     }
-
-    @Override
-    public String toString() {
-        return "Jersey2EmoResponse{" +
-                "_response=" + _response +
-                '}';
-    }
+    
 }
