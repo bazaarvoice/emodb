@@ -53,6 +53,7 @@
                                     <goal>create-update</goal>
                                 </goals>
                                 <configuration>
+                                    <autoIncrementSnapshotArtifacts>false</autoIncrementSnapshotArtifacts>
                                     <s3RepositoryPath>${yumrepo.s3RepositoryPath}</s3RepositoryPath>
                                     <artifactItems>
                                         <artifactItem>
