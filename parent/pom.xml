@@ -381,6 +381,27 @@
                 </exclusions>
             </dependency>
             <dependency>
+                <groupId>org.glassfish.jersey.core</groupId>
+                <artifactId>jersey-client</artifactId>
+                <version>${jersey2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jersey.core</groupId>
+                <artifactId>jersey-server</artifactId>
+                <version>${jersey2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jersey</groupId>
+                <artifactId>jersey-bom</artifactId>
+                <version>${jersey.version}</version>
+                <type>pom</type>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.shiro</groupId>
+                <artifactId>shiro-core</artifactId>
+                <version>${shiro.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.coursera</groupId>
                 <artifactId>metrics-datadog</artifactId>
                 <version>${dropwizard-metrics-datadog.version}</version>
@@ -493,35 +514,20 @@
                 <version>1.1.0.Final</version>
             </dependency>
             <dependency>
-                <groupId>joda-time</groupId>
-                <artifactId>joda-time</artifactId>
-                <version>${jodatime-version}</version>
-            </dependency>
-            <dependency>
                 <groupId>javax.ws.rs</groupId>
                 <artifactId>javax.ws.rs-api</artifactId>
                 <version>2.1.1</version>
             </dependency>
             <dependency>
+                <groupId>joda-time</groupId>
+                <artifactId>joda-time</artifactId>
+                <version>${jodatime-version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.apache.thrift</groupId>
                 <artifactId>libthrift</artifactId>
                 <version>0.13.0</version>
-            </dependency>
-            <dependency>
-                <groupId>org.glassfish.jersey.core</groupId>
-                <artifactId>jersey-client</artifactId>
-                <version>${jersey2.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.glassfish.jersey.core</groupId>
-                <artifactId>jersey-server</artifactId>
-                <version>${jersey2.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.glassfish.jersey</groupId>
-                <artifactId>jersey-bom</artifactId>
-                <version>${jersey.version}</version>
-                <type>pom</type>
             </dependency>
             <dependency>
                 <groupId>org.apache.cassandra</groupId>
@@ -707,32 +713,6 @@
                 <artifactId>jna</artifactId>
                 <version>${jna.version}</version>
             </dependency>
-           <!-- <dependency>
-                <groupId>com.sun.jersey.contribs</groupId>
-                <artifactId>jersey-apache-client4</artifactId>
-                <version>${jersey.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.sun.jersey</groupId>
-                <artifactId>jersey-core</artifactId>
-                <version>${jersey.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.sun.jersey</groupId>
-                <artifactId>jersey-client</artifactId>
-                <version>${jersey.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.sun.jersey</groupId>
-                <artifactId>jersey-server</artifactId>
-                <version>${jersey.version}</version>
-            </dependency>-->
-            <dependency>
-                <groupId>org.apache.shiro</groupId>
-                <artifactId>shiro-core</artifactId>
-                <version>${shiro.version}</version>
-            </dependency>
-
             <dependency>
                 <groupId>io.swagger</groupId>
                 <artifactId>swagger-jersey2-jaxrs</artifactId>
@@ -961,6 +941,8 @@
                                 <unusedDeclaredDependency>io.dropwizard:dropwizard-jackson</unusedDeclaredDependency>
                                 <unusedDeclaredDependency>io.dropwizard.metrics:metrics-core</unusedDeclaredDependency>
                                 <unusedDeclaredDependency>io.dropwizard:dropwizard-core</unusedDeclaredDependency>
+                                <unusedDeclaredDependency>javax.inject:javax.inject</unusedDeclaredDependency>
+                                <unusedDeclaredDependency>org.glassfish.hk2.external:javax.inject</unusedDeclaredDependency>
                             </ignoredUnusedDeclaredDependencies>
                             <ignoredDependencies>
                                 <!-- TODO migrate to jakarta.xml.bind -->

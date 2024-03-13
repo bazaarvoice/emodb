@@ -15,6 +15,9 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.util.thread.Scheduler;
 import org.eclipse.jetty.util.thread.ThreadPool;
 
+import java.util.Collections;
+import java.util.List;
+
 import static com.codahale.metrics.MetricRegistry.name;
 
 @JsonTypeName ("instrumentedHttp")
@@ -72,6 +75,11 @@ public class InstrumentedHttpConnectorFactory extends HttpConnectorFactory {
         @Override
         public String getProtocol() {
             return _wrappedConnectionFactory.getProtocol();
+        }
+
+        @Override
+        public List<String> getProtocols() {
+            return Collections.singletonList(_wrappedConnectionFactory.getProtocol());
         }
 
         @Override
