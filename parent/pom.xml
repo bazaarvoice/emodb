@@ -16,12 +16,12 @@
 
     <name>EmoDB Parent</name>
 
-    <scm>
+<!--     <scm>
         <connection>scm:git:git@github.com:bazaarvoice/emodb.git</connection>
         <developerConnection>scm:git:git@github.com:bazaarvoice/emodb.git</developerConnection>
         <url>scm:git:git@github.com:bazaarvoice/emodb.git</url>
         <tag>emodb-6.5.98</tag>
-    </scm>
+    </scm> -->
 
     <properties>
         <astyanax.version>3.8.0-bv14</astyanax.version>
@@ -61,7 +61,7 @@
         <zookeeper.version>3.4.14</zookeeper.version>
         <zookeeper-jersey2.version>3.5.6</zookeeper-jersey2.version>
 
-        <nexus.autoReleaseAfterClose>true</nexus.autoReleaseAfterClose>
+<!--         <nexus.autoReleaseAfterClose>true</nexus.autoReleaseAfterClose> -->
         <skipDependencyChecks>true</skipDependencyChecks>
         <!-- note: the *bucket* is the root of the repo -->
         <yumrepo.s3RepositoryPath>s3://bv-emodb-artifacts/emodb/yum-repo</yumrepo.s3RepositoryPath>
@@ -882,7 +882,7 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
+<!--             <plugin>
                 <groupId>org.sonatype.plugins</groupId>
                 <artifactId>nexus-staging-maven-plugin</artifactId>
                 <version>1.6.13</version>
@@ -892,7 +892,7 @@
                     <nexusUrl>https://oss.sonatype.org/</nexusUrl>
                     <autoReleaseAfterClose>${nexus.autoReleaseAfterClose}</autoReleaseAfterClose>
                 </configuration>
-            </plugin>
+            </plugin> -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
