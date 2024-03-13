@@ -396,7 +396,7 @@ public class BlobStoreResource1 {
         if (range == null) {
             response.header(HttpHeaders.CONTENT_LENGTH, metadata.getLength());
         } else {
-            response.status(Response.Status.PARTIAL_CONTENT);
+            response.status(206);
             response.header(HttpHeaders.CONTENT_LENGTH, range.getLength());
             response.header("Content-Range", "bytes " + range.getOffset() + "-" +
                     (range.getOffset() + range.getLength() - 1) + "/" + metadata.getLength());

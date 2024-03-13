@@ -9,6 +9,7 @@ import org.glassfish.jersey.client.ClientResponse;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.WebApplicationException;
 
+import javax.ws.rs.client.Client;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
@@ -50,8 +51,9 @@ public class CompactionControlClient implements CompactionControlSource {
                     .type(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
                     .post();
-        } catch (WebApplicationException e) {
-            throw convertException(e);
+        } catch (Exception e) {
+           // throw convertException(e);
+            throw new RuntimeException("Failed in updateStashTime: ", e);
         }
     }
 
@@ -69,8 +71,9 @@ public class CompactionControlClient implements CompactionControlSource {
                     .type(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
                     .delete();
-        } catch (WebApplicationException e) {
-            throw convertException(e);
+        } catch (Exception e) {
+            //throw convertException(e);
+            throw new RuntimeException("Failed in deleteStashTime: ", e);
         }
     }
 
@@ -88,8 +91,8 @@ public class CompactionControlClient implements CompactionControlSource {
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
                     .get(StashRunTimeInfo.class);
-        } catch (WebApplicationException e) {
-            throw convertException(e);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed in getStashTime: ", e);
         }
     }
 
@@ -103,8 +106,9 @@ public class CompactionControlClient implements CompactionControlSource {
                     .type(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
                     .get(Map.class);
-        } catch (WebApplicationException e) {
-            throw convertException(e);
+        } catch (Exception e) {
+            //throw convertException(e);
+            throw new RuntimeException("Failed in getAllStashTimes: ", e);
         }
     }
 
@@ -121,19 +125,20 @@ public class CompactionControlClient implements CompactionControlSource {
                     .type(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
                     .get(Map.class);
-        } catch (WebApplicationException e) {
-            throw convertException(e);
+        } catch (Exception e) {
+            //throw convertException(e);
+            throw new RuntimeException("Failed in getStashTimesForPlacement: ", e);
         }
     }
 
-    private RuntimeException convertException(WebApplicationException e) {
+    /*private RuntimeException convertException(WebApplicationException e) {
         Response response = e.getResponse();
-        String exceptionType = (String) response.getHeaders().getFirst("X-BV-Exception");
+        String exceptionType = response.getFirstHeader("X-BV-Exception");
 
         if (response.getStatus() == Response.Status.BAD_REQUEST.getStatusCode() &&
                 IllegalArgumentException.class.getName().equals(exceptionType)) {
             return new IllegalArgumentException(response.readEntity(String.class), e);
         }
         return e;
-    }
+    }*/
 }
