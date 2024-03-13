@@ -348,7 +348,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
             range.setStart(oldestSlab);
               consistency = ConsistencyLevel.CL_LOCAL_ONE;
         } else {
-              consistency = ConsistencyLevel.CL_TWO;
+              consistency = ConsistencyLevel.CL_LOCAL_QUORUM;
         }
 
         final Iterator<Column<ByteBuffer>> manifestColumns = executePaginated(
@@ -404,7 +404,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
 
         ColumnList<Integer> eventColumns = execute(
 
-                  _keyspace.prepareQuery(ColumnFamilies.SLAB, ConsistencyLevel.CL_TWO)
+                  _keyspace.prepareQuery(ColumnFamilies.SLAB, ConsistencyLevel.CL_LOCAL_QUORUM)
                         .getKey(slabId)
                         .withColumnRange(start, Constants.OPEN_SLAB_MARKER, false, Integer.MAX_VALUE));
 
