@@ -8,12 +8,12 @@ cluster: local_default
 systemTablePlacement: app_global:sys
 
 dataCenter:
-  currentDataCenter: us-east-1           # Which data center does this server belong to?
-  cassandraDataCenter: us-east       # What is the name of this DataCenter as configured in Cassandra's NetworkTopologyStrategy?
-  systemDataCenter: us-east-1             # All CREATE/DROP TABLE operations must occur in a single data center.  Which one is it?
-  dataCenterServiceUri: http://emodb.ci.us-east-1.nexus.bazaarvoice.com:8080     # Load-balanced highly available base URL for the EmoDB service (ie. Amazon ELB base url).
-  dataCenterAdminUri: http://emodb.ci.us-east-1.nexus.bazaarvoice.com:8081         # Load-balanced highly available base URL for the EmoDB administration tasks (ie. Amazon ELB base url).
-  systemDataCenterServiceUri: http://emodb.ci.us-east-1.nexus.bazaarvoice.com:8080 # Load-balanced highly available base URL for the EmoDB system data center
+  currentDataCenter: eu-west-1           # Which data center does this server belong to?
+  cassandraDataCenter: eu-west       # What is the name of this DataCenter as configured in Cassandra's NetworkTopologyStrategy?
+  systemDataCenter: eu-west-1             # All CREATE/DROP TABLE operations must occur in a single data center.  Which one is it?
+  dataCenterServiceUri: http://emodb.ci.eu-west-1.nexus.bazaarvoice.com:8080     # Load-balanced highly available base URL for the EmoDB service (ie. Amazon ELB base url).
+  dataCenterAdminUri: http://emodb.ci.eu-west-1.nexus.bazaarvoice.com:8081         # Load-balanced highly available base URL for the EmoDB administration tasks (ie. Amazon ELB base url).
+  systemDataCenterServiceUri: http://emodb.ci.eu-west-1.nexus.bazaarvoice.com:8080 # Load-balanced highly available base URL for the EmoDB system data center
 
 systemOfRecord:
 
@@ -49,7 +49,7 @@ systemOfRecord:
     ugc_global:
       cluster: ci_sor_ugc_default
       keyspace: ugc_global
-      dataCenter: us-east
+      dataCenter: eu-west
       healthCheckColumnFamily: ugc_delta
       zooKeeperServiceName: ci_sor_ugc_default-cassandra
       maxConnectionsPerHost: 30
