@@ -11,7 +11,7 @@
 
     <groupId>com.bazaarvoice.emodb</groupId>
     <artifactId>emodb-parent</artifactId>
-    <version>6.5.100-SNAPSHOT</version>
+    <version>6.5.100</version>
     <packaging>pom</packaging>
 
     <name>EmoDB Parent</name>
@@ -20,7 +20,8 @@
         <connection>scm:git:git@github.com:bazaarvoice/emodb.git</connection>
         <developerConnection>scm:git:git@github.com:bazaarvoice/emodb.git</developerConnection>
         <url>scm:git:git@github.com:bazaarvoice/emodb.git</url>
-    </scm>
+      <tag>emodb-6.5.100</tag>
+  </scm>
 
     <properties>
         <astyanax.version>3.8.0-bv14</astyanax.version>
