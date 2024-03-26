@@ -14,12 +14,12 @@
     <packaging>pom</packaging>
     <name>EmoDB</name>
 
-<!--     <scm>
+    <scm>
         <connection>scm:git:git@github.com:bazaarvoice/emodb.git</connection>
         <developerConnection>scm:git:git@github.com:bazaarvoice/emodb.git</developerConnection>
         <url>scm:git:git@github.com:bazaarvoice/emodb.git</url>
         <tag>emodb-6.5.98</tag>
-    </scm> -->
+    </scm>
 
     <modules>
         <module>parent</module>
