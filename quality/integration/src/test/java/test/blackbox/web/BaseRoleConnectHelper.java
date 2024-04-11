@@ -59,7 +59,6 @@ import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-
 /**
  * Blackbox tests run against actual EmoDB / C* processes started by mvn using emodb-sdk.
  * The 'ViaOstrich' methods use SOA so they should be connecting to the correct emodb node per role.
