@@ -43,6 +43,11 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>javax.ws.rs-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>com.bazaarvoice.curator</groupId>
             <artifactId>test</artifactId>
             <scope>test</scope>
@@ -255,6 +260,11 @@
         </dependency>
         <!-- Test dependencies -->
         <dependency>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>jsr311-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>com.boundary</groupId>
             <artifactId>high-scale-lib</artifactId>
             <version>1.0.6</version>
@@ -286,11 +296,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>javax.ws.rs</groupId>
-            <artifactId>javax.ws.rs-api</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>com.google.code.findbugs</groupId>
             <artifactId>jsr305</artifactId>
             <scope>test</scope>
@@ -305,11 +310,6 @@
             <artifactId>guice</artifactId>
             <scope>test</scope>
         </dependency>
-        <!--<dependency>
-            <groupId>com.sun.jersey.contribs</groupId>
-            <artifactId>jersey-apache-client4</artifactId>
-            <scope>test</scope>
-        </dependency>-->
         <dependency>
             <groupId>org.glassfish.jersey.core</groupId>
             <artifactId>jersey-client</artifactId>
@@ -378,11 +378,6 @@
         <dependency>
             <groupId>javax.validation</groupId>
             <artifactId>validation-api</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>javax.ws.rs</groupId>
-            <artifactId>jsr311-api</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
