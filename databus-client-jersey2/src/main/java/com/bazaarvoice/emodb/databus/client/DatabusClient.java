@@ -314,7 +314,7 @@ public class DatabusClient implements Databus, Closeable {
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         } catch (Exception e) {
-            _log.error("error occured from acknowledge ",e);
+            _log.error("Error occured from Acknowledge ",e);
             throw new RuntimeException(e);
         }
     }
