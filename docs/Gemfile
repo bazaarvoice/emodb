@@ -7,4 +7,4 @@ gem 'rake'
 gem 'puma'
 gem "rack-jekyll"
 gem "rouge"
-gem "kramdown"
+gem "kramdown" 
