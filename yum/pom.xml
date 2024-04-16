@@ -15,15 +15,15 @@
 
     <build>
         <plugins>
-            <plugin>
+            <!-- <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
-                <!-- <configuration>
+                <configuration>
                     <descriptors>
                         <descriptor>dep.xml</descriptor>
                     </descriptors>
                     <tarLongFileMode>posix</tarLongFileMode>
                     <finalName>emodb-${project.version}</finalName>
-                </configuration> -->
+                </configuration>
                 <executions>
                     <execution>
                         <id>create-package</id>
@@ -33,7 +33,7 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>
+            </plugin> -->
         </plugins>
     </build>
 
