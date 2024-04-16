@@ -322,6 +322,7 @@ public class DatabusClient implements Databus, Closeable {
 //                String jsonEntity = Entity.entity(eventKeysToack, MediaType.APPLICATION_JSON).toString();
                 _log.info("Entity to be sent: " + Entity.entity(eventKeysToack, MediaType.APPLICATION_JSON));
                 _client.resource(uri)
+                        .type(MediaType.APPLICATION_JSON_TYPE)
                         .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
                         .post(Entity.entity(eventKeysToack, MediaType.APPLICATION_JSON));
             });
