@@ -97,6 +97,7 @@ public class Jersey2EmoResource implements EmoResource {
 
             return null;
         } catch (WebApplicationException e) {
+            LOG.error("inside exception:: {}",e.getResponse().readEntity(String.class));
             throw asEmoClientException(e);
         }
     }
