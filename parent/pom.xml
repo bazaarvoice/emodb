@@ -11,7 +11,7 @@
 
     <groupId>com.bazaarvoice.emodb</groupId>
     <artifactId>emodb-parent</artifactId>
-    <version>6.5.125</version>
+    <version>6.5.126-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>EmoDB Parent</name>
@@ -1016,6 +1016,6 @@
 
 
   <scm>
-    <tag>emodb-6.5.125</tag>
+    <tag>emodb-6.5.125-SNAPSHOT</tag>
   </scm>
 </project>
