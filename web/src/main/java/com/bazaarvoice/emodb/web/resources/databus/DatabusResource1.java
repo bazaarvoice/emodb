@@ -45,10 +45,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.time.Instant;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
@@ -262,11 +259,11 @@ public class DatabusResource1 {
     )
     public SuccessResponse acknowledge(@QueryParam ("partitioned") BooleanParam partitioned,
                                        @PathParam ("subscription") String subscription,
-                                       List<String> eventKeys,
+                                       String[] eventKeys,
                                        @Authenticated Subject subject) {
         // Check for null parameters, which will throw a 400, otherwise it throws a 5xx error
         checkArgument(eventKeys != null, "Missing event keys");
-        getClient(partitioned).acknowledge(subject, subscription, eventKeys);
+        getClient(partitioned).acknowledge(subject, subscription, Arrays.asList(eventKeys));
         return SuccessResponse.instance();
     }
 

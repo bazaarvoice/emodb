@@ -20,7 +20,6 @@ import com.bazaarvoice.emodb.databus.api.UnknownSubscriptionException;
 import com.bazaarvoice.emodb.databus.client.discovery.EmoServiceDiscovery;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import org.slf4j.Logger;
@@ -36,8 +35,11 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Collection;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.TimeZone;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
@@ -297,8 +299,6 @@ public class DatabusClient implements Databus, Closeable {
     public void acknowledge(String subscription, Collection<String> eventKeys) {
         requireNonNull(subscription, "subscription");
         requireNonNull(eventKeys, "eventKeys");
-        ObjectMapper objectMapper = new ObjectMapper();
-        _log.info("event key from shovel --> " + eventKeys);
         try {
             URI uri = UriBuilder.fromUri(_databusDiscovery.getBaseUri())
                     .path(subscription)
@@ -306,30 +306,15 @@ public class DatabusClient implements Databus, Closeable {
                     .queryParam("partitioned", _partitionSafe)
                     .build();
             _log.debug("Uri for acknowledge call:{} ", uri.toString());
-            List<String> eveKeyList = eventKeys.stream().collect(Collectors.toList());
-            _log.info("event key from stream --> " + eveKeyList);
-            List<String> eventKeysToack = new ArrayList<>();
-            for(String str:eveKeyList){
-                eventKeysToack.add("\"" + str + "\"");
-            }
-            _log.info("event key to ack --> " + eventKeysToack);
-//            String jsonEventKeys = objectMapper.writeValueAsString(eventKeys);
-//            Failsafe.with(_retryPolicy)
-//                    .run(() -> _client.resource(uri)
-//                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-//                            .post(Entity.entity(eventKeysToack, MediaType.APPLICATION_JSON)));
-            Failsafe.with(_retryPolicy).run(() -> {
-//                String jsonEntity = Entity.entity(eventKeysToack, MediaType.APPLICATION_JSON).toString();
-                _log.info("Entity to be sent ==: " + Entity.entity(eventKeysToack, MediaType.APPLICATION_JSON));
-                _client.resource(uri)
-                        .type(MediaType.APPLICATION_JSON_TYPE)
-                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                        .post(Entity.entity(eventKeysToack, MediaType.APPLICATION_JSON));
-            });
+            Failsafe.with(_retryPolicy)
+                    .run(() -> _client.resource(uri)
+                            .type(MediaType.APPLICATION_JSON_TYPE)
+                            .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
+                            .post(Entity.entity(eventKeys, "application/x.json-condition")));
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         } catch (Exception e) {
-            _log.error("Error occured from Acknowledge ",e);
+            _log.error("error occured from acknowledge ",e);
             throw new RuntimeException(e);
         }
     }
