@@ -4,7 +4,7 @@
     <parent>
         <groupId>com.bazaarvoice.emodb</groupId>
         <artifactId>emodb-parent</artifactId>
-        <version>6.5.123</version>
+        <version>6.5.124</version>
         <relativePath>../parent/pom.xml</relativePath>
     </parent>
 
@@ -60,7 +60,7 @@
                                             <artifactId>${yumArtifactId}</artifactId>
                                             <version>${project.version}</version>
                                             <type>rpm</type>
-                                            <targetBaseName>${yumArtifactName}</targetBaseName>
+                                            <targetBaseName>${yumArtifactName}.SNAPSHOT</targetBaseName>
                                             <targetExtension>noarch.rpm</targetExtension>
                                         </artifactItem>
                                     </artifactItems>
