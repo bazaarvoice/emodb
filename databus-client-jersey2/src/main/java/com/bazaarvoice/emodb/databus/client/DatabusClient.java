@@ -20,6 +20,7 @@ import com.bazaarvoice.emodb.databus.api.UnknownSubscriptionException;
 import com.bazaarvoice.emodb.databus.client.discovery.EmoServiceDiscovery;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import org.slf4j.Logger;
@@ -35,11 +36,7 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
-import java.util.Collection;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.TimeZone;
+import java.util.*;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
@@ -306,11 +303,15 @@ public class DatabusClient implements Databus, Closeable {
                     .queryParam("partitioned", _partitionSafe)
                     .build();
             _log.debug("Uri for acknowledge call:{} ", uri.toString());
+
+//            String dep = new ObjectMapper().reader()
+//                    .forType(String.class)
+//                    .readValue(String.valueOf(eventKeys));
             Failsafe.with(_retryPolicy)
                     .run(() -> _client.resource(uri)
                             .type(MediaType.APPLICATION_JSON_TYPE)
                             .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                            .post(Entity.entity(eventKeys, "application/x.json-condition")));
+                            .post(Entity.entity(Arrays.toString(eventKeys.toArray()), "application/x.json-condition")));
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         } catch (Exception e) {
