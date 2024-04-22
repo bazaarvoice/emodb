@@ -303,15 +303,12 @@ public class DatabusClient implements Databus, Closeable {
                     .queryParam("partitioned", _partitionSafe)
                     .build();
             _log.debug("Uri for acknowledge call:{} ", uri.toString());
-
-//            String dep = new ObjectMapper().reader()
-//                    .forType(String.class)
-//                    .readValue(String.valueOf(eventKeys));
+            _log.info("entity ==> "+Entity.entity(eventKeys, "application/x.json-condition"));
             Failsafe.with(_retryPolicy)
                     .run(() -> _client.resource(uri)
                             .type(MediaType.APPLICATION_JSON_TYPE)
                             .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
-                            .post(Entity.entity(Arrays.toString(eventKeys.toArray()), "application/x.json-condition")));
+                            .post(eventKeys));
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         } catch (Exception e) {

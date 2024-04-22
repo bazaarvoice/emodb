@@ -80,9 +80,16 @@ public class Jersey2EmoResource implements EmoResource {
     private <T> T send(String method, @Nullable Object entity) {
         try {
             Response response;
+            if(method.equalsIgnoreCase("post")) {
+                LOG.info("VALUE -->" + entity.toString());
+            }
             if (entity == null) {
                 response = builder().method(method);
             } else {
+                if(method.equalsIgnoreCase("post"))
+                {
+                    LOG.info("value here "+Entity.entity(entity, type()));
+                }
                 response = builder().method(method, Entity.entity(entity, type()));
             }
             // This is as per jax-rs invocation builder code.
