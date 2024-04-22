@@ -303,7 +303,6 @@ public class DatabusClient implements Databus, Closeable {
                     .queryParam("partitioned", _partitionSafe)
                     .build();
             _log.debug("Uri for acknowledge call:{} ", uri.toString());
-            _log.info("entity ==> "+Entity.entity(eventKeys, "application/x.json-condition"));
             Failsafe.with(_retryPolicy)
                     .run(() -> _client.resource(uri)
                             .type(MediaType.APPLICATION_JSON_TYPE)
