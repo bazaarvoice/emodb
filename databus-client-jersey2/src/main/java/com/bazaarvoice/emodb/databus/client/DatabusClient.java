@@ -302,12 +302,13 @@ public class DatabusClient implements Databus, Closeable {
                     .path("ack")
                     .queryParam("partitioned", _partitionSafe)
                     .build();
-            _log.debug("Uri for acknowledge call:{} ", uri.toString());
+            _log.info("Uri for acknowledge call:{} ", uri.toString());
             Failsafe.with(_retryPolicy)
                     .run(() -> _client.resource(uri)
                             .type(MediaType.APPLICATION_JSON_TYPE)
                             .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
                             .post(eventKeys));
+            _log.info("Uri:{} ", uri.toString());
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         } catch (Exception e) {
