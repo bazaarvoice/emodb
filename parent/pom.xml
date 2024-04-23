@@ -11,7 +11,7 @@
 
     <groupId>com.bazaarvoice.emodb</groupId>
     <artifactId>emodb-parent</artifactId>
-    <version>6.5.126-SNAPSHOT</version>
+    <version>6.5.133-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>EmoDB Parent</name>
@@ -61,7 +61,7 @@
         <zookeeper.version>3.4.14</zookeeper.version>
         <zookeeper-jersey2.version>3.5.6</zookeeper-jersey2.version>
 
-        <nexus.autoReleaseAfterClose>true</nexus.autoReleaseAfterClose>
+        <nexus.autoReleaseAfterClose>false</nexus.autoReleaseAfterClose>
         <skipDependencyChecks>true</skipDependencyChecks>
         <!-- note: the *bucket* is the root of the repo -->
         <yumrepo.s3RepositoryPath>s3://bv-emodb-artifacts/emodb/yum-repo</yumrepo.s3RepositoryPath>
@@ -887,11 +887,11 @@
                 <artifactId>nexus-staging-maven-plugin</artifactId>
                 <version>1.6.13</version>
                 <extensions>true</extensions>
-                <configuration>
+                <!-- <configuration>
                     <serverId>sonatype-nexus-staging</serverId>
                     <nexusUrl>https://oss.sonatype.org/</nexusUrl>
                     <autoReleaseAfterClose>${nexus.autoReleaseAfterClose}</autoReleaseAfterClose>
-                </configuration>
+                </configuration> -->
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
