@@ -22,6 +22,8 @@ import com.bazaarvoice.emodb.web.resources.sor.TableOptionsParam;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.annotation.Timed;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -110,6 +112,8 @@ public class BlobStoreResource1 {
     private final LoadingCache<String, Meter> _putObjectRequestsByApiKey;
     private final LoadingCache<String, Meter> _deleteObjectRequestsByApiKey;
 
+    private final SQSService _sqsService;
+
     public BlobStoreResource1(BlobStore blobStore, Set<String> approvedContentTypes, MetricRegistry metricRegistry) {
         _blobStore = blobStore;
         _approvedContentTypes = approvedContentTypes;
@@ -130,6 +134,8 @@ public class BlobStoreResource1 {
         _getObjectRequestsByApiKey = createMetricCache("getByApiKey");
         _putObjectRequestsByApiKey = createMetricCache("putByApiKey");
         _deleteObjectRequestsByApiKey = createMetricCache("deleteByApiKey");
+        _sqsService = new SQSService("sqs endpoint", "queuename", new ObjectMapper());
+
 
     }
 
@@ -160,10 +166,10 @@ public class BlobStoreResource1 {
                                       @Authenticated Subject subject) {
         _listTableRequestsByApiKey.getUnchecked(subject.getId()).mark();
         return streamingIterator(
-            StreamSupport.stream(Spliterators.spliteratorUnknownSize(_blobStore.listTables(Strings.emptyToNull(fromKeyExclusive), Long.MAX_VALUE), 0), false)
-                .filter(input -> subject.hasPermission(Permissions.readBlobTable(new NamedResource(input.getName()))))
-                .limit(limit.get())
-                .iterator()
+                StreamSupport.stream(Spliterators.spliteratorUnknownSize(_blobStore.listTables(Strings.emptyToNull(fromKeyExclusive), Long.MAX_VALUE), 0), false)
+                        .filter(input -> subject.hasPermission(Permissions.readBlobTable(new NamedResource(input.getName()))))
+                        .limit(limit.get())
+                        .iterator()
         );
     }
 
@@ -191,8 +197,12 @@ public class BlobStoreResource1 {
         if (!subject.hasPermission(Permissions.createBlobTable(resource))) {
             throw new UnauthorizedException();
         }
-
         _blobStore.createTable(table, options, attributes, audit);
+        try {
+            _sqsService.sendTableRequestoSQS(table,options,attributes,audit);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
         return SuccessResponse.instance();
     }
 
@@ -211,6 +221,11 @@ public class BlobStoreResource1 {
         _dropTableRequestsByApiKey.getUnchecked(subject.getId()).mark();
         Audit audit = getRequired(auditParam, "audit");
         _blobStore.dropTable(table, audit);
+        try {
+            _sqsService.sendDeleteTable(table, audit);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         return SuccessResponse.instance();
     }
 
@@ -228,6 +243,11 @@ public class BlobStoreResource1 {
         _purgeTableRequestsByApiKey.getUnchecked(subject.getId()).mark();
         Audit audit = getRequired(auditParam, "audit");
         _blobStore.purgeTableUnsafe(table, audit);
+        try {
+            _sqsService.purgeTableSQS(table,audit);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         return SuccessResponse.instance();
     }
 
@@ -262,6 +282,11 @@ public class BlobStoreResource1 {
         _setTableAttributesRequestsByApiKey.getUnchecked(subject.getId()).mark();
         Audit audit = getRequired(auditParam, "audit");
         _blobStore.setTableAttributes(table, attributes, audit);
+        try {
+            _sqsService.putTableAttributesSQS(table,attributes,audit);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
         return SuccessResponse.instance();
     }
 
@@ -494,6 +519,7 @@ public class BlobStoreResource1 {
 
         // Perform the put
         _blobStore.put(table, blobId, onceOnlySupplier(in), attributes);
+        _sqsService.sendPutRequestToSQS(table, blobId, attributes);
 
         return SuccessResponse.instance();
     }
@@ -510,6 +536,11 @@ public class BlobStoreResource1 {
                                   @PathParam("blobId") String blobId,
                                   @Authenticated Subject subject) {
         _deleteObjectRequestsByApiKey.getUnchecked(subject.getId()).mark();
+        try {
+            _sqsService.sendDeleteRequestToSQS(table, blobId);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         _blobStore.delete(table, blobId);
         return SuccessResponse.instance();
     }
