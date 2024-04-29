@@ -2,12 +2,7 @@ package com.bazaarvoice.emodb.web.resources.blob;
 
 import com.bazaarvoice.emodb.auth.jersey.Authenticated;
 import com.bazaarvoice.emodb.auth.jersey.Subject;
-import com.bazaarvoice.emodb.blob.api.Blob;
-import com.bazaarvoice.emodb.blob.api.BlobMetadata;
-import com.bazaarvoice.emodb.blob.api.BlobStore;
-import com.bazaarvoice.emodb.blob.api.Range;
-import com.bazaarvoice.emodb.blob.api.RangeSpecification;
-import com.bazaarvoice.emodb.blob.api.Table;
+import com.bazaarvoice.emodb.blob.api.*;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 import com.bazaarvoice.emodb.common.json.LoggingIterator;
 import com.bazaarvoice.emodb.sor.api.Audit;
@@ -36,42 +31,24 @@ import io.dropwizard.jersey.params.AbstractParam;
 import io.dropwizard.jersey.params.LongParam;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import javassist.bytecode.ByteArray;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.compress.utils.IOUtils;
 import org.apache.shiro.authz.annotation.RequiresAuthentication;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.coursera.metrics.datadog.TaggedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.DefaultValue;
-import javax.ws.rs.GET;
-import javax.ws.rs.HEAD;
-import javax.ws.rs.HeaderParam;
-import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.StreamingOutput;
-import javax.ws.rs.core.UriInfo;
+import javax.ws.rs.*;
+import javax.ws.rs.core.*;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Spliterators;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -134,7 +111,7 @@ public class BlobStoreResource1 {
         _getObjectRequestsByApiKey = createMetricCache("getByApiKey");
         _putObjectRequestsByApiKey = createMetricCache("putByApiKey");
         _deleteObjectRequestsByApiKey = createMetricCache("deleteByApiKey");
-        _sqsService = new SQSService("sqs endpoint", "queuename", new ObjectMapper());
+        _sqsService = new SQSService( "abqueue", new ObjectMapper());
 
 
     }
@@ -199,7 +176,7 @@ public class BlobStoreResource1 {
         }
         _blobStore.createTable(table, options, attributes, audit);
         try {
-            _sqsService.sendTableRequestoSQS(table,options,attributes,audit);
+            _sqsService.sendCreateTabletoSQS(table,options,attributes,audit);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
@@ -222,7 +199,7 @@ public class BlobStoreResource1 {
         Audit audit = getRequired(auditParam, "audit");
         _blobStore.dropTable(table, audit);
         try {
-            _sqsService.sendDeleteTable(table, audit);
+            _sqsService.sendDeleteTableSQS(table, audit);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -283,10 +260,13 @@ public class BlobStoreResource1 {
         Audit audit = getRequired(auditParam, "audit");
         _blobStore.setTableAttributes(table, attributes, audit);
         try {
+            //send table attributes to sqs queue
             _sqsService.putTableAttributesSQS(table,attributes,audit);
+
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
+
         return SuccessResponse.instance();
     }
 
@@ -517,9 +497,18 @@ public class BlobStoreResource1 {
             throw new IllegalArgumentException(String.format("Ttl:%s is specified for blobId:%s", ttl, blobId));
         }
 
+
+        byte[] byteArray = IOUtils.toByteArray(in);
+        // Send the buffer bytes to SQS
+        _sqsService.sendPutRequestToSQS(table, blobId,byteArray, attributes);
         // Perform the put
-        _blobStore.put(table, blobId, onceOnlySupplier(in), attributes);
-        _sqsService.sendPutRequestToSQS(table, blobId, attributes);
+
+        InputStream inputStream = new ByteArrayInputStream(byteArray);
+        _blobStore.put(table, blobId, onceOnlySupplier(inputStream), attributes);
+
+
+
+
 
         return SuccessResponse.instance();
     }
