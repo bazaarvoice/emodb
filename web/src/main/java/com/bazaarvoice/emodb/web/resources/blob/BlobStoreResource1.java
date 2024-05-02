@@ -12,13 +12,14 @@ import com.bazaarvoice.emodb.web.auth.resource.CreateTableResource;
 import com.bazaarvoice.emodb.web.auth.resource.NamedResource;
 import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
+import com.bazaarvoice.emodb.web.resources.blob.messageQueue.MessagingService;
+import com.bazaarvoice.emodb.web.resources.blob.messageQueue.SQSServiceFactory;
 import com.bazaarvoice.emodb.web.resources.sor.AuditParam;
 import com.bazaarvoice.emodb.web.resources.sor.TableOptionsParam;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.annotation.Timed;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -31,7 +32,6 @@ import io.dropwizard.jersey.params.AbstractParam;
 import io.dropwizard.jersey.params.LongParam;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-import javassist.bytecode.ByteArray;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
@@ -53,7 +53,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.StreamSupport;
-
 import static java.lang.String.format;
 
 @Path("/blob/1")
@@ -62,6 +61,8 @@ import static java.lang.String.format;
 @Api(value = "BlobStore: ", description = "All BlobStore operations")
 public class BlobStoreResource1 {
     private static final Logger _log = LoggerFactory.getLogger(BlobStoreResource1.class);
+
+    private final MessagingService _messagingService;
 
     private static final String X_BV_PREFIX = "X-BV-";    // HTTP header prefix for BlobMetadata other than attributes
     private static final String X_BVA_PREFIX = "X-BVA-";  // HTTP header prefix for BlobMetadata attributes
@@ -89,13 +90,11 @@ public class BlobStoreResource1 {
     private final LoadingCache<String, Meter> _putObjectRequestsByApiKey;
     private final LoadingCache<String, Meter> _deleteObjectRequestsByApiKey;
 
-    private final SQSService _sqsService;
 
     public BlobStoreResource1(BlobStore blobStore, Set<String> approvedContentTypes, MetricRegistry metricRegistry) {
         _blobStore = blobStore;
         _approvedContentTypes = approvedContentTypes;
         _metricRegistry = metricRegistry;
-
         _listTableRequestsByApiKey = createMetricCache("listTablesByApiKey");
         _createTableRequestsByApiKey = createMetricCache("createTableByApiKey");
         _dropTableRequestsByApiKey = createMetricCache("dropTableByApiKey");
@@ -111,9 +110,7 @@ public class BlobStoreResource1 {
         _getObjectRequestsByApiKey = createMetricCache("getByApiKey");
         _putObjectRequestsByApiKey = createMetricCache("putByApiKey");
         _deleteObjectRequestsByApiKey = createMetricCache("deleteByApiKey");
-        _sqsService = new SQSService( "abqueue", new ObjectMapper());
-
-
+        _messagingService= new SQSServiceFactory().createSQSService();
     }
 
     private LoadingCache<String, Meter> createMetricCache(String metricName) {
@@ -176,7 +173,7 @@ public class BlobStoreResource1 {
         }
         _blobStore.createTable(table, options, attributes, audit);
         try {
-            _sqsService.sendCreateTabletoSQS(table,options,attributes,audit);
+            _messagingService.sendCreateTableSQS(table,options,attributes,audit);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
@@ -199,7 +196,7 @@ public class BlobStoreResource1 {
         Audit audit = getRequired(auditParam, "audit");
         _blobStore.dropTable(table, audit);
         try {
-            _sqsService.sendDeleteTableSQS(table, audit);
+            _messagingService.sendDeleteTableSQS(table, audit);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -221,7 +218,7 @@ public class BlobStoreResource1 {
         Audit audit = getRequired(auditParam, "audit");
         _blobStore.purgeTableUnsafe(table, audit);
         try {
-            _sqsService.purgeTableSQS(table,audit);
+            _messagingService.purgeTableSQS(table,audit);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -261,7 +258,7 @@ public class BlobStoreResource1 {
         _blobStore.setTableAttributes(table, attributes, audit);
         try {
             //send table attributes to sqs queue
-            _sqsService.putTableAttributesSQS(table,attributes,audit);
+            _messagingService.putTableAttributesSQS(table,attributes,audit);
 
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
@@ -497,19 +494,16 @@ public class BlobStoreResource1 {
             throw new IllegalArgumentException(String.format("Ttl:%s is specified for blobId:%s", ttl, blobId));
         }
 
-
+        _log.info(String.valueOf(in.markSupported()));
         byte[] byteArray = IOUtils.toByteArray(in);
-        // Send the buffer bytes to SQS
-        _sqsService.sendPutRequestToSQS(table, blobId,byteArray, attributes);
-        // Perform the put
 
+
+        // Perform the put
         InputStream inputStream = new ByteArrayInputStream(byteArray);
         _blobStore.put(table, blobId, onceOnlySupplier(inputStream), attributes);
 
-
-
-
-
+        // Send the buffer bytes to SQS
+        _messagingService.sendPutRequestSQS(table, blobId,byteArray, attributes);
         return SuccessResponse.instance();
     }
 
@@ -526,7 +520,7 @@ public class BlobStoreResource1 {
                                   @Authenticated Subject subject) {
         _deleteObjectRequestsByApiKey.getUnchecked(subject.getId()).mark();
         try {
-            _sqsService.sendDeleteRequestToSQS(table, blobId);
+            _messagingService.sendDeleteRequestSQS(table, blobId);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
