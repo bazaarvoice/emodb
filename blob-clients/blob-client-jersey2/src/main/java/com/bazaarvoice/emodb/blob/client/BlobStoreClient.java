@@ -35,6 +35,8 @@ import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
@@ -95,6 +97,7 @@ public class BlobStoreClient implements AuthBlobStore {
      */
     private static final Duration BLOB_CONNECTION_CLOSED_TIMEOUT = Duration.ofSeconds(6);
 
+    private final Logger _log = LoggerFactory.getLogger(BlobStoreClient.class);
     private final EmoClient _client;
     private final UriBuilder _blobStore;
     private final ScheduledExecutorService _connectionManagementService;
@@ -416,17 +419,19 @@ public class BlobStoreClient implements AuthBlobStore {
             if (rangeSpec != null) {
                 request.header(HttpHeaders.RANGE, rangeSpec);
             }
+            _log.info(("test--> 1"));
             BlobResponse blobResponse = Failsafe.with(_retryPolicy)
                     .get(() -> {
                         EmoResponse response = request
                                 .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
                                 .get(EmoResponse.class);
-
+                        _log.info(("test--> 2"));
+                        _log.info("test--> 3"+response.getStatus());
                         int status = response.getStatus();
                         if (status != Response.Status.OK.getStatusCode() && status != HTTP_PARTIAL_CONTENT) {
                             throw new EmoClientException(response);
                         }
-
+                        _log.info(("test--> 3"));
                         BlobMetadata metadata = parseMetadataHeaders(blobId, response);
                         InputStream input = response.getEntityInputStream();
                         boolean rangeApplied = true;
