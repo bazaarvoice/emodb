@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.bazaarvoice.emodb</groupId>
         <artifactId>emodb-parent</artifactId>
-        <version>6.5.133-SNAPSHOT</version>
+        <version>6.5.133</version>
         <relativePath>../../parent/pom.xml</relativePath>
     </parent>
 
