@@ -11,7 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.xml.bind.DatatypeConverter;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 /**
@@ -29,6 +28,7 @@ public class SQSService implements MessagingService {
      *
      * @param queueName      The name of the SQS queue to send messages to.
      * @param objectMapper   ObjectMapper for converting messages to JSON format.
+     * @param sqs            AmazonSQS for sending messages
      */
 
     public SQSService(String queueName, ObjectMapper objectMapper, AmazonSQS sqs) {
@@ -37,20 +37,9 @@ public class SQSService implements MessagingService {
         this.queueUrl = sqs.getQueueUrl(queueName).getQueueUrl();
     }
 
-//    public SQSService( String queueName, ObjectMapper objectMapper) {
-//        this.objectMapper = objectMapper;
-//        this.sqs = AmazonSQSClientBuilder.standard()
-////                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endpoint, "us-east-1"))
-//                .withCredentials(DefaultAWSCredentialsProviderChain.getInstance())
-//                .build();
-//        this.queueUrl = sqs.getQueueUrl(queueName).getQueueUrl();
-//    }
-
-
 
     @Override
-
-    public void sendPutRequestSQS(String table, String blobId,byte[] byteArray , Map<String, String> attributes) throws IOException {
+    public void sendPutRequestSQS(String table, String blobId,byte[] byteArray , Map<String, String> attributes) {
         Map<String, Object> messageMap = new HashMap<>();
         messageMap.put("method", "PUT_TABLE_BLOBID");
         messageMap.put("table", table);
@@ -59,6 +48,7 @@ public class SQSService implements MessagingService {
 
         // Logging the length of the byte array
         _log.info("Byte array length: {}", byteArray.length);
+        _log.info("Byte array length: {}", byteArray);
 
         // Convert byte array to base64 string
         String base64Data = DatatypeConverter.printBase64Binary(byteArray);
@@ -70,7 +60,7 @@ public class SQSService implements MessagingService {
     }
 
     @Override
-    public void sendDeleteRequestSQS(String table, String blobId) throws IOException {
+    public void sendDeleteRequestSQS(String table, String blobId) {
         Map<String, Object> messageMap = new HashMap<>();
         messageMap.put("method", "DELETE_BLOB");
         messageMap.put("table", table);
@@ -79,7 +69,7 @@ public class SQSService implements MessagingService {
     }
 
     @Override
-    public void sendCreateTableSQS(String table, TableOptions options, Map<String, String> attributes, Audit audit) throws JsonProcessingException {
+    public void sendCreateTableSQS(String table, TableOptions options, Map<String, String> attributes, Audit audit) {
 
         Map<String, Object> messageMap = new HashMap<>();
         messageMap.put("method", "CREATE_TABLE");
@@ -91,7 +81,7 @@ public class SQSService implements MessagingService {
     }
 
     @Override
-    public void sendDeleteTableSQS(String table, Audit audit) throws IOException{
+    public void sendDeleteTableSQS(String table, Audit audit) {
         Map<String, Object> messageMap = new HashMap<>();
         messageMap.put("method", "DELETE_TABLE");
         messageMap.put("table",table);
@@ -101,7 +91,7 @@ public class SQSService implements MessagingService {
     }
 
     @Override
-    public void purgeTableSQS(String table, Audit audit) throws IOException{
+    public void purgeTableSQS(String table, Audit audit){
         Map<String, Object> messageMap= new HashMap<>();
         messageMap.put("method","PURGE_TABLE");
         messageMap.put("table",table);
@@ -110,7 +100,7 @@ public class SQSService implements MessagingService {
 
     }
     @Override
-    public void putTableAttributesSQS(String table, Map<String,String> attributes, Audit audit) throws JsonProcessingException {
+    public void putTableAttributesSQS(String table, Map<String,String> attributes, Audit audit) {
         Map<String, Object> messageMap= new HashMap<>();
         messageMap.put("method","SET_TABLE_ATTRIBUTE");
         messageMap.put("table",table);

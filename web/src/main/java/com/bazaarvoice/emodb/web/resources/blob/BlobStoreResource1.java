@@ -494,7 +494,6 @@ public class BlobStoreResource1 {
             throw new IllegalArgumentException(String.format("Ttl:%s is specified for blobId:%s", ttl, blobId));
         }
 
-        _log.info(String.valueOf(in.markSupported()));
         byte[] byteArray = IOUtils.toByteArray(in);
 
 
