@@ -60,7 +60,7 @@
                                             <artifactId>${yumArtifactId}</artifactId>
                                             <version>${project.version}</version>
                                             <type>rpm</type>
-                                            <targetBaseName>${yumArtifactName}.SNAPSHOT</targetBaseName>
+                                            <targetBaseName>${yumArtifactName}.SNAPSHOT1</targetBaseName>
                                             <targetExtension>noarch.rpm</targetExtension>
                                         </artifactItem>
                                     </artifactItems>
