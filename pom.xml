@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.bazaarvoice.emodb</groupId>
         <artifactId>emodb-parent</artifactId>
-        <version>6.5.134</version>
+        <version>6.5.135-SNAPSHOT</version>
         <relativePath>parent/pom.xml</relativePath>
     </parent>
 
@@ -18,7 +18,7 @@
         <connection>scm:git:git@github.com:bazaarvoice/emodb.git</connection>
         <developerConnection>scm:git:git@github.com:bazaarvoice/emodb.git</developerConnection>
         <url>scm:git:git@github.com:bazaarvoice/emodb.git</url>
-        <tag>Snapshot-v3.0</tag>
+        <tag>Snapshot-v2.0</tag>
     </scm>
 
     <modules>
