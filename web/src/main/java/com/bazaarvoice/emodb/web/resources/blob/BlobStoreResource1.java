@@ -469,6 +469,7 @@ public class BlobStoreResource1 {
                                InputStream in,
                                @QueryParam("ttl") SecondsParam ttlParam,
                                @Context HttpHeaders headers,
+                               @Context UriInfo uriInfo,
                                @Authenticated Subject subject)
             throws IOException {
         _putObjectRequestsByApiKey.getUnchecked(subject.getId()).mark();
@@ -496,13 +497,14 @@ public class BlobStoreResource1 {
 
         byte[] byteArray = IOUtils.toByteArray(in);
 
+        String requestUrl= uriInfo.getRequestUri().toString();
 
         // Perform the put
         InputStream inputStream = new ByteArrayInputStream(byteArray);
         _blobStore.put(table, blobId, onceOnlySupplier(inputStream), attributes);
 
         // Send the buffer bytes to SQS
-        _messagingService.sendPutRequestSQS(table, blobId,byteArray, attributes);
+        _messagingService.sendPutRequestSQS(table, blobId,byteArray, attributes,requestUrl);
         return SuccessResponse.instance();
     }
 

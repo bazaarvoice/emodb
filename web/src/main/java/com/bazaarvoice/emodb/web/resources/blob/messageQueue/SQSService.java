@@ -39,23 +39,23 @@ public class SQSService implements MessagingService {
 
 
     @Override
-    public void sendPutRequestSQS(String table, String blobId,byte[] byteArray , Map<String, String> attributes) {
+    public void sendPutRequestSQS(String table, String blobId, byte[] byteArray , Map<String, String> attributes, String requestUrl) {
         Map<String, Object> messageMap = new HashMap<>();
         messageMap.put("method", "PUT_TABLE_BLOBID");
+        messageMap.put("tenantName","datastorage");
+        messageMap.put("requestUrl",requestUrl);
         messageMap.put("table", table);
         messageMap.put("blobId", blobId);
         messageMap.put("attributes", attributes);
 
         // Logging the length of the byte array
-        _log.info("Byte array length: {}", byteArray.length);
-        _log.info("Byte array length: {}", byteArray);
+        _log.debug("Byte array length: {}", byteArray.length);
 
         // Convert byte array to base64 string
         String base64Data = DatatypeConverter.printBase64Binary(byteArray);
         messageMap.put("data", base64Data);
+        _log.debug("Sending PUT request to SQS. Table: {}, BlobId: {}, RequestUrl: {}", table, blobId, requestUrl);
 
-        // Logging the base64 string
-        _log.info("Base64 data: {}", base64Data);
         sendMessageSQS(messageMap);
     }
 
@@ -87,7 +87,6 @@ public class SQSService implements MessagingService {
         messageMap.put("table",table);
         messageMap.put("audit",audit);
         sendMessageSQS(messageMap);
-
     }
 
     @Override
@@ -113,7 +112,9 @@ public class SQSService implements MessagingService {
         try {
             String messageBody = objectMapper.writeValueAsString(messageMap);
             sqs.sendMessage(new SendMessageRequest(queueUrl, messageBody));
-        } catch (JsonProcessingException e) {
+            _log.info("Message sent successfully to SQS");
+        }
+        catch (JsonProcessingException e) {
             _log.error("Error converting message to JSON: {}", e.getMessage());
         } catch (AmazonClientException e) {
             _log.error("Error sending message to SQS: {}", e.getMessage());
