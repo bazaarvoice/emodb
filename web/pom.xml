@@ -6,14 +6,14 @@
     <parent>
         <groupId>com.bazaarvoice.emodb</groupId>
         <artifactId>emodb-parent</artifactId>
-        <version>6.5.135-SNAPSHOT</version>
+        <version>6.5.134-SNAPSHOT6</version>
         <relativePath>../parent/pom.xml</relativePath>
     </parent>
 
     <artifactId>emodb-web</artifactId>
     <packaging>jar</packaging>
 
-    <name>EmoDB RESTful Web Server</name>
+    <name>EmoDB RESTful Web Server 6</name>
 
     <properties>
         <docker-maven-plugin.version>0.40.3</docker-maven-plugin.version>
