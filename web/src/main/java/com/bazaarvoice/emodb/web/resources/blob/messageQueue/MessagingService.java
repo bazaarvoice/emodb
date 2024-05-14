@@ -10,7 +10,7 @@ import java.util.Map;
  * Interface for interacting with a messaging service.
  */
 public interface MessagingService {
-    void sendPutRequestSQS(String table, String blobId, byte[] byteArray, Map<String, String> attributes) throws IOException;
+    void sendPutRequestSQS(String table, String blobId, byte[] byteArray, Map<String, String> attributes, String requestUrl) throws IOException;
     void sendDeleteRequestSQS(String table, String blobId) throws IOException;
     void sendCreateTableSQS(String table, TableOptions options, Map<String, String> attributes, Audit audit) throws JsonProcessingException;
     void sendDeleteTableSQS(String table, Audit audit) throws IOException;
