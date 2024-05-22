@@ -419,14 +419,12 @@ public class BlobStoreClient implements AuthBlobStore {
             }
             BlobResponse blobResponse = Failsafe.with(_retryPolicy)
                     .get(() -> {
-                        _log.info("Request is: {}",request);
                         EmoResponse response = request
                                 .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
                                 .get(EmoResponse.class);
 
                         int status = response.getStatus();
                         _log.info("Response status: {}",status);
-                        _log.info("Response is: {}",response);
                         if (status != Response.Status.OK.getStatusCode() && status != HTTP_PARTIAL_CONTENT) {
                             String exceptionType = response.getFirstHeader("X-BV-Exception");
                             _log.error("Exception occured: {}",exceptionType);
