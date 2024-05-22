@@ -430,7 +430,7 @@ public class BlobStoreClient implements AuthBlobStore {
                         _log.info(messageResponse);
                         if (status != Response.Status.OK.getStatusCode() && status != HTTP_PARTIAL_CONTENT) {
                             String exceptionType = response.getFirstHeader("X-BV-Exception");
-                            _log.error("Exception occured: ",+exceptionType);
+                            _log.error("Exception occured: {} ",exceptionType);
                             throw new EmoClientException(response);
                         }
 
