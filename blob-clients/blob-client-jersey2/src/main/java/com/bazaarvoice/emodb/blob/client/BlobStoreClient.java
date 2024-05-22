@@ -54,7 +54,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -74,7 +73,7 @@ public class BlobStoreClient implements AuthBlobStore {
      * Must match the service name in the EmoService class.
      */
     /*package*/ static final String BASE_SERVICE_NAME = "emodb-blob-1";
-    private static final Logger _log = Logger.getLogger(BlobStoreClient.class);
+
     /**
      * Must match the @Path annotation on the BlobStoreResource class.
      */
@@ -419,17 +418,12 @@ public class BlobStoreClient implements AuthBlobStore {
             }
             BlobResponse blobResponse = Failsafe.with(_retryPolicy)
                     .get(() -> {
-                        _log.info("Request is: {}",request);
                         EmoResponse response = request
                                 .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
                                 .get(EmoResponse.class);
 
                         int status = response.getStatus();
-                        _log.info("Response status: {}",status);
-                        _log.info("Response is: {}",response);
                         if (status != Response.Status.OK.getStatusCode() && status != HTTP_PARTIAL_CONTENT) {
-                            String exceptionType = response.getFirstHeader("X-BV-Exception");
-                            _log.error("Exception occured: {}",exceptionType);
                             throw new EmoClientException(response);
                         }
 
