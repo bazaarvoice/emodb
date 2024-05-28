@@ -515,6 +515,7 @@ public class BlobStoreClient implements AuthBlobStore {
         } else if (response.getStatus() == Response.Status.FORBIDDEN.getStatusCode() &&
                 UnauthorizedException.class.getName().equals(exceptionType)) {
             if (response.hasEntity()) {
+                
                 return (RuntimeException) response.getEntity(UnauthorizedException.class).initCause(e);
             } else {
                 return (RuntimeException) new UnauthorizedException().initCause(e);

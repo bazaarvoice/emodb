@@ -4676,19 +4676,52 @@
 											"name": "Drops a table",
 											"event": [
 												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"if (!pm.variables.get('retryCount')) {",
+															"    pm.variables.set('retryCount', 0);",
+															"}"
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
 													"listen": "test",
 													"script": {
 														"exec": [
-															"pm.test(\"Status code is 400\", function () {",
-															"    pm.response.to.have.status(400);",
-															"});",
-															"",
-															"const postman_table_name = pm.environment.get(\"table20\");",
-															"const expectedResponseBody = `This table name is currently undergoing maintenance and therefore cannot be modified: ${postman_table_name}`;",
-															"",
-															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.text()).to.eql(expectedResponseBody);",
-															"});"
+															"const maxRetries = 3;",
+															"const retryCount = parseInt(pm.variables.get('retryCount'), 10);",
+															"const retryInterval = Math.pow(2, retryCount) * 1000;",
+
+															"if (pm.response.code === 500) {",
+															"    if (retryCount < maxRetries) {",
+															"        console.log(`Retry attempt ${retryCount + 1} of ${maxRetries} after ${retryInterval} ms`);",
+															"        pm.variables.set('retryCount', retryCount + 1);",
+															"        setTimeout(() => {",
+															"            // Re-run the request",
+															"            postman.setNextRequest('Drops a table');",
+															"        }, retryInterval);",
+															"    } else {",
+															"        console.log(`Failed after ${maxRetries} retries.`);",
+															"        pm.variables.set('retryCount', 0); // Reset the retry count for next request",
+															"        pm.test('Status code is 500', function () {",
+															"            pm.response.to.have.status(500);",
+															"        });",
+															"    }",
+															"} else {",
+															"    // Reset the retry count for next request",
+															"    pm.variables.set('retryCount', 0);",
+															"    // Handle the expected response",
+															"    pm.test('Status code is 400', function () {",
+															"        pm.response.to.have.status(400);",
+															"    });",
+															"    const postman_table_name = pm.environment.get('table20');",
+															"    const expectedResponseBody = `This table name is currently undergoing maintenance and therefore cannot be modified: ${postman_table_name}`;",
+															"    pm.test('Body matches string', function () {",
+															"        pm.expect(pm.response.text()).to.eql(expectedResponseBody);",
+															"    });",
+															"}"
 														],
 														"type": "text/javascript"
 													}
