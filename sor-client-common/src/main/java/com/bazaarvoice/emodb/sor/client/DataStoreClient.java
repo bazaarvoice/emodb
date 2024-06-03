@@ -133,6 +133,8 @@ public class DataStoreClient implements AuthDataStore {
                         .put(template);
                 return;
             } catch (EmoClientException e) {
+                e.printStackTrace();
+                System.err.println(e);
                 // The SoR returns a 301 response when we need to make this request against a different data center.
                 // Follow the redirect a few times but don't loop forever.
                 if (e.getResponse().getStatus() == Response.Status.MOVED_PERMANENTLY.getStatusCode() && attempt < 5) {
