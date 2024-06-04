@@ -340,17 +340,21 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
      */
     private Iterator<Column<ByteBuffer>> readManifestForChannel(final String channel, final boolean weak) {
         final ByteBuffer oldestSlab = weak ? _oldestSlab.getIfPresent(channel) : null;
-        final ConsistencyLevel consistency;
+        ConsistencyLevel consistency = ConsistencyLevel.CL_TWO;//CL_LOCAL_QUORUM;;
 
         RangeBuilder range = new RangeBuilder().setLimit(50);
-
         if (oldestSlab != null) {
             range.setStart(oldestSlab);
-              consistency = ConsistencyLevel.CL_LOCAL_ONE;
+            _log.info("Consistency level set to ", consistency);
         } else {
-              consistency = ConsistencyLevel.CL_LOCAL_QUORUM;
-        }
-
+            try{
+                String _sysConsistency = System.getProperty("ASTYANAX-READ-CONSISTENCY");
+                consistency = ConsistencyLevel.valueOf(_sysConsistency);
+                _log.info("Consistency level set to ", consistency);
+            } catch(Exception e){
+                _log.debug("Encountered exception while parsing ", e);
+            }
+            _log.info("Consistancy level is ", consistency);
         final Iterator<Column<ByteBuffer>> manifestColumns = executePaginated(
                 _keyspace.prepareQuery(ColumnFamilies.MANIFEST, consistency)
                         .getKey(channel)
@@ -400,11 +404,8 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
         // Event add and delete write with local quorum, so read with local quorum to get a consistent view of things.
         // Using a lower consistency level could result in (a) duplicate events because we miss deletes and (b)
         // incorrectly closing or deleting slabs when slabs look empty if we miss adds.
-
-
         ColumnList<Integer> eventColumns = execute(
-
-                  _keyspace.prepareQuery(ColumnFamilies.SLAB, ConsistencyLevel.CL_LOCAL_QUORUM)
+                  _keyspace.prepareQuery(ColumnFamilies.SLAB, ConsistencyLevel.CL_TWO)
                         .getKey(slabId)
                         .withColumnRange(start, Constants.OPEN_SLAB_MARKER, false, Integer.MAX_VALUE));
 
