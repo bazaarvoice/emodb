@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import javax.xml.bind.DatatypeConverter;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 /**
  * Service class for interacting with Amazon SQS (Simple Queue Service).
  */
@@ -111,7 +112,12 @@ public class SQSService implements MessagingService {
     private void sendMessageSQS(Map<String, Object> messageMap){
         try {
             String messageBody = objectMapper.writeValueAsString(messageMap);
-            sqs.sendMessage(new SendMessageRequest(queueUrl, messageBody));
+            String messageGroupId = "blob";
+            SendMessageRequest sendMessageRequest = new SendMessageRequest()
+                    .withQueueUrl(queueUrl)
+                    .withMessageBody(messageBody)
+                    .withMessageGroupId(messageGroupId);
+            sqs.sendMessage(sendMessageRequest);
             _log.info("Message sent successfully to SQS");
         }
         catch (JsonProcessingException e) {

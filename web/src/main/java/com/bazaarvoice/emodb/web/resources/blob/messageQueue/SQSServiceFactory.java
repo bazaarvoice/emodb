@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class SQSServiceFactory {
     public MessagingService createSQSService() {
-        return new SQSService("blobMigrationQueue", new ObjectMapper(), AmazonSQSClientBuilder.standard().build());
+        return new SQSService("blobMigrationQueue.fifo", new ObjectMapper(), AmazonSQSClientBuilder.standard().build());
     }
 }
 
