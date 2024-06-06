@@ -54,9 +54,8 @@ public class SQSService implements MessagingService {
 
         // Convert byte array to base64 string
         String base64Data = DatatypeConverter.printBase64Binary(byteArray);
-        messageMap.put("data", base64Data);
+//        messageMap.put("data", base64Data);
         _log.debug("Sending PUT request to SQS. Table: {}, BlobId: {}, RequestUrl: {}", table, blobId, requestUrl);
-
         sendMessageSQS(messageMap);
     }
 
