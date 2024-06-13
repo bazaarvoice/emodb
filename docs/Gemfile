@@ -4,7 +4,7 @@ gem "jekyll", "~> 3.0"
 gem "jekyll-sitemap"
 gem "jekyll-gist"
 gem 'rake'
-gem 'puma'
+gem 'puma', '>= 5.6.7'
 gem "rack-jekyll"
 gem "rouge"
 gem "kramdown"
