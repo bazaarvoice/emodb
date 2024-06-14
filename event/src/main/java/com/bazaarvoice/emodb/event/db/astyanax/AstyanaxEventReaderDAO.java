@@ -340,15 +340,19 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
      */
     private Iterator<Column<ByteBuffer>> readManifestForChannel(final String channel, final boolean weak) {
         final ByteBuffer oldestSlab = weak ? _oldestSlab.getIfPresent(channel) : null;
-        final ConsistencyLevel consistency;
+        ConsistencyLevel consistency = ConsistencyLevel.CL_LOCAL_ONE;
 
         RangeBuilder range = new RangeBuilder().setLimit(50);
-
         if (oldestSlab != null) {
             range.setStart(oldestSlab);
-              consistency = ConsistencyLevel.CL_LOCAL_ONE;
+            _log.info("Consistency level set to ", consistency);
         } else {
-              consistency = ConsistencyLevel.CL_LOCAL_QUORUM;
+            try {
+                consistency = ConsistencyLevel.CL_TWO;
+                _log.info("Consistency level set to ", consistency);
+            } catch (Exception e) {
+                _log.debug("Encountered exception while parsing ", e);
+            }
         }
 
         final Iterator<Column<ByteBuffer>> manifestColumns = executePaginated(
@@ -404,7 +408,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
 
         ColumnList<Integer> eventColumns = execute(
 
-                  _keyspace.prepareQuery(ColumnFamilies.SLAB, ConsistencyLevel.CL_LOCAL_QUORUM)
+                  _keyspace.prepareQuery(ColumnFamilies.SLAB, ConsistencyLevel.CL_LOCAL_ONE)
                         .getKey(slabId)
                         .withColumnRange(start, Constants.OPEN_SLAB_MARKER, false, Integer.MAX_VALUE));
 
