@@ -354,7 +354,6 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
                 _log.debug("Encountered exception while parsing ", e);
             }
         }
-
         final Iterator<Column<ByteBuffer>> manifestColumns = executePaginated(
                 _keyspace.prepareQuery(ColumnFamilies.MANIFEST, consistency)
                         .getKey(channel)
