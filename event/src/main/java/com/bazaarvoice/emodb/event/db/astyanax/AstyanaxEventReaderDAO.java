@@ -345,17 +345,17 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
         RangeBuilder range = new RangeBuilder().setLimit(50);
         if (oldestSlab != null) {
             range.setStart(oldestSlab);
-            _log.info("Consistency level set to ", consistency);
+            _log.info("Consistency level is set to ", consistency);
         } else {
             try {
                 String _sysConsistency = System.getenv("ASTYANAX-READ-CONSISTENCY");
                 consistency = ConsistencyLevel.valueOf(_sysConsistency);
-                _log.info("Consistency level set to ", consistency);
+                _log.info("Consistency level is set to ", consistency);
             } catch (Exception e) {
                 _log.debug("Encountered exception while parsing ", e);
             }
         }
-        _log.info("Final Consistency level set to ", consistency);
+        _log.info("Final Consistency level is set to ", consistency);
         final Iterator<Column<ByteBuffer>> manifestColumns = executePaginated(
                 _keyspace.prepareQuery(ColumnFamilies.MANIFEST, consistency)
                         .getKey(channel)
