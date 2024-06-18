@@ -348,7 +348,8 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
             _log.info("Consistency level set to ", consistency);
         } else {
             try {
-                consistency = ConsistencyLevel.CL_TWO;
+                String _sysConsistency = System.getenv("ASTYANAX-READ-CONSISTENCY");
+                consistency = ConsistencyLevel.valueOf(_sysConsistency);
                 _log.info("Consistency level set to ", consistency);
             } catch (Exception e) {
                 _log.debug("Encountered exception while parsing ", e);
