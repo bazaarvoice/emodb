@@ -720,6 +720,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                             "The 'changeId' UUID is from too far in the past: " + TimeUUIDs.getDate(changeId));
                 }
 
+                _log.info("Update - Table: {}, Key: {}, ChangeId: {}, delta: {}, audit: {}, tags: {}, UpdateConsistency: {}", table, key, changeId, delta, audit, tags, update.getConsistency());
                 return new RecordUpdate(table, key, changeId, delta, audit, tags, update.getConsistency());
             }
         }), new DataWriterDAO.UpdateListener() {
@@ -736,7 +737,8 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                 // If the update fails to get written to SoR, its just a phantom event on the databus, and listeners will see a duplicate.
                 // If the update isn't replicated to another datacenter SoR, but the databus event is, then poller will just wait for replication to finish
                 // before polling the event.
-
+                // Log the number of items being written to the Databus
+                _log.info("Writing {} updates to Databus", updateBatch.size());
                 List<UpdateRef> updateRefs = Lists.newArrayListWithCapacity(updateBatch.size());
                 for (RecordUpdate update : updateBatch) {
                     if (!update.getTable().isInternal()) {
@@ -744,7 +746,13 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                     }
                 }
                 if (!updateRefs.isEmpty()) {
+                    _log.info("Writing update references to Databus: {}", updateRefs);
+                    _log.info("Update ref size:  {}",updateRefs.size());
                     _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefs);
+
+                    for (UpdateRef ref : updateRefs) {
+                        _log.info("Databus update - Table: {}, Key: {}, ChangeId: {}", ref.getTable(), ref.getKey(), ref.getChangeId());
+                    }
                 }
             }
 
@@ -754,6 +762,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                 // didn't end in Cassandra. However, it is absolutely possible for audits to be missing if Emo
                 // terminates unexpectedly without a graceful shutdown to drain all audit that haven't been flushed yet.
 
+                _log.info("Writing {} updates to SoR", updateBatch.size());
                 // Add the hash of the delta to the audit log to make it easy to tell when the same delta is written multiple times
                 // Update the audit to include the tags associated with the update
                 updateBatch.forEach(update -> {
@@ -761,7 +770,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                             .set(Audit.SHA1, Hashing.sha1().hashUnencodedChars(update.getDelta().toString()).toString())
                             .set(Audit.TAGS, tags)
                             .build();
-
+                    _log.info("Writing audit for table: {}, key: {}", update.getTable().getName(), update.getKey());
                     _auditWriter.persist(update.getTable().getName(), update.getKey(), augmentedAudit, TimeUUIDs.getTimeMillis(update.getChangeId()));
 
                 });
