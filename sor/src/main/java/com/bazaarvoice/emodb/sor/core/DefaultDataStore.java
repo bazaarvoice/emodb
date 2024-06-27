@@ -770,6 +770,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                             .set(Audit.SHA1, Hashing.sha1().hashUnencodedChars(update.getDelta().toString()).toString())
                             .set(Audit.TAGS, tags)
                             .build();
+                    
                     _log.info("Writing audit for table: {}, key: {}", update.getTable().getName(), update.getKey());
                     _auditWriter.persist(update.getTable().getName(), update.getKey(), augmentedAudit, TimeUUIDs.getTimeMillis(update.getChangeId()));
 
