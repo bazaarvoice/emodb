@@ -1,5 +1,8 @@
 package com.bazaarvoice.emodb.web.resources.blob;
 
+import com.amazonaws.AmazonClientException;
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.SdkClientException;
 import com.bazaarvoice.emodb.auth.jersey.Authenticated;
 import com.bazaarvoice.emodb.auth.jersey.Subject;
 import com.bazaarvoice.emodb.blob.api.*;
@@ -13,6 +16,7 @@ import com.bazaarvoice.emodb.web.auth.resource.NamedResource;
 import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.bazaarvoice.emodb.web.resources.blob.messageQueue.MessagingService;
+import com.bazaarvoice.emodb.web.resources.blob.messageQueue.SQSMessageException;
 import com.bazaarvoice.emodb.web.resources.blob.messageQueue.SQSServiceFactory;
 import com.bazaarvoice.emodb.web.resources.sor.AuditParam;
 import com.bazaarvoice.emodb.web.resources.sor.TableOptionsParam;
@@ -174,8 +178,12 @@ public class BlobStoreResource1 {
         _blobStore.createTable(table, options, attributes, audit);
         try {
             _messagingService.sendCreateTableSQS(table,options,attributes,audit);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+        } catch (IOException | AmazonClientException e) {
+            _log.error("Failed to send create table message to SQS for table {}: {}", table, e.getMessage());
+            throw new SQSMessageException("Failed to send create table message to SQS", e);
+        } catch (RuntimeException e) {
+            _log.error("Unexpected error occurred while sending create table message to SQS for table {}: {}", table, e.getMessage());
+            throw new SQSMessageException("Unexpected error occurred while sending create table message to SQS", e);
         }
         return SuccessResponse.instance();
     }
@@ -197,8 +205,12 @@ public class BlobStoreResource1 {
         _blobStore.dropTable(table, audit);
         try {
             _messagingService.sendDeleteTableSQS(table, audit);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } catch (IOException | AmazonClientException e) {
+            _log.error("Failed to send delete table message to SQS for table {}: {}", table, e.getMessage());
+            throw new SQSMessageException("Failed to send delete table message to SQS", e);
+        } catch (RuntimeException e) {
+            _log.error("Unexpected error occurred while sending delete table message to SQS for table {}: {}", table, e.getMessage());
+            throw new SQSMessageException("Unexpected error occurred while sending delete table message to SQS", e);
         }
         return SuccessResponse.instance();
     }
@@ -219,8 +231,12 @@ public class BlobStoreResource1 {
         _blobStore.purgeTableUnsafe(table, audit);
         try {
             _messagingService.purgeTableSQS(table,audit);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } catch (IOException | AmazonClientException| UnsupportedOperationException  e) {
+            _log.error("Failed to send purge table message to SQS for table {}: {}", table, e.getMessage());
+            throw new SQSMessageException("Failed to send purge table message to SQS", e);
+        } catch (RuntimeException e) {
+            _log.error("Unexpected error occurred while sending purge table message to SQS for table {}: {}", table, e.getMessage());
+            throw new SQSMessageException("Unexpected error occurred while sending purge table message to SQS", e);
         }
         return SuccessResponse.instance();
     }
@@ -260,8 +276,12 @@ public class BlobStoreResource1 {
             //send table attributes to sqs queue
             _messagingService.putTableAttributesSQS(table,attributes,audit);
 
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+        } catch (IOException | AmazonClientException e) {
+            _log.error("Failed to send put table attributes message to SQS for table {}: {}", table, e.getMessage());
+            throw new SQSMessageException("Failed to send put table attributes message to SQS", e);
+        } catch (RuntimeException e) {
+            _log.error("Unexpected error occurred while sending put table attributes message to SQS for table {}: {}", table, e.getMessage());
+            throw new SQSMessageException("Unexpected error occurred while sending put table attributes message to SQS", e);
         }
 
         return SuccessResponse.instance();
@@ -504,7 +524,17 @@ public class BlobStoreResource1 {
         _blobStore.put(table, blobId, onceOnlySupplier(inputStream), attributes);
 
         // Send the buffer bytes to SQS
-        _messagingService.sendPutRequestSQS(table, blobId,byteArray, attributes,requestUrl);
+        try {
+            _messagingService.sendPutRequestSQS(table, blobId, byteArray, attributes, requestUrl);
+        } catch (IOException | AmazonClientException e) {
+            _log.error("Failed to send put blob message to SQS for table {}: {}", table, e.getMessage());
+            throw new SQSMessageException("Failed to send put blob message to SQS", e);
+        } catch (RuntimeException e) {
+            _log.error("Unexpected error occurred while sending put blob message to SQS for table {}: {}", table, e.getMessage());
+            throw new SQSMessageException("Unexpected error occurred while sending put blob message to SQS", e);
+        }
+
+
         return SuccessResponse.instance();
     }
 
@@ -522,8 +552,12 @@ public class BlobStoreResource1 {
         _deleteObjectRequestsByApiKey.getUnchecked(subject.getId()).mark();
         try {
             _messagingService.sendDeleteRequestSQS(table, blobId);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } catch (IOException | AmazonClientException e) {
+            _log.error("Failed to send delete blob message to SQS for table {}: {}", table, e.getMessage());
+            throw new SQSMessageException("Failed to send delete blob message to SQS", e);
+        } catch (RuntimeException e) {
+            _log.error("Unexpected error occurred while sending delete blob message to SQS for table {}: {}", table, e.getMessage());
+            throw new SQSMessageException("Unexpected error occurred while sending delete blob message to SQS", e);
         }
         _blobStore.delete(table, blobId);
         return SuccessResponse.instance();
