@@ -522,7 +522,7 @@ public class BlobStoreResource1 {
 
         // Send the buffer bytes to SQS
         try {
-            _messagingService.sendPutRequestSQS(table, blobId, byteArray, attributes, requestUrl);
+            _messagingService.sendPutRequestSQS(table, blobId, attributes, requestUrl);
         } catch (IOException | AmazonClientException e) {
             _log.error("Failed to send put blob message to SQS for table {}: {}", table, e.getMessage());
             throw new SQSMessageException("Failed to send put blob message to SQS", e);
