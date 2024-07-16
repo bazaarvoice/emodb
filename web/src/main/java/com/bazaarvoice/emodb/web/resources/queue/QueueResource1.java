@@ -10,6 +10,8 @@ import com.bazaarvoice.emodb.web.auth.Permissions;
 import com.bazaarvoice.emodb.web.auth.resource.NamedResource;
 import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
@@ -46,12 +48,17 @@ import static java.util.Objects.requireNonNull;
 @Api (value="Queue: " , description = "All Queue operations")
 public class QueueResource1 {
 
+    private final MetricRegistry _metricRegistry;
     private final QueueService _queueService;
     private final QueueServiceAuthenticator _queueClient;
+    private final Meter _messageCount;
 
-    public QueueResource1(QueueService queueService, QueueServiceAuthenticator queueClient) {
+    public QueueResource1(QueueService queueService, QueueServiceAuthenticator queueClient, MetricRegistry metricRegistry) {
+        this._metricRegistry = metricRegistry;
+
         _queueService = requireNonNull(queueService, "queueService");
         _queueClient = requireNonNull(queueClient, "queueClient");
+        _messageCount = metricRegistry.meter(MetricRegistry.name(QueueResource1.class, "matchingEventIds"));
     }
 
     @POST
@@ -168,7 +175,9 @@ public class QueueResource1 {
                               @QueryParam("ttl") @DefaultValue("30") SecondsParam claimTtl,
                               @QueryParam("limit") @DefaultValue("10") IntParam limit,
                               @Authenticated Subject subject) {
-        return getService(partitioned, subject.getAuthenticationId()).poll(queue, claimTtl.get(), limit.get());
+        List<Message> polledMessages = getService(partitioned, subject.getAuthenticationId()).poll(queue, claimTtl.get(), limit.get());
+        _messageCount.mark(polledMessages.size());
+        return polledMessages;
     }
 
     @POST
