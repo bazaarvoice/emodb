@@ -52,13 +52,15 @@ public class QueueResource1 {
     private final QueueService _queueService;
     private final QueueServiceAuthenticator _queueClient;
     private final Meter _messageCount;
+    private final Meter _nullPollsCount;
 
     public QueueResource1(QueueService queueService, QueueServiceAuthenticator queueClient, MetricRegistry metricRegistry) {
         this._metricRegistry = metricRegistry;
 
         _queueService = requireNonNull(queueService, "queueService");
         _queueClient = requireNonNull(queueClient, "queueClient");
-        _messageCount = metricRegistry.meter(MetricRegistry.name(QueueResource1.class, "matchingEventIds"));
+        _messageCount = metricRegistry.meter(MetricRegistry.name(QueueResource1.class, "polledMessageCount"));
+        _nullPollsCount = metricRegistry.meter(MetricRegistry.name(QueueResource1.class, "nullPollsCount"));
     }
 
     @POST
@@ -177,6 +179,9 @@ public class QueueResource1 {
                               @Authenticated Subject subject) {
         List<Message> polledMessages = getService(partitioned, subject.getAuthenticationId()).poll(queue, claimTtl.get(), limit.get());
         _messageCount.mark(polledMessages.size());
+        if(polledMessages.isEmpty()){
+            _nullPollsCount.mark();
+        }
         return polledMessages;
     }
 
