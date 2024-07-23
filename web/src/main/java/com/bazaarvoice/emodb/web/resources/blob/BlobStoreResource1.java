@@ -129,6 +129,7 @@ public class BlobStoreResource1 {
                 });
     }
 
+    //change
     @GET
     @Path("_table")
     @Timed(name = "bv.emodb.blob.BlobStoreResource1.listTables", absolute = true)
@@ -185,6 +186,7 @@ public class BlobStoreResource1 {
         return SuccessResponse.instance();
     }
 
+    //change
     @DELETE
     @Path("_table/{table}")
     @RequiresPermissions("blob|drop_table|{table}")
@@ -351,6 +353,7 @@ public class BlobStoreResource1 {
     /**
      * Retrieves a list of content items in a particular table.
      */
+    //change
     @GET
     @Path("{table}")
     @RequiresPermissions("blob|read|{table}")
@@ -363,7 +366,7 @@ public class BlobStoreResource1 {
                                                @QueryParam("from") String blobId,
                                                @QueryParam("limit") @DefaultValue("10") LongParam limit,
                                                @Authenticated Subject subject) {
-        _scanMetadataRequestsByApiKey.getUnchecked(subject.getId()).mark();
+//        _scanMetadataRequestsByApiKey.getUnchecked(subject.getId()).mark();
         return streamingIterator(_blobStore.scanMetadata(table, Strings.emptyToNull(blobId), limit.get()));
     }
 
@@ -383,6 +386,7 @@ public class BlobStoreResource1 {
     }
 
 
+    //change
     /**
      * Retrieves the current version of a piece of content from the data store.
      */
@@ -472,6 +476,7 @@ public class BlobStoreResource1 {
         return MediaType.APPLICATION_OCTET_STREAM;
     }
 
+    //change
     @PUT
     @Path("{table}/{blobId}")
     @Consumes(MediaType.WILDCARD)
