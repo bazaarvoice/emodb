@@ -11,6 +11,7 @@ import com.bazaarvoice.emodb.blob.api.Names;
 import com.bazaarvoice.emodb.blob.api.Range;
 import com.bazaarvoice.emodb.blob.api.RangeSpecification;
 import com.bazaarvoice.emodb.blob.api.StreamSupplier;
+import com.bazaarvoice.emodb.blob.config.ApiClient;
 import com.bazaarvoice.emodb.blob.db.MetadataProvider;
 import com.bazaarvoice.emodb.blob.db.StorageProvider;
 import com.bazaarvoice.emodb.blob.db.StorageSummary;
@@ -227,20 +228,9 @@ public class DefaultBlobStore implements BlobStore {
     @Override
     public Iterator<BlobMetadata> scanMetadata(String tableName, @Nullable String fromBlobIdExclusive, long limit) {
         checkLegalTableName(tableName);
-        checkArgument(fromBlobIdExclusive == null || Names.isLegalBlobId(fromBlobIdExclusive), "fromBlobIdExclusive");
-        checkArgument(limit > 0, "Limit must be >0");
-
-        final Table table = _tableDao.get(tableName);
-
-        // Stream back results.  Don't hold them all in memory at once.
-        LimitCounter remaining = new LimitCounter(limit);
-        return remaining.limit(Iterators.transform(_metadataProvider.scanMetadata(table, fromBlobIdExclusive, remaining),
-                new Function<Map.Entry<String, StorageSummary>, BlobMetadata>() {
-                    @Override
-                    public BlobMetadata apply(Map.Entry<String, StorageSummary> entry) {
-                        return newMetadata(table, entry.getKey(), entry.getValue());
-                    }
-                }));
+        ApiClient apiClient = new ApiClient();
+        LOGGER.debug(" Before calling the endpoint ");
+        return apiClient.getBlobMetadata(tableName);
     }
 
     private static BlobMetadata newMetadata(Table table, String blobId, StorageSummary s) {
