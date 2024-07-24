@@ -485,7 +485,6 @@ public class BlobStoreResource1 {
                                InputStream in,
                                @QueryParam("ttl") SecondsParam ttlParam,
                                @Context HttpHeaders headers,
-                               @Context UriInfo uriInfo,
                                @Authenticated Subject subject)
             throws IOException {
         _putObjectRequestsByApiKey.getUnchecked(subject.getId()).mark();
