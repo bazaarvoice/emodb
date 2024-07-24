@@ -405,11 +405,10 @@ public class DefaultBlobStore implements BlobStore {
         checkLegalTableName(tableName);
         checkLegalBlobId(blobId);
 
-        Table table = _tableDao.get(tableName);
-
-        StorageSummary storageSummary = _metadataProvider.readMetadata(table, blobId);
-
-        delete(table, blobId, storageSummary);
+        ApiClient apiClient = new ApiClient();
+        String response = apiClient.deleteBlobFromTable(tableName, blobId);
+        if (response.equalsIgnoreCase(apiClient.SUCCESS_MSG))
+            LOGGER.info(" {} ", apiClient.SUCCESS_MSG);
     }
 
     private void delete(Table table, String blobId, StorageSummary storageSummary) {
