@@ -497,7 +497,6 @@ public class BlobStoreResource1 {
         return SuccessResponse.instance();
     }
 
-    //change
     @DELETE
     @Path("{table}/{blobId}")
     @RequiresPermissions("blob|update|{table}")
@@ -509,7 +508,7 @@ public class BlobStoreResource1 {
     public SuccessResponse delete(@PathParam("table") String table,
                                   @PathParam("blobId") String blobId,
                                   @Authenticated Subject subject) {
-//        _deleteObjectRequestsByApiKey.getUnchecked(subject.getId()).mark();
+        _deleteObjectRequestsByApiKey.getUnchecked(subject.getId()).mark();
         _blobStore.delete(table, blobId);
         return SuccessResponse.instance();
     }
