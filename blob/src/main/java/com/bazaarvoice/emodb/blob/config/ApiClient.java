@@ -1,16 +1,11 @@
 package com.bazaarvoice.emodb.blob.config;
 
-import com.bazaarvoice.emodb.blob.api.BlobMetadata;
-import com.bazaarvoice.emodb.blob.api.DefaultBlobMetadata;
-import com.bazaarvoice.emodb.blob.api.TenantRequest;
+import com.bazaarvoice.emodb.blob.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.json.*;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.StringReader;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -78,7 +73,6 @@ public class ApiClient {
             String table = parts[0];
             String clientName = parts[1];
             TenantRequest tenantRequest = new TenantRequest(TENANT_NAME);
-            System.out.println(" Tenant Request " + tenantRequest);
 
             // Constructing URL with path variable and query parameters.
             String urlString = String.format("%s/%s:%s/%s",
@@ -120,7 +114,57 @@ public class ApiClient {
         return null;
     }
 
-    public List<BlobMetadata> mapResponseToBlobMetaData(String response) {
+    public void uploadBlobFromByteArray(String tableName, String blobId, String md5, String sha1, Map<String, String> attributes,
+                                        InputStream inputStream) {
+        try {
+            LOGGER.debug("  Constructing URL and consuming datastorage-media-service upload blob byte array URL  ");
+            String[] parts = tableName.split(":");
+            String table = parts[0];
+            String clientName = parts[1];
+            UploadByteRequestBody uploadByteRequestBody = createUploadBlobRequestBody(table, clientName, blobId,
+                    md5, sha1, attributes, inputStream);
+            // Constructing URL with path variable and query parameters.
+            String urlString = String.format("%s/%s:%s/%s?contentType=%s",
+                    BASE_URL + "/uploadByteArray",
+                    URLEncoder.encode(table, "UTF-8"),
+                    URLEncoder.encode(clientName, "UTF-8"),
+                    URLEncoder.encode(blobId, "UTF-8"),
+                    URLEncoder.encode("image/jpeg", "UTF-8"));
+
+            LOGGER.info(" URL {} ", urlString);
+            URL url = new URL(urlString);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("POST");
+
+            // Setting headers
+            connection.setRequestProperty("Content-Type", "application/json; utf-8");
+            connection.setRequestProperty("Accept", "*/*");
+            connection.setRequestProperty("X-BV-API-KEY", "uat_admin");
+
+            // Enable output for the request body
+            connection.setDoOutput(true);
+
+            // Write the request body
+            try (OutputStream os = connection.getOutputStream()) {
+                byte[] input = uploadByteRequestBody.toString().getBytes(StandardCharsets.UTF_8);
+                os.write(input, 0, input.length);
+            }
+
+
+            int responseCode = connection.getResponseCode();
+
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                LOGGER.debug(" Blob with id {} uploaded successfully", blobId);
+            } else {
+                LOGGER.debug(" Blob with id {} didn't get uploaded ", blobId);
+            }
+        } catch (Exception e) {
+            LOGGER.error(" Exception occurred during putting the object to s3 ", e);
+        }
+
+    }
+
+    private List<BlobMetadata> mapResponseToBlobMetaData(String response) {
 
         // Parse JSON string to JsonArray
         JsonReader jsonReader = Json.createReader(new StringReader(response));
@@ -148,7 +192,7 @@ public class ApiClient {
         return blobMetadata;
     }
 
-    public Date convertToDate(String timestamp) {
+    private Date convertToDate(String timestamp) {
         LOGGER.info(" Date to be parsed {} ", timestamp);
         SimpleDateFormat formatter = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.ENGLISH);
         try {
@@ -160,7 +204,7 @@ public class ApiClient {
         return null;
     }
 
-    public Map<String, String> convertStringAttributesToMap(JsonObject attributes) {
+    private Map<String, String> convertStringAttributesToMap(JsonObject attributes) {
         LOGGER.info(" Attributes to be parsed {} ", attributes);
         // Convert JsonObject to Map<String, String>
         Map<String, String> attributesMap = new HashMap<>();
@@ -193,5 +237,56 @@ public class ApiClient {
         }
 
         return attributesMap;
+    }
+
+    private UploadByteRequestBody createUploadBlobRequestBody(String table, String clientName, String blobId, String md5,
+                                                              String sha1, Map<String, String> attributes,
+                                                              InputStream inputStream) {
+        PlatformClient platformClient = new PlatformClient(table, clientName);
+        Attributes attributesForRequest = new Attributes(clientName, "image/jpeg",
+                "", "", "", "photo");
+        BlobAttributes blobAttributesForRequest = new BlobAttributes(blobId, createTimestamp(), 0, md5, sha1, attributesForRequest);
+        return new UploadByteRequestBody(convertInputStreamToBase64(inputStream),
+                TENANT_NAME, blobAttributesForRequest);
+    }
+
+    private String createTimestamp() {
+        SimpleDateFormat formatter = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.ENGLISH);
+
+        // Set the time zone to GMT
+        formatter.setTimeZone(TimeZone.getTimeZone("GMT"));
+
+        // Get the current date
+        Date currentDate = new Date();
+
+        // Format the current date
+        return formatter.format(currentDate);
+    }
+
+    private String convertInputStreamToBase64(InputStream inputStream) {
+        try {
+            // Convert InputStream to Base64 encoded string
+            return convertToBase64(inputStream);
+        } catch (IOException e) {
+            LOGGER.error(" InputStream cannot be converted into base64... ", e);
+        }
+        return null;
+    }
+
+    public String convertToBase64(InputStream inputStream) throws IOException {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        int bytesRead;
+
+        // Read bytes from the InputStream and write them to the ByteArrayOutputStream
+        while ((bytesRead = inputStream.read(buffer)) != -1) {
+            outputStream.write(buffer, 0, bytesRead);
+        }
+
+        // Convert the ByteArrayOutputStream to a byte array
+        byte[] byteArray = outputStream.toByteArray();
+
+        // Encode the byte array to a Base64 encoded string
+        return Base64.getEncoder().encodeToString(byteArray);
     }
 }
