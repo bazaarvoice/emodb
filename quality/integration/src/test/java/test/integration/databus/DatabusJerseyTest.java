@@ -55,6 +55,7 @@ import org.mockito.stubbing.Answer;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.ServletOutputStream;
+import javax.servlet.WriteListener;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Context;
@@ -683,6 +684,16 @@ public class DatabusJerseyTest extends ResourceTest {
             throws Exception {
 
         ServletOutputStream servletOutputStream = new ServletOutputStream() {
+            @Override
+            public boolean isReady() {
+                return false;
+            }
+
+            @Override
+            public void setWriteListener(WriteListener writeListener) {
+
+            }
+
             @Override
             public void write(int b) throws IOException {
                 out.write(b);
