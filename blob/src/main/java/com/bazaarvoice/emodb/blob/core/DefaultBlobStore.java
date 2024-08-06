@@ -230,7 +230,7 @@ public class DefaultBlobStore implements BlobStore {
         checkLegalTableName(tableName);
         ApiClient apiClient = new ApiClient();
         LOGGER.debug(" Before calling the endpoint ");
-        return apiClient.getBlobMetadata(tableName);
+        return apiClient.getBlobMetadata(fromBlobIdExclusive);
     }
 
     private static BlobMetadata newMetadata(Table table, String blobId, StorageSummary s) {
