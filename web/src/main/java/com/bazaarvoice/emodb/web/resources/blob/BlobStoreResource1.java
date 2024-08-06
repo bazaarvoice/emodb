@@ -15,7 +15,6 @@ import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.web.auth.Permissions;
 import com.bazaarvoice.emodb.web.auth.resource.CreateTableResource;
 import com.bazaarvoice.emodb.web.auth.resource.NamedResource;
-import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.bazaarvoice.emodb.web.resources.sor.AuditParam;
 import com.bazaarvoice.emodb.web.resources.sor.TableOptionsParam;
@@ -363,7 +362,7 @@ public class BlobStoreResource1 {
         return _blobStore.getTablePlacements();
     }
 
-
+    //change
     /**
      * Retrieves the current version of a piece of content from the data store.
      */
@@ -465,33 +464,16 @@ public class BlobStoreResource1 {
     public SuccessResponse put(@PathParam("table") String table,
                                @PathParam("blobId") String blobId,
                                InputStream in,
-                               @QueryParam("ttl") SecondsParam ttlParam,
                                @Context HttpHeaders headers,
                                @Authenticated Subject subject)
             throws IOException {
         _putObjectRequestsByApiKey.getUnchecked(subject.getId()).mark();
-        // Note: we could copy the Content-Type and Content-Encoding headers into the attributes automatically because
-        // they're so common, but in practice this runs into two problems: (1) Dropwizard interprets Content-Encoding
-        // and automatically uncompresses gzip uploads, which generally isn't what we want, and (2) curl sets the
-        // Content-Type to "application/x-www-form-urlencoded" by default and that's almost never what we want.
-        // So, there are two special headers a user can set:
-        //   X-BVA-contentEncoding:  the value of this attribute will be copied to Content-Encoding on GET
-        //   X-BVA-contentType: the value of this attribute will be copied to Content-Type on GET
-
-        // Copy all the "X-BVA-*" headers into the attributes
         Map<String, String> attributes = Maps.newHashMap();
         for (Map.Entry<String, List<String>> entry : headers.getRequestHeaders().entrySet()) {
             if (entry.getKey().startsWith(X_BVA_PREFIX)) {
                 attributes.put(entry.getKey().substring(X_BVA_PREFIX.length()), entry.getValue().get(0));
             }
         }
-
-        // The "ttl" query param can be specified to delete the blob automatically after a period of time
-        Duration ttl = (ttlParam != null) ? ttlParam.get() : null;
-        if (null != ttl) {
-            throw new IllegalArgumentException(String.format("Ttl:%s is specified for blobId:%s", ttl, blobId));
-        }
-
         // Perform the put
         _blobStore.put(table, blobId, onceOnlySupplier(in), attributes);
 

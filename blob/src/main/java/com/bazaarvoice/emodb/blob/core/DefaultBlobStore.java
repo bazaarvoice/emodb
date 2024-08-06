@@ -11,6 +11,7 @@ import com.bazaarvoice.emodb.blob.api.Names;
 import com.bazaarvoice.emodb.blob.api.Range;
 import com.bazaarvoice.emodb.blob.api.RangeSpecification;
 import com.bazaarvoice.emodb.blob.api.StreamSupplier;
+import com.bazaarvoice.emodb.blob.config.ApiClient;
 import com.bazaarvoice.emodb.blob.db.MetadataProvider;
 import com.bazaarvoice.emodb.blob.db.StorageProvider;
 import com.bazaarvoice.emodb.blob.db.StorageSummary;
@@ -227,20 +228,9 @@ public class DefaultBlobStore implements BlobStore {
     @Override
     public Iterator<BlobMetadata> scanMetadata(String tableName, @Nullable String fromBlobIdExclusive, long limit) {
         checkLegalTableName(tableName);
-        checkArgument(fromBlobIdExclusive == null || Names.isLegalBlobId(fromBlobIdExclusive), "fromBlobIdExclusive");
-        checkArgument(limit > 0, "Limit must be >0");
-
-        final Table table = _tableDao.get(tableName);
-
-        // Stream back results.  Don't hold them all in memory at once.
-        LimitCounter remaining = new LimitCounter(limit);
-        return remaining.limit(Iterators.transform(_metadataProvider.scanMetadata(table, fromBlobIdExclusive, remaining),
-                new Function<Map.Entry<String, StorageSummary>, BlobMetadata>() {
-                    @Override
-                    public BlobMetadata apply(Map.Entry<String, StorageSummary> entry) {
-                        return newMetadata(table, entry.getKey(), entry.getValue());
-                    }
-                }));
+        ApiClient apiClient = new ApiClient();
+        LOGGER.debug(" Before calling the endpoint ");
+        return apiClient.getBlobMetadata(fromBlobIdExclusive);
     }
 
     private static BlobMetadata newMetadata(Table table, String blobId, StorageSummary s) {
@@ -351,63 +341,22 @@ public class DefaultBlobStore implements BlobStore {
     public void put(String tableName, String blobId, Supplier<? extends InputStream> in, Map<String, String> attributes) throws IOException {
         checkLegalTableName(tableName);
         checkLegalBlobId(blobId);
+        LOGGER.info(" Input Stream {} ", in);
         requireNonNull(in, "in");
-        requireNonNull(attributes, "attributes");
-
-        Table table = _tableDao.get(tableName);
-
-        StorageSummary summary = putObject(table, blobId, in, attributes);
-
-        try {
-            _metadataProvider.writeMetadata(table, blobId, summary);
-        } catch (Throwable t) {
-            LOGGER.error("Failed to upload metadata for table: {}, blobId: {}, attempt to delete blob. Exception: {}", tableName, blobId, t.getMessage());
-
-            try {
-                _storageProvider.deleteObject(table, blobId);
-            } catch (Exception e1) {
-                LOGGER.error("Failed to delete blob for table: {}, blobId: {}. Inconsistency between blob and metadata storages. Exception: {}", tableName, blobId, e1.getMessage());
-                _metaDataNotPresentMeter.mark();
-            } finally {
-                Throwables.propagate(t);
-            }
-        }
+        putObject(tableName, blobId, in, attributes);
     }
 
-    private StorageSummary putObject(Table table, String blobId, Supplier<? extends InputStream> in, Map<String, String> attributes) {
-        long timestamp = _storageProvider.getCurrentTimestamp(table);
-        int chunkSize = _storageProvider.getDefaultChunkSize();
-        checkArgument(chunkSize > 0);
-        DigestInputStream md5In = new DigestInputStream(in.get(), getMessageDigest("MD5"));
+    private void putObject(String table, String blobId, Supplier<? extends InputStream> in, Map<String, String> attributes) {
+        InputStream inputStream = in.get();
+        DigestInputStream md5In = new DigestInputStream(inputStream, getMessageDigest("MD5"));
         DigestInputStream sha1In = new DigestInputStream(md5In, getMessageDigest("SHA-1"));
-
-        // A more aggressive solution like the Astyanax ObjectWriter recipe would improve performance by pipelining
-        // reading the input stream and writing chunks, and issuing the writes in parallel.
-        byte[] bytes = new byte[chunkSize];
-        long length = 0;
-        int chunkCount = 0;
-        for (; ; ) {
-            int chunkLength;
-            try {
-                chunkLength = ByteStreams.read(sha1In, bytes, 0, bytes.length);
-            } catch (IOException e) {
-                LOGGER.error("Failed to read input stream", e);
-                throw Throwables.propagate(e);
-            }
-            if (chunkLength == 0) {
-                break;
-            }
-            ByteBuffer buffer = ByteBuffer.wrap(bytes, 0, chunkLength);
-            _storageProvider.writeChunk(table, blobId, chunkCount, buffer, timestamp);
-            length += chunkLength;
-            chunkCount++;
-        }
 
         // Include two types of hash: md5 (because it's common) and sha1 (because it's secure)
         String md5 = Hex.encodeHexString(md5In.getMessageDigest().digest());
         String sha1 = Hex.encodeHexString(sha1In.getMessageDigest().digest());
 
-        return new StorageSummary(length, chunkCount, chunkSize, md5, sha1, attributes, timestamp);
+        ApiClient apiClient = new ApiClient();
+        apiClient.uploadBlobFromByteArray(table, blobId, md5, sha1, attributes, inputStream);
     }
 
     @Override
@@ -415,11 +364,10 @@ public class DefaultBlobStore implements BlobStore {
         checkLegalTableName(tableName);
         checkLegalBlobId(blobId);
 
-        Table table = _tableDao.get(tableName);
-
-        StorageSummary storageSummary = _metadataProvider.readMetadata(table, blobId);
-
-        delete(table, blobId, storageSummary);
+        ApiClient apiClient = new ApiClient();
+        String response = apiClient.deleteBlobFromTable(tableName, blobId);
+        if (response.equalsIgnoreCase(apiClient.SUCCESS_MSG))
+            LOGGER.info(" {} ", apiClient.SUCCESS_MSG);
     }
 
     private void delete(Table table, String blobId, StorageSummary storageSummary) {
