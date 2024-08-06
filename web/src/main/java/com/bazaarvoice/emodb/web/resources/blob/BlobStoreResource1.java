@@ -362,6 +362,7 @@ public class BlobStoreResource1 {
         return _blobStore.getTablePlacements();
     }
 
+    //change
     /**
      * Retrieves the current version of a piece of content from the data store.
      */

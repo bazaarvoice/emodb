@@ -21,19 +21,15 @@ public class ApiClient {
     private final String TENANT_NAME = "datastorage";
     public final String SUCCESS_MSG = "Successfully deleted blob.";
 
-    public Iterator<BlobMetadata> getBlobMetadata(String tableName) {
+    public Iterator<BlobMetadata> getBlobMetadata(String fromBlobIdExclusive) {
         try {
             LOGGER.debug("  Constructing URL and consuming datastorage-media-service URL  ");
-            String[] parts = tableName.split(":");
-            String table = parts[0];
-            String clientName = parts[1];
 
             // Constructing URL with path variable and query parameters.
-            String urlString = String.format("%s/%s/%s/%s",
+            String urlString = String.format("%s/%s/%s",
                     BASE_URL,
-                    URLEncoder.encode(TENANT_NAME, "UTF-8"),
-                    URLEncoder.encode(table, "UTF-8"),
-                    URLEncoder.encode(clientName, "UTF-8"));
+                    URLEncoder.encode(fromBlobIdExclusive, "UTF-8"),
+                    "/metadata");
 
             URL url = new URL(urlString);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -53,8 +49,7 @@ public class ApiClient {
                     response.append(inputLine);
                 }
                 in.close();
-                System.out.println(response);
-                LOGGER.info(" Before mapping of the response ");
+                LOGGER.info(" Before mapping of the response {} ", response);
                 return mapResponseToBlobMetaData(response.toString()).iterator();
             } else {
                 LOGGER.debug(" GET operation halted with error ");
@@ -176,7 +171,6 @@ public class ApiClient {
         for (JsonObject jsonObject : jsonArray.getValuesAs(JsonObject.class)) {
             long length = Long.parseLong(String.valueOf(jsonObject.getInt("length")));
 
-            System.out.println(" Length " + length);
             Map<String, String> attributes = convertStringAttributesToMap((JsonObject) jsonObject.get("attributes"));
             BlobMetadata blobMetadataObject = new DefaultBlobMetadata(jsonObject.getString("id"),
                     convertToDate(jsonObject.getString("timestamp")),
@@ -185,10 +179,8 @@ public class ApiClient {
                     jsonObject.getString("sha1"),
                     attributes);
             blobMetadata.add(blobMetadataObject);
-            System.out.println(jsonObject);
         }
-        LOGGER.info(" After mapping of the response ");
-        System.out.println(" BlobMetaData " + blobMetadata);
+        LOGGER.debug(" After mapping of the response {} ", blobMetadata);
         return blobMetadata;
     }
 
@@ -244,7 +236,7 @@ public class ApiClient {
                                                               InputStream inputStream) {
         PlatformClient platformClient = new PlatformClient(table, clientName);
         Attributes attributesForRequest = new Attributes(clientName, "image/jpeg",
-                "", "", "", "photo");
+                "", platformClient.getTable() + ":" + platformClient.getClientName(), "", "photo");
         BlobAttributes blobAttributesForRequest = new BlobAttributes(blobId, createTimestamp(), 0, md5, sha1, attributesForRequest);
         return new UploadByteRequestBody(convertInputStreamToBase64(inputStream),
                 TENANT_NAME, blobAttributesForRequest);
