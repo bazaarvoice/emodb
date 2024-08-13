@@ -18,6 +18,8 @@ import com.bazaarvoice.emodb.queue.api.MoveQueueStatus;
 import com.bazaarvoice.emodb.queue.api.Names;
 import com.bazaarvoice.emodb.queue.api.UnknownMoveException;
 import com.bazaarvoice.emodb.sortedq.core.ReadOnlyQueueException;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.cache.CacheBuilder;
@@ -46,18 +48,24 @@ abstract class AbstractQueueService implements BaseQueueService {
     private final JobService _jobService;
     private final JobType<MoveQueueRequest, MoveQueueResult> _moveQueueJobType;
     private final LoadingCache<SizeCacheKey, Map.Entry<Long, Long>> _queueSizeCache;
+    private final Meter _sendAllMeterAQS;
+    private final Meter _sendAllMeterNullAQS;
+
+    private final Meter _pollAQS;
+    private final Meter _pollNullAQS;
 
     public static final int MAX_MESSAGE_SIZE_IN_BYTES = 30 * 1024;
 
     protected AbstractQueueService(BaseEventStore eventStore, JobService jobService,
                                    JobHandlerRegistry jobHandlerRegistry,
                                    JobType<MoveQueueRequest, MoveQueueResult> moveQueueJobType,
-                                   Clock clock) {
+                                   Clock clock,MetricRegistry metricRegistry) {
         _eventStore = eventStore;
         _jobService = jobService;
         _moveQueueJobType = moveQueueJobType;
 
         registerMoveQueueJobHandler(jobHandlerRegistry);
+
         _queueSizeCache = CacheBuilder.newBuilder()
                 .expireAfterWrite(15, TimeUnit.SECONDS)
                 .maximumSize(2000)
@@ -69,6 +77,11 @@ abstract class AbstractQueueService implements BaseQueueService {
                         return Maps.immutableEntry(internalMessageCountUpTo(key.channelName, key.limitAsked), key.limitAsked);
                     }
                 });
+        _sendAllMeterAQS = metricRegistry.meter(MetricRegistry.name(AbstractQueueService.class, "sendAllAQS"));
+        _sendAllMeterNullAQS = metricRegistry.meter(MetricRegistry.name(AbstractQueueService.class, "sendAllNullAQS"));
+        _pollAQS= metricRegistry.meter(MetricRegistry.name(AbstractQueueService.class,"pollNullAQS"));
+        _pollNullAQS= metricRegistry.meter(MetricRegistry.name(AbstractQueueService.class,"pollNullAQS"));
+
     }
 
     private void registerMoveQueueJobHandler(JobHandlerRegistry jobHandlerRegistry) {
@@ -109,6 +122,11 @@ abstract class AbstractQueueService implements BaseQueueService {
     @Override
     public void sendAll(Map<String, ? extends Collection<?>> messagesByQueue) {
         requireNonNull(messagesByQueue, "messagesByQueue");
+        if(messagesByQueue.keySet().isEmpty()){
+            _sendAllMeterNullAQS.mark();
+        } else {
+            _sendAllMeterAQS.mark(messagesByQueue.keySet().size());
+        }
 
         ImmutableMultimap.Builder<String, ByteBuffer> builder = ImmutableMultimap.builder();
         for (Map.Entry<String, ? extends Collection<?>> entry : messagesByQueue.entrySet()) {
@@ -178,8 +196,12 @@ abstract class AbstractQueueService implements BaseQueueService {
         checkLegalQueueName(queue);
         checkArgument(claimTtl.toMillis() >= 0, "ClaimTtl must be >=0");
         checkArgument(limit > 0, "Limit must be >0");
-
-        return toMessages(_eventStore.poll(queue, claimTtl, limit));
+        List<Message> response = toMessages(_eventStore.poll(queue, claimTtl, limit));
+        _pollAQS.mark(response.size());
+        if(response.isEmpty()){
+            _pollNullAQS.mark();
+        }
+        return  response;
     }
 
     @Override
