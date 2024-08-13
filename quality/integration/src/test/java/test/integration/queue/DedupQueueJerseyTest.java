@@ -16,6 +16,7 @@ import com.bazaarvoice.emodb.web.resources.queue.DedupQueueResource1;
 import com.bazaarvoice.ostrich.PartitionContextBuilder;
 import com.bazaarvoice.ostrich.pool.OstrichAccessors;
 import com.bazaarvoice.ostrich.pool.PartitionContextValidator;
+import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
@@ -56,7 +57,7 @@ public class DedupQueueJerseyTest extends ResourceTest {
 
     @Rule
     public ResourceTestRule _resourceTestRule = setupResourceTestRule(
-            Collections.<Object>singletonList(new DedupQueueResource1(_server, DedupQueueServiceAuthenticator.proxied(_proxy))),
+            Collections.<Object>singletonList(new DedupQueueResource1(_server, DedupQueueServiceAuthenticator.proxied(_proxy), new MetricRegistry())),
             ImmutableMap.of(
                     APIKEY_QUEUE, new ApiKey("queue", ImmutableSet.of("queue-role")),
                     APIKEY_UNAUTHORIZED, new ApiKey("unauth", ImmutableSet.of("unauthorized-role"))),

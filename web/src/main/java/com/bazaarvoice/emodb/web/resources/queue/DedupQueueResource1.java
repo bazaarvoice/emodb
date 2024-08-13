@@ -10,6 +10,8 @@ import com.bazaarvoice.emodb.web.auth.Permissions;
 import com.bazaarvoice.emodb.web.auth.resource.NamedResource;
 import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
@@ -48,10 +50,14 @@ public class DedupQueueResource1 {
 
     private final DedupQueueService _queueService;
     private final DedupQueueServiceAuthenticator _queueClient;
+    private final Meter _nullPollDedupCount;
+    private final Meter _messageDedupCount;
 
-    public DedupQueueResource1(DedupQueueService queueService, DedupQueueServiceAuthenticator queueClient) {
+    public DedupQueueResource1(DedupQueueService queueService, DedupQueueServiceAuthenticator queueClient, MetricRegistry metricRegistry) {
         _queueService = requireNonNull(queueService, "queueService");
         _queueClient = requireNonNull(queueClient, "queueClient");
+        _nullPollDedupCount = metricRegistry.meter(MetricRegistry.name(DedupQueueResource1.class, "nullPollsDedupCount"));
+        _messageDedupCount = metricRegistry.meter(MetricRegistry.name(QueueResource1.class, "polledMessageCount"));
     }
 
     @POST
@@ -171,7 +177,13 @@ public class DedupQueueResource1 {
                               @QueryParam("ttl") @DefaultValue("30") SecondsParam claimTtl,
                               @QueryParam("limit") @DefaultValue("10") IntParam limit,
                               @Authenticated Subject subject) {
-        return getService(partitioned, subject.getAuthenticationId()).poll(queue, claimTtl.get(), limit.get());
+
+        List<Message> polledMessages = getService(partitioned, subject.getAuthenticationId()).poll(queue, claimTtl.get(), limit.get());
+        _messageDedupCount.mark(polledMessages.size());
+        if(polledMessages.isEmpty()){
+            _nullPollDedupCount.mark();
+        }
+        return polledMessages;
     }
 
     @POST

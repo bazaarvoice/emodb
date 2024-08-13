@@ -306,7 +306,7 @@ public class EmoService extends Application<EmoConfiguration> {
         // Start the Queue service
         resources.addResource(_cluster, "emodb-queue-1", new QueueResource1(queueService, queueClient, _environment.metrics()));
         // Start the Dedup Queue service
-        resources.addResource(_cluster, "emodb-dedupq-1", new DedupQueueResource1(dedupQueueService, dedupQueueClient));
+        resources.addResource(_cluster, "emodb-dedupq-1", new DedupQueueResource1(dedupQueueService, dedupQueueClient, _environment.metrics()));
     }
 
     private void evaluateScanner()
