@@ -52,12 +52,21 @@ public class DedupQueueResource1 {
     private final DedupQueueServiceAuthenticator _queueClient;
     private final Meter _nullPollDedupCount;
     private final Meter _messageDedupCount;
+    private final Meter _sendDedupCount;
+    private final Meter _sendNullDedupCount;
+    private final Meter _sendBatchNullDedupCount;
+    private final Meter _sendBatchDedupCount;
+
 
     public DedupQueueResource1(DedupQueueService queueService, DedupQueueServiceAuthenticator queueClient, MetricRegistry metricRegistry) {
         _queueService = requireNonNull(queueService, "queueService");
         _queueClient = requireNonNull(queueClient, "queueClient");
         _nullPollDedupCount = metricRegistry.meter(MetricRegistry.name(DedupQueueResource1.class, "nullPollsDedupCount"));
-        _messageDedupCount = metricRegistry.meter(MetricRegistry.name(QueueResource1.class, "polledMessageCount"));
+        _messageDedupCount = metricRegistry.meter(MetricRegistry.name(DedupQueueResource1.class, "polledMessageDedupCount"));
+        _sendDedupCount= metricRegistry.meter(MetricRegistry.name(DedupQueueResource1.class,"sendDedupCount"));
+        _sendNullDedupCount= metricRegistry.meter(MetricRegistry.name(DedupQueueResource1.class,"sendNullDedupCount"));
+        _sendBatchDedupCount= metricRegistry.meter(MetricRegistry.name(DedupQueueResource1.class,"sendBatchDedupCount"));
+        _sendBatchNullDedupCount= metricRegistry.meter(MetricRegistry.name(DedupQueueResource1.class,"sendBatchNullDedupCount"));
     }
 
     @POST
@@ -71,6 +80,12 @@ public class DedupQueueResource1 {
     )
     public SuccessResponse send(@PathParam("queue") String queue, Object message) {
         // Not partitioned--any server can write messages to Cassandra.
+        if (message == null) {
+            _sendNullDedupCount.mark();
+        }
+        else{
+            _sendDedupCount.mark();
+        }
         _queueService.send(queue, message);
         return SuccessResponse.instance();
     }
@@ -86,6 +101,12 @@ public class DedupQueueResource1 {
     )
     public SuccessResponse sendBatch(@PathParam("queue") String queue, Collection<Object> messages) {
         // Not partitioned--any server can write messages to Cassandra.
+        if (messages == null || messages.isEmpty()) {
+            _sendBatchNullDedupCount.mark(); // Increment the sendnull meter
+        }
+        else {
+            _sendBatchDedupCount.mark(messages.size());
+        }
         _queueService.sendAll(queue, messages);
         return SuccessResponse.instance();
     }

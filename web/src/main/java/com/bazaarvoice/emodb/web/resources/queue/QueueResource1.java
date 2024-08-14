@@ -87,10 +87,12 @@ public class QueueResource1 {
     )
     public SuccessResponse send(@PathParam("queue") String queue, Object message) {
         // Not partitioned--any server can write messages to Cassandra.
-        _sendCount_qr1.mark();
 
         if (message == null) {
             _sendNullCount_qr1.mark();
+        }
+        else{
+            _sendCount_qr1.mark();
         }
         _queueService.send(queue, message);
         return SuccessResponse.instance();

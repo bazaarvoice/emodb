@@ -53,15 +53,13 @@ abstract class AbstractQueueService implements BaseQueueService {
 
     private final Meter _pollAQS;
     private final Meter _pollNullAQS;
-    private final MetricRegistry metricRegistry;
 
     public static final int MAX_MESSAGE_SIZE_IN_BYTES = 30 * 1024;
 
     protected AbstractQueueService(BaseEventStore eventStore, JobService jobService,
                                    JobHandlerRegistry jobHandlerRegistry,
                                    JobType<MoveQueueRequest, MoveQueueResult> moveQueueJobType,
-                                   Clock clock) {
-        metricRegistry = new MetricRegistry();
+                                   Clock clock, MetricRegistry metricRegistry) {
         _eventStore = eventStore;
         _jobService = jobService;
         _moveQueueJobType = moveQueueJobType;
