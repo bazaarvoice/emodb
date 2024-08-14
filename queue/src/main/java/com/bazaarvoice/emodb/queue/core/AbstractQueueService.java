@@ -79,7 +79,7 @@ abstract class AbstractQueueService implements BaseQueueService {
                 });
         _sendAllMeterAQS = metricRegistry.meter(MetricRegistry.name(AbstractQueueService.class, "sendAllAQS"));
         _sendAllMeterNullAQS = metricRegistry.meter(MetricRegistry.name(AbstractQueueService.class, "sendAllNullAQS"));
-        _pollAQS= metricRegistry.meter(MetricRegistry.name(AbstractQueueService.class,"pollNullAQS"));
+        _pollAQS= metricRegistry.meter(MetricRegistry.name(AbstractQueueService.class,"pollAQS"));
         _pollNullAQS= metricRegistry.meter(MetricRegistry.name(AbstractQueueService.class,"pollNullAQS"));
 
     }
