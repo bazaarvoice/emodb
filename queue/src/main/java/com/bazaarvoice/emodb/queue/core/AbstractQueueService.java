@@ -197,9 +197,11 @@ abstract class AbstractQueueService implements BaseQueueService {
         checkArgument(claimTtl.toMillis() >= 0, "ClaimTtl must be >=0");
         checkArgument(limit > 0, "Limit must be >0");
         List<Message> response = toMessages(_eventStore.poll(queue, claimTtl, limit));
-        _pollAQS.mark(response.size());
         if(response.isEmpty()){
             _pollNullAQS.mark();
+        }
+        else{
+            _pollAQS.mark(response.size());
         }
         return  response;
     }
