@@ -10,6 +10,8 @@ import com.bazaarvoice.emodb.web.auth.Permissions;
 import com.bazaarvoice.emodb.web.auth.resource.NamedResource;
 import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
@@ -36,6 +38,7 @@ import javax.ws.rs.core.Response;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
@@ -46,12 +49,31 @@ import static java.util.Objects.requireNonNull;
 @Api (value="Queue: " , description = "All Queue operations")
 public class QueueResource1 {
 
+    //private final MetricRegistry _metricRegistry;
     private final QueueService _queueService;
     private final QueueServiceAuthenticator _queueClient;
+    private final Meter _messageCount_qr1;
+    private final Meter _nullPollsCount_qr1;
 
-    public QueueResource1(QueueService queueService, QueueServiceAuthenticator queueClient) {
+    private final Meter _sendCount_qr1;
+    private final Meter _sendNullCount_qr1;
+
+    private final Meter _sendBatch_qr1;
+
+    private final Meter _sendBatchNull_qr1;
+
+    public QueueResource1(QueueService queueService, QueueServiceAuthenticator queueClient, MetricRegistry metricRegistry) {
+        //this._metricRegistry = metricRegistry;
+
         _queueService = requireNonNull(queueService, "queueService");
         _queueClient = requireNonNull(queueClient, "queueClient");
+        _messageCount_qr1 = metricRegistry.meter(MetricRegistry.name(QueueResource1.class, "polledMessageCount_qr1"));
+        _nullPollsCount_qr1 = metricRegistry.meter(MetricRegistry.name(QueueResource1.class, "nullPollsCount_qr1"));
+        _sendCount_qr1= metricRegistry.meter(MetricRegistry.name(QueueResource1.class,"sendCount_qr1"));
+        _sendNullCount_qr1= metricRegistry.meter(MetricRegistry.name(QueueResource1.class,"sendNullCount_qr1"));
+        _sendBatch_qr1= metricRegistry.meter(MetricRegistry.name(QueueResource1.class,"sendBatch_qr1"));
+        _sendBatchNull_qr1= metricRegistry.meter(MetricRegistry.name(QueueResource1.class,"sendBatchNull_qr1"));
+
     }
 
     @POST
@@ -65,6 +87,13 @@ public class QueueResource1 {
     )
     public SuccessResponse send(@PathParam("queue") String queue, Object message) {
         // Not partitioned--any server can write messages to Cassandra.
+
+        if (message == null) {
+            _sendNullCount_qr1.mark();
+        }
+        else{
+            _sendCount_qr1.mark();
+        }
         _queueService.send(queue, message);
         return SuccessResponse.instance();
     }
@@ -79,6 +108,13 @@ public class QueueResource1 {
             response = SuccessResponse.class
     )
     public SuccessResponse sendBatch(@PathParam("queue") String queue, Collection<Object> messages) {
+
+        if (messages == null || messages.isEmpty()) {
+            _sendBatchNull_qr1.mark(); // Increment the sendnull meter
+        }
+        else {
+            _sendBatch_qr1.mark(messages.size());
+        }
         // Not partitioned--any server can write messages to Cassandra.
         _queueService.sendAll(queue, messages);
         return SuccessResponse.instance();
@@ -168,7 +204,14 @@ public class QueueResource1 {
                               @QueryParam("ttl") @DefaultValue("30") SecondsParam claimTtl,
                               @QueryParam("limit") @DefaultValue("10") IntParam limit,
                               @Authenticated Subject subject) {
-        return getService(partitioned, subject.getAuthenticationId()).poll(queue, claimTtl.get(), limit.get());
+        List<Message> polledMessages = getService(partitioned, subject.getAuthenticationId()).poll(queue, claimTtl.get(), limit.get());
+        if(polledMessages.isEmpty()){
+            _nullPollsCount_qr1.mark();
+        }
+        else{
+            _messageCount_qr1.mark(polledMessages.size());
+        }
+        return polledMessages;
     }
 
     @POST

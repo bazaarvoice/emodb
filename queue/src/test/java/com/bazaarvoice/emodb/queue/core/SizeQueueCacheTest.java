@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.event.api.BaseEventStore;
 import com.bazaarvoice.emodb.job.api.JobHandlerRegistry;
 import com.bazaarvoice.emodb.job.api.JobService;
 import com.bazaarvoice.emodb.job.api.JobType;
+import com.codahale.metrics.MetricRegistry;
 import org.testng.annotations.Test;
 
 import java.time.Clock;
@@ -37,7 +38,7 @@ public class SizeQueueCacheTest {
 
         BaseEventStore mockEventStore = mock(BaseEventStore.class);
         AbstractQueueService queueService = new AbstractQueueService(mockEventStore, mock(JobService.class),
-                mock(JobHandlerRegistry.class), mock(JobType.class), clock){};
+                mock(JobHandlerRegistry.class), mock(JobType.class), clock, new MetricRegistry()){};
 
         // At limit=500, size estimate should be at 4800
         // At limit=50, size estimate should be at 5000
