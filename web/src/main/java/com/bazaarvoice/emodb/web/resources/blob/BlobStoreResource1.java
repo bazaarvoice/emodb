@@ -1,13 +1,9 @@
 package com.bazaarvoice.emodb.web.resources.blob;
 
+import com.amazonaws.AmazonClientException;
 import com.bazaarvoice.emodb.auth.jersey.Authenticated;
 import com.bazaarvoice.emodb.auth.jersey.Subject;
-import com.bazaarvoice.emodb.blob.api.Blob;
-import com.bazaarvoice.emodb.blob.api.BlobMetadata;
-import com.bazaarvoice.emodb.blob.api.BlobStore;
-import com.bazaarvoice.emodb.blob.api.Range;
-import com.bazaarvoice.emodb.blob.api.RangeSpecification;
-import com.bazaarvoice.emodb.blob.api.Table;
+import com.bazaarvoice.emodb.blob.api.*;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 import com.bazaarvoice.emodb.common.json.LoggingIterator;
 import com.bazaarvoice.emodb.sor.api.Audit;
@@ -17,6 +13,9 @@ import com.bazaarvoice.emodb.web.auth.resource.CreateTableResource;
 import com.bazaarvoice.emodb.web.auth.resource.NamedResource;
 import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
+import com.bazaarvoice.emodb.web.resources.blob.messageQueue.MessagingService;
+import com.bazaarvoice.emodb.web.resources.blob.messageQueue.SQSMessageException;
+import com.bazaarvoice.emodb.web.resources.blob.messageQueue.SQSServiceFactory;
 import com.bazaarvoice.emodb.web.resources.sor.AuditParam;
 import com.bazaarvoice.emodb.web.resources.sor.TableOptionsParam;
 import com.codahale.metrics.Meter;
@@ -37,44 +36,24 @@ import io.swagger.annotations.ApiOperation;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.compress.utils.IOUtils;
 import org.apache.shiro.authz.annotation.RequiresAuthentication;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.coursera.metrics.datadog.TaggedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.DefaultValue;
-import javax.ws.rs.GET;
-import javax.ws.rs.HEAD;
-import javax.ws.rs.HeaderParam;
-import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.StreamingOutput;
-import javax.ws.rs.core.UriInfo;
+import javax.ws.rs.*;
+import javax.ws.rs.core.*;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Spliterators;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.StreamSupport;
-
 import static java.lang.String.format;
 
 @Path("/blob/1")
@@ -83,6 +62,8 @@ import static java.lang.String.format;
 @Api(value = "BlobStore: ", description = "All BlobStore operations")
 public class BlobStoreResource1 {
     private static final Logger _log = LoggerFactory.getLogger(BlobStoreResource1.class);
+
+    private final MessagingService _messagingService;
 
     private static final String X_BV_PREFIX = "X-BV-";    // HTTP header prefix for BlobMetadata other than attributes
     private static final String X_BVA_PREFIX = "X-BVA-";  // HTTP header prefix for BlobMetadata attributes
@@ -110,11 +91,11 @@ public class BlobStoreResource1 {
     private final LoadingCache<String, Meter> _putObjectRequestsByApiKey;
     private final LoadingCache<String, Meter> _deleteObjectRequestsByApiKey;
 
+
     public BlobStoreResource1(BlobStore blobStore, Set<String> approvedContentTypes, MetricRegistry metricRegistry) {
         _blobStore = blobStore;
         _approvedContentTypes = approvedContentTypes;
         _metricRegistry = metricRegistry;
-
         _listTableRequestsByApiKey = createMetricCache("listTablesByApiKey");
         _createTableRequestsByApiKey = createMetricCache("createTableByApiKey");
         _dropTableRequestsByApiKey = createMetricCache("dropTableByApiKey");
@@ -130,7 +111,7 @@ public class BlobStoreResource1 {
         _getObjectRequestsByApiKey = createMetricCache("getByApiKey");
         _putObjectRequestsByApiKey = createMetricCache("putByApiKey");
         _deleteObjectRequestsByApiKey = createMetricCache("deleteByApiKey");
-
+        _messagingService= new SQSServiceFactory().createSQSService();
     }
 
     private LoadingCache<String, Meter> createMetricCache(String metricName) {
@@ -160,10 +141,10 @@ public class BlobStoreResource1 {
                                       @Authenticated Subject subject) {
         _listTableRequestsByApiKey.getUnchecked(subject.getId()).mark();
         return streamingIterator(
-            StreamSupport.stream(Spliterators.spliteratorUnknownSize(_blobStore.listTables(Strings.emptyToNull(fromKeyExclusive), Long.MAX_VALUE), 0), false)
-                .filter(input -> subject.hasPermission(Permissions.readBlobTable(new NamedResource(input.getName()))))
-                .limit(limit.get())
-                .iterator()
+                StreamSupport.stream(Spliterators.spliteratorUnknownSize(_blobStore.listTables(Strings.emptyToNull(fromKeyExclusive), Long.MAX_VALUE), 0), false)
+                        .filter(input -> subject.hasPermission(Permissions.readBlobTable(new NamedResource(input.getName()))))
+                        .limit(limit.get())
+                        .iterator()
         );
     }
 
@@ -191,8 +172,16 @@ public class BlobStoreResource1 {
         if (!subject.hasPermission(Permissions.createBlobTable(resource))) {
             throw new UnauthorizedException();
         }
-
         _blobStore.createTable(table, options, attributes, audit);
+        try {
+            _messagingService.sendCreateTableSQS(table,options,attributes,audit);
+        } catch (IOException | AmazonClientException e) {
+            _log.error("Failed to send create table message to SQS for table {}: {}", table, e.getMessage());
+            throw new SQSMessageException("Failed to send create table message to SQS", e);
+        } catch (RuntimeException e) {
+            _log.error("Unexpected error occurred while sending create table message to SQS for table {}: {}", table, e.getMessage());
+            throw new SQSMessageException("Unexpected error occurred while sending create table message to SQS", e);
+        }
         return SuccessResponse.instance();
     }
 
@@ -211,6 +200,15 @@ public class BlobStoreResource1 {
         _dropTableRequestsByApiKey.getUnchecked(subject.getId()).mark();
         Audit audit = getRequired(auditParam, "audit");
         _blobStore.dropTable(table, audit);
+        try {
+            _messagingService.sendDeleteTableSQS(table, audit);
+        } catch (IOException | AmazonClientException e) {
+            _log.error("Failed to send delete table message to SQS for table {}: {}", table, e.getMessage());
+            throw new SQSMessageException("Failed to send delete table message to SQS", e);
+        } catch (RuntimeException e) {
+            _log.error("Unexpected error occurred while sending delete table message to SQS for table {}: {}", table, e.getMessage());
+            throw new SQSMessageException("Unexpected error occurred while sending delete table message to SQS", e);
+        }
         return SuccessResponse.instance();
     }
 
@@ -228,6 +226,15 @@ public class BlobStoreResource1 {
         _purgeTableRequestsByApiKey.getUnchecked(subject.getId()).mark();
         Audit audit = getRequired(auditParam, "audit");
         _blobStore.purgeTableUnsafe(table, audit);
+        try {
+            _messagingService.purgeTableSQS(table,audit);
+        } catch (IOException | AmazonClientException| UnsupportedOperationException  e) {
+            _log.error("Failed to send purge table message to SQS for table {}: {}", table, e.getMessage());
+            throw new SQSMessageException("Failed to send purge table message to SQS", e);
+        } catch (RuntimeException e) {
+            _log.error("Unexpected error occurred while sending purge table message to SQS for table {}: {}", table, e.getMessage());
+            throw new SQSMessageException("Unexpected error occurred while sending purge table message to SQS", e);
+        }
         return SuccessResponse.instance();
     }
 
@@ -262,6 +269,18 @@ public class BlobStoreResource1 {
         _setTableAttributesRequestsByApiKey.getUnchecked(subject.getId()).mark();
         Audit audit = getRequired(auditParam, "audit");
         _blobStore.setTableAttributes(table, attributes, audit);
+        try {
+            //send table attributes to sqs queue
+            _messagingService.putTableAttributesSQS(table,attributes,audit);
+
+        } catch (IOException | AmazonClientException e) {
+            _log.error("Failed to send put table attributes message to SQS for table {}: {}", table, e.getMessage());
+            throw new SQSMessageException("Failed to send put table attributes message to SQS", e);
+        } catch (RuntimeException e) {
+            _log.error("Unexpected error occurred while sending put table attributes message to SQS for table {}: {}", table, e.getMessage());
+            throw new SQSMessageException("Unexpected error occurred while sending put table attributes message to SQS", e);
+        }
+
         return SuccessResponse.instance();
     }
 
@@ -467,6 +486,7 @@ public class BlobStoreResource1 {
                                InputStream in,
                                @QueryParam("ttl") SecondsParam ttlParam,
                                @Context HttpHeaders headers,
+                               @Context UriInfo uriInfo,
                                @Authenticated Subject subject)
             throws IOException {
         _putObjectRequestsByApiKey.getUnchecked(subject.getId()).mark();
@@ -492,8 +512,25 @@ public class BlobStoreResource1 {
             throw new IllegalArgumentException(String.format("Ttl:%s is specified for blobId:%s", ttl, blobId));
         }
 
+        byte[] byteArray = IOUtils.toByteArray(in);
+
+        String requestUrl= uriInfo.getRequestUri().toString();
+
         // Perform the put
-        _blobStore.put(table, blobId, onceOnlySupplier(in), attributes);
+        InputStream inputStream = new ByteArrayInputStream(byteArray);
+        _blobStore.put(table, blobId, onceOnlySupplier(inputStream), attributes);
+
+        // Send the buffer bytes to SQS
+        try {
+            _messagingService.sendPutRequestSQS(table, blobId, attributes, requestUrl);
+        } catch (IOException | AmazonClientException e) {
+            _log.error("Failed to send put blob message to SQS for table {}: {}", table, e.getMessage());
+            throw new SQSMessageException("Failed to send put blob message to SQS", e);
+        } catch (RuntimeException e) {
+            _log.error("Unexpected error occurred while sending put blob message to SQS for table {}: {}", table, e.getMessage());
+            throw new SQSMessageException("Unexpected error occurred while sending put blob message to SQS", e);
+        }
+
 
         return SuccessResponse.instance();
     }
@@ -510,6 +547,15 @@ public class BlobStoreResource1 {
                                   @PathParam("blobId") String blobId,
                                   @Authenticated Subject subject) {
         _deleteObjectRequestsByApiKey.getUnchecked(subject.getId()).mark();
+        try {
+            _messagingService.sendDeleteRequestSQS(table, blobId);
+        } catch (IOException | AmazonClientException e) {
+            _log.error("Failed to send delete blob message to SQS for table {}: {}", table, e.getMessage());
+            throw new SQSMessageException("Failed to send delete blob message to SQS", e);
+        } catch (RuntimeException e) {
+            _log.error("Unexpected error occurred while sending delete blob message to SQS for table {}: {}", table, e.getMessage());
+            throw new SQSMessageException("Unexpected error occurred while sending delete blob message to SQS", e);
+        }
         _blobStore.delete(table, blobId);
         return SuccessResponse.instance();
     }

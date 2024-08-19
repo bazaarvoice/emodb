@@ -302,6 +302,9 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
+											"var uuid = require('uuid');",
+											"pm.environment.set('document_id', uuid.v4());",
+											"",
 											"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 											"pm.environment.set(\"consistency\", \"GLOBAL\");",
 											"pm.environment.set(\"tag\", \"test_tag\");",
