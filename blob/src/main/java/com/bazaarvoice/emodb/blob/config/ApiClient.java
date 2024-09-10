@@ -17,7 +17,8 @@ import java.util.*;
 public class ApiClient {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiClient.class);
-    private final String BASE_URL = "http://localhost:8082/blob";
+//    private final String BASE_URL = "https://cert-blob-media-service.qa.us-east-1.nexus.bazaarvoice.com/blob";
+    private final String BASE_URL = "https://cert-blob-media-service.qa.us-east-1.nexus.bazaarvoice.com/blob";
     private final String TENANT_NAME = "datastorage";
     public final String SUCCESS_MSG = "Successfully deleted blob.";
 
@@ -134,7 +135,7 @@ public class ApiClient {
             // Setting headers
             connection.setRequestProperty("Content-Type", "application/json; utf-8");
             connection.setRequestProperty("Accept", "*/*");
-            connection.setRequestProperty("X-BV-API-KEY", "uat_admin");
+            connection.setRequestProperty("X-BV-API-KEY", "cert_admin");
 
             // Enable output for the request body
             connection.setDoOutput(true);
