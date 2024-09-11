@@ -463,17 +463,16 @@ public class BlobStoreResource1 {
     )
     public SuccessResponse put(@PathParam("table") String table,
                                @PathParam("blobId") String blobId,
-                               InputStream in,
-                               @Context HttpHeaders headers,
-                               @Authenticated Subject subject)
+                               InputStream in
+                               )
             throws IOException {
-        _putObjectRequestsByApiKey.getUnchecked(subject.getId()).mark();
+//        _putObjectRequestsByApiKey.getUnchecked(subject.getId()).mark();
         Map<String, String> attributes = Maps.newHashMap();
-        for (Map.Entry<String, List<String>> entry : headers.getRequestHeaders().entrySet()) {
-            if (entry.getKey().startsWith(X_BVA_PREFIX)) {
-                attributes.put(entry.getKey().substring(X_BVA_PREFIX.length()), entry.getValue().get(0));
-            }
-        }
+//        for (Map.Entry<String, List<String>> entry : headers.getRequestHeaders().entrySet()) {
+//            if (entry.getKey().startsWith(X_BVA_PREFIX)) {
+//                attributes.put(entry.getKey().substring(X_BVA_PREFIX.length()), entry.getValue().get(0));
+//            }
+//        }
         // Perform the put
         _blobStore.put(table, blobId, onceOnlySupplier(in), attributes);
 
