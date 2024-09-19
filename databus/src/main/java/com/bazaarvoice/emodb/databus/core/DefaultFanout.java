@@ -236,6 +236,7 @@ public class DefaultFanout extends AbstractScheduledService {
                                 Timer.Context matchTime = _matchSubscriptionsTimer.time();
                                 int subscriptionCount = 0;
                                 for (OwnedSubscription subscription : subscriptions) {
+                                    _log.info("Subcribtion owned -{}",subscription.getName());
                                     subscriptionCount += 1;
                                     if (_subscriptionEvaluator.matches(subscription, matchEventData)) {
                                         eventsByChannel.put(subscription.getName(), eventData);

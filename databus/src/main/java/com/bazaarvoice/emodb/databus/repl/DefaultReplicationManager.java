@@ -100,6 +100,7 @@ public class DefaultReplicationManager extends AbstractScheduledService {
                 }
                 Managed fanout = active.remove(dataCenter.getName());
                 if (fanout == null) {
+                    _log.info("Replication-{},Cassandra-Name-{}, Is Sytem or not- {}",dataCenter.getName(),dataCenter.getCassandraName(),dataCenter.isSystem())
                     fanout = newInboundReplication(dataCenter);
                     try {
                         fanout.start();
