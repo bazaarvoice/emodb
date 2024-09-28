@@ -67,6 +67,23 @@ abstract class AbstractQueueClient {
                         .post(messages));
     }
 
+    public void sendAll(String apiKey, String queue, Collection<?> messages, boolean isFlush) {
+        requireNonNull(queue, "queue");
+        requireNonNull(messages, "messages");
+        if (messages.isEmpty()) {
+            return;
+        }
+        URI uri = _queueService.clone()
+                .segment(queue, "sendbatch")
+                .build();
+
+        Failsafe.with(_retryPolicy)
+                .run(() -> _client.resource(uri)
+                        .type(MediaType.APPLICATION_JSON_TYPE)
+                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                        .post(messages));
+    }
+
     public void sendAll(String apiKey, Map<String, ? extends Collection<?>> messagesByQueue) {
         requireNonNull(messagesByQueue, "messagesByQueue");
         if (messagesByQueue.isEmpty()) {

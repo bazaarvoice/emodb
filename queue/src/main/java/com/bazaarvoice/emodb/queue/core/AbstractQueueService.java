@@ -17,6 +17,9 @@ import com.bazaarvoice.emodb.queue.api.Message;
 import com.bazaarvoice.emodb.queue.api.MoveQueueStatus;
 import com.bazaarvoice.emodb.queue.api.Names;
 import com.bazaarvoice.emodb.queue.api.UnknownMoveException;
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaAdminService;
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaConfig;
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sortedq.core.ReadOnlyQueueException;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
@@ -31,21 +34,22 @@ import com.google.common.collect.Multimap;
 import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 abstract class AbstractQueueService implements BaseQueueService {
+    private final Logger _log = LoggerFactory.getLogger(AbstractQueueService.class);
     private final BaseEventStore _eventStore;
     private final JobService _jobService;
     private final JobType<MoveQueueRequest, MoveQueueResult> _moveQueueJobType;
     private final LoadingCache<SizeCacheKey, Map.Entry<Long, Long>> _queueSizeCache;
+    private final KafkaProducerService producerService;
 
     public static final int MAX_MESSAGE_SIZE_IN_BYTES = 30 * 1024;
 
@@ -56,6 +60,8 @@ abstract class AbstractQueueService implements BaseQueueService {
         _eventStore = eventStore;
         _jobService = jobService;
         _moveQueueJobType = moveQueueJobType;
+        KafkaAdminService adminService = new KafkaAdminService();
+        this.producerService = new KafkaProducerService(adminService);
 
         registerMoveQueueJobHandler(jobHandlerRegistry);
         _queueSizeCache = CacheBuilder.newBuilder()
@@ -109,16 +115,55 @@ abstract class AbstractQueueService implements BaseQueueService {
     @Override
     public void sendAll(Map<String, ? extends Collection<?>> messagesByQueue) {
         requireNonNull(messagesByQueue, "messagesByQueue");
+        _log.info("Starting to send messages to queues. Total queues: {}", messagesByQueue.size());
 
-        ImmutableMultimap.Builder<String, ByteBuffer> builder = ImmutableMultimap.builder();
+        ImmutableMultimap.Builder<String, String> builder = ImmutableMultimap.builder();
         for (Map.Entry<String, ? extends Collection<?>> entry : messagesByQueue.entrySet()) {
             String queue = entry.getKey();
             Collection<?> messages = entry.getValue();
 
+            _log.debug("Processing queue: {}", queue);
             checkLegalQueueName(queue);
             requireNonNull(messages, "messages");
 
-            List<ByteBuffer> events = Lists.newArrayListWithCapacity(messages.size());
+            List<Object> events = Lists.newArrayListWithCapacity(messages.size());
+            _log.info("Processing {} messages for queue: {}", messages.size(), queue);
+
+            for (Object message : messages) {
+                _log.debug("Validating message: {}", message);
+                ByteBuffer messageByteBuffer = MessageSerializer.toByteBuffer(JsonValidator.checkValid(message));
+                checkArgument(messageByteBuffer.limit() <= MAX_MESSAGE_SIZE_IN_BYTES,
+                        "Message size (" + messageByteBuffer.limit() + ") is greater than the maximum allowed (" + MAX_MESSAGE_SIZE_IN_BYTES + ") message size");
+
+                _log.debug("Message size is valid. Size: {}", messageByteBuffer.limit());
+                events.add(message);
+            }
+            _log.info("Adding {} events to queue: {}", events.size(), queue);
+            builder.putAll(queue, String.valueOf(events));
+        }
+
+        Multimap<String, String> eventsByChannel = builder.build();
+        _log.info("Prepared {} channels to send messages.", eventsByChannel.asMap().size());
+
+        for (Map.Entry<String, Collection<String>> topicEntry : eventsByChannel.asMap().entrySet()) {
+            String topic = topicEntry.getKey();
+            Collection<String> events = topicEntry.getValue();
+            _log.debug("Sending {} messages to topic: {}", events.size(), topic);
+            producerService.sendMessages(topic, events);
+            _log.info("Messages sent to topic: {}", topic);
+        }
+
+        _log.info("All messages have been sent to their respective queues.");
+    }
+
+
+
+    @Override
+    public void sendAll(String queue, Collection<?> messages, boolean isFlush) {
+        //incoming message from kafka consume, save to cassandra
+
+        ImmutableMultimap.Builder<String, ByteBuffer> builder = ImmutableMultimap.builder();
+        List<ByteBuffer> events = Lists.newArrayListWithCapacity(messages.size());
             for (Object message : messages) {
                 ByteBuffer messageByteBuffer = MessageSerializer.toByteBuffer(JsonValidator.checkValid(message));
                 checkArgument(messageByteBuffer.limit() <= MAX_MESSAGE_SIZE_IN_BYTES, "Message size (" + messageByteBuffer.limit() + ") is greater than the maximum allowed (" + MAX_MESSAGE_SIZE_IN_BYTES + ") message size");
@@ -126,7 +171,6 @@ abstract class AbstractQueueService implements BaseQueueService {
                 events.add(messageByteBuffer);
             }
             builder.putAll(queue, events);
-        }
         Multimap<String, ByteBuffer> eventsByChannel = builder.build();
 
         _eventStore.addAll(eventsByChannel);

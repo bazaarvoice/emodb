@@ -39,6 +39,11 @@ class DedupQueueServiceAuthenticatorProxy implements DedupQueueService {
     }
 
     @Override
+    public void sendAll(String queue, Collection<?> messages, boolean isFlush) {
+        _authDedupQueueService.sendAll(_apiKey, queue, messages, isFlush);
+    }
+
+    @Override
     public MoveQueueStatus getMoveStatus(String reference) {
         return _authDedupQueueService.getMoveStatus(_apiKey, reference);
     }
