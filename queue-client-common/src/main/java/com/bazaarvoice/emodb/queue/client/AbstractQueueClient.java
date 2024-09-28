@@ -75,6 +75,25 @@ abstract class AbstractQueueClient {
         }
     }
 
+    public void sendAll(String apiKey, String queue, Collection<?> messages, boolean isFlush) {
+        requireNonNull(queue, "queue");
+        requireNonNull(messages, "messages");
+        if (messages.isEmpty()) {
+            return;
+        }
+        try {
+            URI uri = _queueService.clone()
+                    .segment(queue, "sendbatch")
+                    .build();
+            _client.resource(uri)
+                    .type(MediaType.APPLICATION_JSON_TYPE)
+                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                    .post(messages);
+        } catch (EmoClientException e) {
+            throw convertException(e);
+        }
+    }
+
     // Any server can handle sending messages, no need for @PartitionKey
     public void sendAll(String apiKey, Map<String, ? extends Collection<?>> messagesByQueue) {
         requireNonNull(messagesByQueue, "messagesByQueue");
