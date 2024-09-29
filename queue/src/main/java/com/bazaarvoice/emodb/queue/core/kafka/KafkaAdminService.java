@@ -24,7 +24,7 @@ public class KafkaAdminService {
      * @param numPartitions     Number of partitions.
      * @param replicationFactor Replication factor.
      */
-    public void createTopic(String topic, int numPartitions, short replicationFactor) {
+    public void createTopic(String topic, int numPartitions, short replicationFactor, String queueType) {
         NewTopic newTopic = new NewTopic(topic, numPartitions, replicationFactor);
         try {
             adminClient.createTopics(Collections.singleton(newTopic)).all().get();

@@ -83,20 +83,20 @@ public class DedupQueueResource1 {
         _queueService.sendAll(queue, messages);
         return SuccessResponse.instance();
     }
-//    @POST
-//    @Path("{queue}/sendbatch1")
-//    @Consumes(MediaType.APPLICATION_JSON)
-//    @RequiresPermissions("queue|post|{queue}")
-//    @Timed(name = "bv.emodb.dedupq.DedupQueueResource1.sendBatch", absolute = true)
-//    @ApiOperation (value = "Send a Batch.",
-//            notes = "Returns a SuccessResponse",
-//            response = SuccessResponse.class
-//    )
-//    public SuccessResponse sendBatch1(@PathParam("queue") String queue, Collection<Object> messages) {
-//        // Not partitioned--any server can write messages to Cassandra.
-//        _queueService.sendAll(queue, messages);
-//        return SuccessResponse.instance();
-//    }
+    @POST
+    @Path("{queue}/sendbatch1")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @RequiresPermissions("queue|post|{queue}")
+    @Timed(name = "bv.emodb.dedupq.DedupQueueResource1.sendBatch", absolute = true)
+    @ApiOperation (value = "Send a Batch.",
+            notes = "Returns a SuccessResponse",
+            response = SuccessResponse.class
+    )
+    public SuccessResponse sendBatch1(@PathParam("queue") String queue, Collection<Object> messages) {
+        // Not partitioned--any server can write messages to Cassandra.
+        _queueService.sendAll(queue, messages,true);
+        return SuccessResponse.instance();
+    }
 
     @POST
     @Path("_sendbatch")
