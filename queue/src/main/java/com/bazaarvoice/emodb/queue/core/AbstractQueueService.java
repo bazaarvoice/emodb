@@ -144,15 +144,20 @@ abstract class AbstractQueueService implements BaseQueueService {
 
         Multimap<String, String> eventsByChannel = builder.build();
         _log.info("Prepared {} channels to send messages.", eventsByChannel.asMap().size());
-
+        String queueType = "queue";
+        if(_eventStore.getClass().getName().equals("com.bazaarvoice.emodb.event.dedup.DefaultDedupEventStore")){
+            queueType = "dedup";
+        }
         for (Map.Entry<String, Collection<String>> topicEntry : eventsByChannel.asMap().entrySet()) {
             String topic = topicEntry.getKey();
             Collection<String> events = topicEntry.getValue();
+            if ("dedup".equals(queueType)) {
+                topic = "dedup_" + topic;
+            }
             _log.debug("Sending {} messages to topic: {}", events.size(), topic);
-            producerService.sendMessages(topic, events);
+            producerService.sendMessages(topic, events,queueType);
             _log.info("Messages sent to topic: {}", topic);
         }
-
         _log.info("All messages have been sent to their respective queues.");
     }
 
