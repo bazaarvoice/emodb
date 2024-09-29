@@ -27,11 +27,11 @@ public class KafkaProducerService {
      * @param topic   The Kafka topic.
      * @param events  The collection of messages to be sent.
      */
-    public void sendMessages(String topic, Collection<String> events) {
+    public void sendMessages(String topic, Collection<String> events, String queueType) {
         _log.info("Sending {} messages to topic '{}'", events.size(), topic);
         for (String event : events) {
             _log.debug("Sending message: {}", event);
-            sendMessage(topic, event);
+            sendMessage(topic, event,queueType);
         }
         _log.info("Finished sending messages to topic '{}'", topic);
     }
@@ -42,7 +42,7 @@ public class KafkaProducerService {
      * @param topic   The Kafka topic.
      * @param message The message to be sent.
      */
-    public void sendMessage(String topic, String message) {
+    public void sendMessage(String topic, String message, String queueType) {
         ProducerRecord<String, String> record = new ProducerRecord<>(topic, message);
         _log.debug("Preparing to send message to topic '{}' with value: {}", topic, message);
 
@@ -53,10 +53,10 @@ public class KafkaProducerService {
                     if (exception instanceof UnknownTopicOrPartitionException) {
                         _log.warn("Topic '{}' does not exist. Attempting to create it.", topic);
                         try {
-                            adminService.createTopic(topic, 1, (short) 2);
+                            adminService.createTopic(topic, 1, (short) 2,queueType);
                             _log.info("Successfully created topic '{}'", topic);
                             // Retry sending the message after topic creation
-                            sendMessage(topic, message); // Retry with the same message
+                            sendMessage(topic, message,queueType); // Retry with the same message
                         } catch (Exception e) {
                             _log.error("Failed to create topic '{}'. Error: {}", topic, e.getMessage());
                         }
