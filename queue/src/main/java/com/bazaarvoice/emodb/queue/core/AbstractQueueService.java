@@ -18,7 +18,6 @@ import com.bazaarvoice.emodb.queue.api.MoveQueueStatus;
 import com.bazaarvoice.emodb.queue.api.Names;
 import com.bazaarvoice.emodb.queue.api.UnknownMoveException;
 import com.bazaarvoice.emodb.queue.core.kafka.KafkaAdminService;
-import com.bazaarvoice.emodb.queue.core.kafka.KafkaConfig;
 import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sortedq.core.ReadOnlyQueueException;
 import com.google.common.base.Function;
@@ -40,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,18 +50,19 @@ abstract class AbstractQueueService implements BaseQueueService {
     private final JobType<MoveQueueRequest, MoveQueueResult> _moveQueueJobType;
     private final LoadingCache<SizeCacheKey, Map.Entry<Long, Long>> _queueSizeCache;
     private final KafkaProducerService producerService;
+    private final KafkaAdminService adminService;
 
     public static final int MAX_MESSAGE_SIZE_IN_BYTES = 30 * 1024;
 
     protected AbstractQueueService(BaseEventStore eventStore, JobService jobService,
                                    JobHandlerRegistry jobHandlerRegistry,
                                    JobType<MoveQueueRequest, MoveQueueResult> moveQueueJobType,
-                                   Clock clock) {
+                                   Clock clock,  KafkaAdminService adminService,KafkaProducerService producerService) {
         _eventStore = eventStore;
         _jobService = jobService;
         _moveQueueJobType = moveQueueJobType;
-        KafkaAdminService adminService = new KafkaAdminService();
-        this.producerService = new KafkaProducerService(adminService);
+        this.adminService = adminService;
+        this.producerService = producerService;
 
         registerMoveQueueJobHandler(jobHandlerRegistry);
         _queueSizeCache = CacheBuilder.newBuilder()
@@ -111,6 +112,34 @@ abstract class AbstractQueueService implements BaseQueueService {
     public void sendAll(String queue, Collection<?> messages) {
         sendAll(Collections.singletonMap(queue, messages));
     }
+    /**
+     * Sends messages to Kafka topics with handling for UnknownTopicOrPartitionException.
+     *
+     * @param topic      The Kafka topic.
+     * @param events     The collection of messages to send.
+     * @param queueType  The type of the queue.
+     */
+    protected void sendWithTopicCheck(String topic, Collection<String> events, String queueType) {
+        try {
+            producerService.sendMessages(topic, events, queueType);
+            _log.info("Messages sent to topic: {}", topic);
+        } catch (UnknownTopicOrPartitionException e) {
+            _log.warn("Topic '{}' does not exist. Attempting to create it.", topic);
+            try {
+                adminService.createTopic(topic, 1, (short) 2, queueType);
+                _log.info("Successfully created topic '{}'", topic);
+                // Retry sending the messages after topic creation
+                producerService.sendMessages(topic, events, queueType);
+                _log.info("Messages retried and sent to topic: {}", topic);
+            } catch (Exception creationException) {
+                _log.error("Failed to create topic '{}' and send messages. Error: {}", topic, creationException.getMessage());
+                // Optionally, rethrow or handle differently
+            }
+        } catch (Exception e) {
+            _log.error("Failed to send messages to topic '{}'. Error: {}", topic, e.getMessage());
+            // Optionally, rethrow or handle differently
+        }
+    }
 
     @Override
     public void sendAll(Map<String, ? extends Collection<?>> messagesByQueue) {
@@ -155,7 +184,8 @@ abstract class AbstractQueueService implements BaseQueueService {
                 topic = "dedup_" + topic;
             }
             _log.debug("Sending {} messages to topic: {}", events.size(), topic);
-            producerService.sendMessages(topic, events,queueType);
+            // Use the new method with topic existence handling
+            sendWithTopicCheck(topic, events, queueType);
             _log.info("Messages sent to topic: {}", topic);
         }
         _log.info("All messages have been sent to their respective queues.");

@@ -3,7 +3,6 @@ package com.bazaarvoice.emodb.queue.core.kafka;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,67 +11,48 @@ import java.util.concurrent.Future;
 
 public class KafkaProducerService {
     private static final Logger _log = LoggerFactory.getLogger(KafkaProducerService.class);
-    private final KafkaProducer<String, String> producer; // Changed to String
-    private final KafkaAdminService adminService;
+    private final KafkaProducer<String, Collection<String>> producer;
 
-    public KafkaProducerService(KafkaAdminService adminService) {
+    public KafkaProducerService() {
         this.producer = new KafkaProducer<>(KafkaConfig.getProducerProps());
-        this.adminService = adminService;
         _log.info("KafkaProducerService initialized with producer properties: {}", KafkaConfig.getProducerProps());
     }
 
     /**
-     * Sends each message from the collection to the specified Kafka topic separately.
+     * Sends the entire collection of messages to the specified Kafka topic as a single record.
      *
-     * @param topic   The Kafka topic.
-     * @param events  The collection of messages to be sent.
+     * @param topic      The Kafka topic.
+     * @param events     The collection of messages to be sent as one message.
+     * @param queueType  The type of the queue.
      */
     public void sendMessages(String topic, Collection<String> events, String queueType) {
-        _log.info("Sending {} messages to topic '{}'", events.size(), topic);
-        for (String event : events) {
-            _log.debug("Sending message: {}", event);
-            sendMessage(topic, event,queueType);
-        }
-        _log.info("Finished sending messages to topic '{}'", topic);
-    }
+        _log.info("Sending a collection of {} messages to topic '{}'", events.size(), topic);
 
-    /**
-     * Sends a single message to the specified Kafka topic.
-     *
-     * @param topic   The Kafka topic.
-     * @param message The message to be sent.
-     */
-    public void sendMessage(String topic, String message, String queueType) {
-        ProducerRecord<String, String> record = new ProducerRecord<>(topic, message);
-        _log.debug("Preparing to send message to topic '{}' with value: {}", topic, message);
+        // Sending the entire collection as a single message (one ProducerRecord)
+        ProducerRecord<String, Collection<String>> record = new ProducerRecord<>(topic, events);
 
         try {
             Future<RecordMetadata> future = producer.send(record, (metadata, exception) -> {
                 if (exception != null) {
-                    _log.error("Failed to send message to topic '{}'. Error: {}", topic, exception.getMessage());
-                    if (exception instanceof UnknownTopicOrPartitionException) {
-                        _log.warn("Topic '{}' does not exist. Attempting to create it.", topic);
-                        try {
-                            adminService.createTopic(topic, 1, (short) 2,queueType);
-                            _log.info("Successfully created topic '{}'", topic);
-                            // Retry sending the message after topic creation
-                            sendMessage(topic, message,queueType); // Retry with the same message
-                        } catch (Exception e) {
-                            _log.error("Failed to create topic '{}'. Error: {}", topic, e.getMessage());
-                        }
-                    }
+                    _log.error("Failed to send messages to topic '{}'. Error: {}", topic, exception.getMessage());
+                    // Handle exception here or delegate it to other layers (e.g., AbstractQueueService)
                 } else {
-                    _log.debug("Message sent to topic '{}' partition {} at offset {}",
+                    _log.debug("Messages sent to topic '{}' partition {} at offset {}",
                             metadata.topic(), metadata.partition(), metadata.offset());
                 }
             });
-            // Optionally, you can wait for the send to complete
-            RecordMetadata metadata = future.get(); // Blocking call
-            _log.info("Message sent successfully to topic '{}' partition {} at offset {}",
+
+            // Optionally, wait for the send to complete (blocking call)
+            RecordMetadata metadata = future.get();
+            _log.info("Collection of messages sent successfully to topic '{}' partition {} at offset {}",
                     metadata.topic(), metadata.partition(), metadata.offset());
+
         } catch (Exception e) {
-            _log.error("Failed to send message to topic '{}'. Exception: {}", topic, e.getMessage());
+            _log.error("Failed to send collection of messages to topic '{}'. Exception: {}", topic, e.getMessage());
+            // Handle exception here or delegate it to other layers (e.g., AbstractQueueService)
         }
+
+        _log.info("Finished sending collection of messages to topic '{}'", topic);
     }
 
     /**
