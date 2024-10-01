@@ -13,11 +13,9 @@ import java.util.concurrent.Future;
 public class KafkaProducerService {
     private static final Logger _log = LoggerFactory.getLogger(KafkaProducerService.class);
     private final KafkaProducer<String, String> producer; // Changed to String
-    private final KafkaAdminService adminService;
 
-    public KafkaProducerService(KafkaAdminService adminService) {
+    public KafkaProducerService() {
         this.producer = new KafkaProducer<>(KafkaConfig.getProducerProps());
-        this.adminService = adminService;
         _log.info("KafkaProducerService initialized with producer properties: {}", KafkaConfig.getProducerProps());
     }
 
@@ -50,17 +48,6 @@ public class KafkaProducerService {
             Future<RecordMetadata> future = producer.send(record, (metadata, exception) -> {
                 if (exception != null) {
                     _log.error("Failed to send message to topic '{}'. Error: {}", topic, exception.getMessage());
-                    if (exception instanceof UnknownTopicOrPartitionException) {
-                        _log.warn("Topic '{}' does not exist. Attempting to create it.", topic);
-                        try {
-                            adminService.createTopic(topic, 1, (short) 2,queueType);
-                            _log.info("Successfully created topic '{}'", topic);
-                            // Retry sending the message after topic creation
-                            sendMessage(topic, message,queueType); // Retry with the same message
-                        } catch (Exception e) {
-                            _log.error("Failed to create topic '{}'. Error: {}", topic, e.getMessage());
-                        }
-                    }
                 } else {
                     _log.debug("Message sent to topic '{}' partition {} at offset {}",
                             metadata.topic(), metadata.partition(), metadata.offset());

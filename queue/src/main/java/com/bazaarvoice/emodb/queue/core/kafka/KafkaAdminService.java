@@ -42,6 +42,20 @@ public class KafkaAdminService {
     }
 
     /**
+     *  Determines if a topic already exists in AWS MSK
+     *  @param topic   The name of the topic.
+     */
+    public boolean isTopicExists(String topic) {
+        try {
+            return adminClient.listTopics().names().get().contains(topic);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
      * Closes the AdminClient to release resources.
      */
     public void close() {

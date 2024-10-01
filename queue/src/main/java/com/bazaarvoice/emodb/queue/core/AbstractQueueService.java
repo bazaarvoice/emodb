@@ -49,6 +49,7 @@ abstract class AbstractQueueService implements BaseQueueService {
     private final JobService _jobService;
     private final JobType<MoveQueueRequest, MoveQueueResult> _moveQueueJobType;
     private final LoadingCache<SizeCacheKey, Map.Entry<Long, Long>> _queueSizeCache;
+    private final KafkaAdminService adminService;
     private final KafkaProducerService producerService;
 
     public static final int MAX_MESSAGE_SIZE_IN_BYTES = 30 * 1024;
@@ -60,8 +61,8 @@ abstract class AbstractQueueService implements BaseQueueService {
         _eventStore = eventStore;
         _jobService = jobService;
         _moveQueueJobType = moveQueueJobType;
-        KafkaAdminService adminService = new KafkaAdminService();
-        this.producerService = new KafkaProducerService(adminService);
+        this.adminService = new KafkaAdminService();
+        this.producerService = new KafkaProducerService();
 
         registerMoveQueueJobHandler(jobHandlerRegistry);
         _queueSizeCache = CacheBuilder.newBuilder()
@@ -112,6 +113,7 @@ abstract class AbstractQueueService implements BaseQueueService {
         sendAll(Collections.singletonMap(queue, messages));
     }
 
+
     @Override
     public void sendAll(Map<String, ? extends Collection<?>> messagesByQueue) {
         requireNonNull(messagesByQueue, "messagesByQueue");
@@ -145,9 +147,10 @@ abstract class AbstractQueueService implements BaseQueueService {
         Multimap<String, String> eventsByChannel = builder.build();
         _log.info("Prepared {} channels to send messages.", eventsByChannel.asMap().size());
         String queueType = "queue";
-        if(_eventStore.getClass().getName().equals("com.bazaarvoice.emodb.event.dedup.DefaultDedupEventStore")){
+        if (_eventStore.getClass().getName().equals("com.bazaarvoice.emodb.event.dedup.DefaultDedupEventStore")) {
             queueType = "dedup";
         }
+
         for (Map.Entry<String, Collection<String>> topicEntry : eventsByChannel.asMap().entrySet()) {
             String topic = topicEntry.getKey();
             Collection<String> events = topicEntry.getValue();
@@ -155,11 +158,66 @@ abstract class AbstractQueueService implements BaseQueueService {
                 topic = "dedup_" + topic;
             }
             _log.debug("Sending {} messages to topic: {}", events.size(), topic);
-            producerService.sendMessages(topic, events,queueType);
+
+            //Checking if topic exists, if not create a new topic
+            if (!adminService.isTopicExists(topic)) {
+                _log.info("Topic '{}' does not exist. Creating it now...", topic);
+                adminService.createTopic(topic, 1, (short) 2, queueType);  // Create the topic if it doesn't exist
+                _log.info("Topic '{}' created.", topic);
+            }
+            producerService.sendMessages(topic, events, queueType);
             _log.info("Messages sent to topic: {}", topic);
         }
         _log.info("All messages have been sent to their respective queues.");
     }
+//    @Override
+//    public void sendAll(Map<String, ? extends Collection<?>> messagesByQueue) {
+//        requireNonNull(messagesByQueue, "messagesByQueue");
+//        _log.info("Starting to send messages to queues. Total queues: {}", messagesByQueue.size());
+//
+//        ImmutableMultimap.Builder<String, String> builder = ImmutableMultimap.builder();
+//        for (Map.Entry<String, ? extends Collection<?>> entry : messagesByQueue.entrySet()) {
+//            String queue = entry.getKey();
+//            Collection<?> messages = entry.getValue();
+//
+//            _log.debug("Processing queue: {}", queue);
+//            checkLegalQueueName(queue);
+//            requireNonNull(messages, "messages");
+//
+//            List<Object> events = Lists.newArrayListWithCapacity(messages.size());
+//            _log.info("Processing {} messages for queue: {}", messages.size(), queue);
+//
+//            for (Object message : messages) {
+//                _log.debug("Validating message: {}", message);
+//                ByteBuffer messageByteBuffer = MessageSerializer.toByteBuffer(JsonValidator.checkValid(message));
+//                checkArgument(messageByteBuffer.limit() <= MAX_MESSAGE_SIZE_IN_BYTES,
+//                        "Message size (" + messageByteBuffer.limit() + ") is greater than the maximum allowed (" + MAX_MESSAGE_SIZE_IN_BYTES + ") message size");
+//
+//                _log.debug("Message size is valid. Size: {}", messageByteBuffer.limit());
+//                events.add(message);
+//            }
+//            _log.info("Adding {} events to queue: {}", events.size(), queue);
+//            builder.putAll(queue, String.valueOf(events));
+//        }
+//
+//        Multimap<String, String> eventsByChannel = builder.build();
+//        _log.info("Prepared {} channels to send messages.", eventsByChannel.asMap().size());
+//        String queueType = "queue";
+//        if(_eventStore.getClass().getName().equals("com.bazaarvoice.emodb.event.dedup.DefaultDedupEventStore")){
+//            queueType = "dedup";
+//        }
+//        for (Map.Entry<String, Collection<String>> topicEntry : eventsByChannel.asMap().entrySet()) {
+//            String topic = topicEntry.getKey();
+//            Collection<String> events = topicEntry.getValue();
+//            if ("dedup".equals(queueType)) {
+//                topic = "dedup_" + topic;
+//            }
+//            _log.debug("Sending {} messages to topic: {}", events.size(), topic);
+//            producerService.sendMessages(topic, events,queueType);
+//            _log.info("Messages sent to topic: {}", topic);
+//        }
+//        _log.info("All messages have been sent to their respective queues.");
+//    }
 
 
 
