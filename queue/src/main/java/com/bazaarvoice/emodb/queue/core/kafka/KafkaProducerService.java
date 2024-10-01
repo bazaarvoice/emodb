@@ -3,6 +3,7 @@ package com.bazaarvoice.emodb.queue.core.kafka;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,7 +12,7 @@ import java.util.concurrent.Future;
 
 public class KafkaProducerService {
     private static final Logger _log = LoggerFactory.getLogger(KafkaProducerService.class);
-    private final KafkaProducer<String, Collection<String>> producer;
+    private final KafkaProducer<String, String> producer; // Changed to String
 
     public KafkaProducerService() {
         this.producer = new KafkaProducer<>(KafkaConfig.getProducerProps());
@@ -19,40 +20,46 @@ public class KafkaProducerService {
     }
 
     /**
-     * Sends the entire collection of messages to the specified Kafka topic as a single record.
+     * Sends each message from the collection to the specified Kafka topic separately.
      *
-     * @param topic      The Kafka topic.
-     * @param events     The collection of messages to be sent as one message.
-     * @param queueType  The type of the queue.
+     * @param topic   The Kafka topic.
+     * @param events  The collection of messages to be sent.
      */
     public void sendMessages(String topic, Collection<String> events, String queueType) {
-        _log.info("Sending a collection of {} messages to topic '{}'", events.size(), topic);
+        _log.info("Sending {} messages to topic '{}'", events.size(), topic);
+        for (String event : events) {
+            _log.debug("Sending message: {}", event);
+            sendMessage(topic, event,queueType);
+        }
+        _log.info("Finished sending messages to topic '{}'", topic);
+    }
 
-        // Sending the entire collection as a single message (one ProducerRecord)
-        ProducerRecord<String, Collection<String>> record = new ProducerRecord<>(topic, events);
+    /**
+     * Sends a single message to the specified Kafka topic.
+     *
+     * @param topic   The Kafka topic.
+     * @param message The message to be sent.
+     */
+    public void sendMessage(String topic, String message, String queueType) {
+        ProducerRecord<String, String> record = new ProducerRecord<>(topic, message);
+        _log.debug("Preparing to send message to topic '{}' with value: {}", topic, message);
 
         try {
             Future<RecordMetadata> future = producer.send(record, (metadata, exception) -> {
                 if (exception != null) {
-                    _log.error("Failed to send messages to topic '{}'. Error: {}", topic, exception.getMessage());
-                    // Handle exception here or delegate it to other layers (e.g., AbstractQueueService)
+                    _log.error("Failed to send message to topic '{}'. Error: {}", topic, exception.getMessage());
                 } else {
-                    _log.debug("Messages sent to topic '{}' partition {} at offset {}",
+                    _log.debug("Message sent to topic '{}' partition {} at offset {}",
                             metadata.topic(), metadata.partition(), metadata.offset());
                 }
             });
-
-            // Optionally, wait for the send to complete (blocking call)
-            RecordMetadata metadata = future.get();
-            _log.info("Collection of messages sent successfully to topic '{}' partition {} at offset {}",
+            // Optionally, you can wait for the send to complete
+            RecordMetadata metadata = future.get(); // Blocking call
+            _log.info("Message sent successfully to topic '{}' partition {} at offset {}",
                     metadata.topic(), metadata.partition(), metadata.offset());
-
         } catch (Exception e) {
-            _log.error("Failed to send collection of messages to topic '{}'. Exception: {}", topic, e.getMessage());
-            // Handle exception here or delegate it to other layers (e.g., AbstractQueueService)
+            _log.error("Failed to send message to topic '{}'. Exception: {}", topic, e.getMessage());
         }
-
-        _log.info("Finished sending collection of messages to topic '{}'", topic);
     }
 
     /**
