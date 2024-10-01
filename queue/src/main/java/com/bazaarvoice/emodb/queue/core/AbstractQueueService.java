@@ -18,6 +18,7 @@ import com.bazaarvoice.emodb.queue.api.MoveQueueStatus;
 import com.bazaarvoice.emodb.queue.api.Names;
 import com.bazaarvoice.emodb.queue.api.UnknownMoveException;
 import com.bazaarvoice.emodb.queue.core.kafka.KafkaAdminService;
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaConfig;
 import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sortedq.core.ReadOnlyQueueException;
 import com.google.common.base.Function;
@@ -39,7 +40,6 @@ import java.util.concurrent.TimeUnit;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,20 +49,20 @@ abstract class AbstractQueueService implements BaseQueueService {
     private final JobService _jobService;
     private final JobType<MoveQueueRequest, MoveQueueResult> _moveQueueJobType;
     private final LoadingCache<SizeCacheKey, Map.Entry<Long, Long>> _queueSizeCache;
-    private final KafkaProducerService producerService;
     private final KafkaAdminService adminService;
+    private final KafkaProducerService producerService;
 
     public static final int MAX_MESSAGE_SIZE_IN_BYTES = 30 * 1024;
 
     protected AbstractQueueService(BaseEventStore eventStore, JobService jobService,
                                    JobHandlerRegistry jobHandlerRegistry,
                                    JobType<MoveQueueRequest, MoveQueueResult> moveQueueJobType,
-                                   Clock clock,  KafkaAdminService adminService,KafkaProducerService producerService) {
+                                   Clock clock) {
         _eventStore = eventStore;
         _jobService = jobService;
         _moveQueueJobType = moveQueueJobType;
-        this.adminService = adminService;
-        this.producerService = producerService;
+        this.adminService = new KafkaAdminService();
+        this.producerService = new KafkaProducerService();
 
         registerMoveQueueJobHandler(jobHandlerRegistry);
         _queueSizeCache = CacheBuilder.newBuilder()
@@ -112,34 +112,7 @@ abstract class AbstractQueueService implements BaseQueueService {
     public void sendAll(String queue, Collection<?> messages) {
         sendAll(Collections.singletonMap(queue, messages));
     }
-    /**
-     * Sends messages to Kafka topics with handling for UnknownTopicOrPartitionException.
-     *
-     * @param topic      The Kafka topic.
-     * @param events     The collection of messages to send.
-     * @param queueType  The type of the queue.
-     */
-    protected void sendWithTopicCheck(String topic, Collection<String> events, String queueType) {
-        try {
-            producerService.sendMessages(topic, events, queueType);
-            _log.info("Messages sent to topic: {}", topic);
-        } catch (UnknownTopicOrPartitionException e) {
-            _log.warn("Topic '{}' does not exist. Attempting to create it.", topic);
-            try {
-                adminService.createTopic(topic, 1, (short) 2, queueType);
-                _log.info("Successfully created topic '{}'", topic);
-                // Retry sending the messages after topic creation
-                producerService.sendMessages(topic, events, queueType);
-                _log.info("Messages retried and sent to topic: {}", topic);
-            } catch (Exception creationException) {
-                _log.error("Failed to create topic '{}' and send messages. Error: {}", topic, creationException.getMessage());
-                // Optionally, rethrow or handle differently
-            }
-        } catch (Exception e) {
-            _log.error("Failed to send messages to topic '{}'. Error: {}", topic, e.getMessage());
-            // Optionally, rethrow or handle differently
-        }
-    }
+
 
     @Override
     public void sendAll(Map<String, ? extends Collection<?>> messagesByQueue) {
@@ -174,7 +147,7 @@ abstract class AbstractQueueService implements BaseQueueService {
         Multimap<String, String> eventsByChannel = builder.build();
         _log.info("Prepared {} channels to send messages.", eventsByChannel.asMap().size());
         String queueType = "queue";
-        if(_eventStore.getClass().getName().equals("com.bazaarvoice.emodb.event.dedup.DefaultDedupEventStore")){
+        if (_eventStore.getClass().getName().equals("com.bazaarvoice.emodb.event.dedup.DefaultDedupEventStore")) {
             queueType = "dedup";
         }
         for (Map.Entry<String, Collection<String>> topicEntry : eventsByChannel.asMap().entrySet()) {
@@ -184,8 +157,14 @@ abstract class AbstractQueueService implements BaseQueueService {
                 topic = "dedup_" + topic;
             }
             _log.debug("Sending {} messages to topic: {}", events.size(), topic);
-            // Use the new method with topic existence handling
-            sendWithTopicCheck(topic, events, queueType);
+
+            //Checking if topic exists, if not create a new topic
+            if (!adminService.isTopicExists(topic)) {
+                _log.info("Topic '{}' does not exist. Creating it now...", topic);
+                adminService.createTopic(topic, 1, (short) 2, queueType);  // Create the topic if it doesn't exist
+                _log.info("Topic '{}' created.", topic);
+            }
+            producerService.sendMessages(topic, events, queueType);
             _log.info("Messages sent to topic: {}", topic);
         }
         _log.info("All messages have been sent to their respective queues.");
@@ -199,13 +178,13 @@ abstract class AbstractQueueService implements BaseQueueService {
 
         ImmutableMultimap.Builder<String, ByteBuffer> builder = ImmutableMultimap.builder();
         List<ByteBuffer> events = Lists.newArrayListWithCapacity(messages.size());
-            for (Object message : messages) {
-                ByteBuffer messageByteBuffer = MessageSerializer.toByteBuffer(JsonValidator.checkValid(message));
-                checkArgument(messageByteBuffer.limit() <= MAX_MESSAGE_SIZE_IN_BYTES, "Message size (" + messageByteBuffer.limit() + ") is greater than the maximum allowed (" + MAX_MESSAGE_SIZE_IN_BYTES + ") message size");
+        for (Object message : messages) {
+            ByteBuffer messageByteBuffer = MessageSerializer.toByteBuffer(JsonValidator.checkValid(message));
+            checkArgument(messageByteBuffer.limit() <= MAX_MESSAGE_SIZE_IN_BYTES, "Message size (" + messageByteBuffer.limit() + ") is greater than the maximum allowed (" + MAX_MESSAGE_SIZE_IN_BYTES + ") message size");
 
-                events.add(messageByteBuffer);
-            }
-            builder.putAll(queue, events);
+            events.add(messageByteBuffer);
+        }
+        builder.putAll(queue, events);
         Multimap<String, ByteBuffer> eventsByChannel = builder.build();
 
         _eventStore.addAll(eventsByChannel);
