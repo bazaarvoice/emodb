@@ -57,12 +57,12 @@ abstract class AbstractQueueService implements BaseQueueService {
     protected AbstractQueueService(BaseEventStore eventStore, JobService jobService,
                                    JobHandlerRegistry jobHandlerRegistry,
                                    JobType<MoveQueueRequest, MoveQueueResult> moveQueueJobType,
-                                   Clock clock) {
+                                   Clock clock, KafkaAdminService adminService, KafkaProducerService producerService) {
         _eventStore = eventStore;
         _jobService = jobService;
         _moveQueueJobType = moveQueueJobType;
-        this.adminService = new KafkaAdminService();
-        this.producerService = new KafkaProducerService();
+        this.adminService = adminService;
+        this.producerService = producerService;
 
         registerMoveQueueJobHandler(jobHandlerRegistry);
         _queueSizeCache = CacheBuilder.newBuilder()
