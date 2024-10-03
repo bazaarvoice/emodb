@@ -8,6 +8,7 @@ import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.blob.api.Range;
 import com.bazaarvoice.emodb.blob.api.RangeSpecification;
 import com.bazaarvoice.emodb.blob.api.Table;
+import com.bazaarvoice.emodb.blob.config.ApiClient;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 import com.bazaarvoice.emodb.common.json.LoggingIterator;
 import com.bazaarvoice.emodb.sor.api.Audit;
@@ -63,12 +64,7 @@ import javax.ws.rs.core.UriInfo;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Spliterators;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -376,15 +372,25 @@ public class BlobStoreResource1 {
             response = Response.class
     )
     public Response get(@PathParam("table") String table,
-                        @PathParam("blobId") String blobId,
-                        @HeaderParam("Range") RangeParam rangeParam,
-                        @Authenticated Subject subject) {
-        _getObjectRequestsByApiKey.getUnchecked(subject.getId()).mark();
-        RangeSpecification rangeSpec = rangeParam != null ? rangeParam.get() : null;
-        final Blob blob = _blobStore.get(table, blobId, rangeSpec);
+                        @PathParam("blobId") String blobId) {
+//        _getObjectRequestsByApiKey.getUnchecked(subject.getId()).mark();
+//        RangeSpecification rangeSpec = rangeParam != null ? rangeParam.get() : null;
+//        final Blob blob = _blobStore.get(table, blobId, rangeSpec);
+//
+//        Response.ResponseBuilder response = Response.ok((StreamingOutput) blob::writeTo);
+//        setHeaders(response, blob, (rangeSpec != null) ? blob.getByteRange() : null);
 
-        Response.ResponseBuilder response = Response.ok((StreamingOutput) blob::writeTo);
-        setHeaders(response, blob, (rangeSpec != null) ? blob.getByteRange() : null);
+        Map<String, String> headers = new HashMap<>();
+        ApiClient apiClient = new ApiClient();
+        byte[] responseBytes = apiClient.getBlob(table, blobId, headers);
+
+        Response.ResponseBuilder response = Response.ok(responseBytes);
+        for (Map.Entry<String, String> entry : headers.entrySet()) {
+            String headerName = entry.getKey();
+            String headerValue = entry.getValue();
+
+            response.header(headerName, headerValue);
+        }
         return response.build();
     }
 
