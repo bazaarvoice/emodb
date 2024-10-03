@@ -160,6 +160,90 @@ public class ApiClient {
 
     }
 
+    public byte[] getBlob(String tableName, String blobId, Map<String, String> headers) {
+        try {
+            // Define the path variables
+            String[] parts = tableName.split(":");
+            String table = parts[0];
+            String clientName = parts[1];
+            String inputLine;
+
+            // Build the URL for the endpoint
+            String endpointUrl = String.format("%s/%s/%s/%s/%s",
+                    BASE_URL,
+                    URLEncoder.encode(TENANT_NAME, "UTF-8"),
+                    URLEncoder.encode(table, "UTF-8"),
+                    URLEncoder.encode(clientName, "UTF-8"),
+                    URLEncoder.encode(blobId, "UTF-8"));
+
+            // Create a URL object
+            URL url = new URL(endpointUrl);
+
+            // Open a connection to the URL
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
+            // Set the request method to GET
+            connection.setRequestMethod("GET");
+
+            //Set "Connection" header to "keep-alive"
+            connection.setRequestProperty("Connection", "keep-alive");
+
+            // Get the response code
+            int responseCode = connection.getResponseCode();
+            System.out.println("Response Code: " + responseCode);
+
+            // Check if the response is OK (200)
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                Map<String, List<String>> responseHeaders = connection.getHeaderFields();
+
+                // Print each header key and its values
+                for (Map.Entry<String, List<String>> entry : responseHeaders.entrySet()) {
+                    String headerName = entry.getKey();
+                    List<String> headerValues = entry.getValue();
+
+                    System.out.println("Header: " + headerName);
+                    for (String value : headerValues) {
+                        headers.put(headerName, value);
+                        System.out.println("Value: " + value);
+                    }
+                }
+                InputStream inputStream = connection.getInputStream();
+
+                // Read the input stream into a byte array
+                ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+
+                // Read the input stream into the buffer and write to ByteArrayOutputStream
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    byteArrayOutputStream.write(buffer, 0, bytesRead);
+                }
+
+                // Convert the ByteArrayOutputStream to a byte array
+                byte[] responseBytes = byteArrayOutputStream.toByteArray();
+
+                // Optionally, you can do something with the byte array (e.g., save it as a file)
+                System.out.println("Response received as byte array, length: " + responseBytes.length);
+
+                // Close the streams
+                inputStream.close();
+                byteArrayOutputStream.close();
+                return responseBytes;
+            } else if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
+                System.out.println("Blob not found (404)");
+
+            } else if (responseCode == HttpURLConnection.HTTP_INTERNAL_ERROR) {
+                System.out.println("Internal server error (500)");
+
+            } else {
+                System.out.println("Unexpected response code: " + responseCode);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     private List<BlobMetadata> mapResponseToBlobMetaData(String response) {
 
         // Parse JSON string to JsonArray
