@@ -18,7 +18,7 @@ public class ApiClient {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiClient.class);
 //    private final String BASE_URL = "https://cert-blob-media-service.qa.us-east-1.nexus.bazaarvoice.com/blob";
-    private final String BASE_URL = "https://cert-blob-media-service.qa.us-east-1.nexus.bazaarvoice.com/blob";
+    private final String BASE_URL = "https://uat-blob-media-service.prod.us-east-1.nexus.bazaarvoice.com/blob";
     private final String TENANT_NAME = "datastorage";
     public final String SUCCESS_MSG = "Successfully deleted blob.";
 
