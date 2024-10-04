@@ -365,7 +365,7 @@ public class BlobStoreResource1 {
     @GET
     @Path("{table}/{blobId}")
     @RequiresPermissions("blob|read|{table}")
-    @Produces(MediaType.APPLICATION_OCTET_STREAM)
+    @Produces("*/*")
     @Timed(name = "bv.emodb.blob.BlobStoreResource1.get", absolute = true)
     @ApiOperation(value = "Retrieves the current version of a piece of content from the data store..",
             notes = "Returns a Response.",
@@ -388,8 +388,9 @@ public class BlobStoreResource1 {
         for (Map.Entry<String, String> entry : headers.entrySet()) {
             String headerName = entry.getKey();
             String headerValue = entry.getValue();
-
-            response.header(headerName, headerValue);
+            if(headerName.equalsIgnoreCase("Content-Type")
+                    || headerName.equalsIgnoreCase("Content-Length"))
+                response.header(headerName, headerValue);
         }
         return response.build();
     }
