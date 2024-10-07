@@ -19,6 +19,7 @@ import com.bazaarvoice.emodb.queue.api.Names;
 import com.bazaarvoice.emodb.queue.api.UnknownMoveException;
 import com.bazaarvoice.emodb.queue.core.kafka.KafkaAdminService;
 import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
+import com.bazaarvoice.emodb.queue.core.kafka.ParameterStoreUtil;
 import com.bazaarvoice.emodb.queue.core.stepfn.StepFunctionService;
 import com.bazaarvoice.emodb.sortedq.core.ReadOnlyQueueException;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -55,7 +56,8 @@ abstract class AbstractQueueService implements BaseQueueService {
     private final KafkaProducerService producerService;
 
     public static final int MAX_MESSAGE_SIZE_IN_BYTES = 30 * 1024;
-    private final StepFunctionService stepFunctionService;
+    //private final StepFunctionService stepFunctionService;
+    //private final ParameterStoreUtil parameterStoreUtil;
 
     protected AbstractQueueService(BaseEventStore eventStore, JobService jobService,
                                    JobHandlerRegistry jobHandlerRegistry,
@@ -66,7 +68,9 @@ abstract class AbstractQueueService implements BaseQueueService {
         _moveQueueJobType = moveQueueJobType;
         this.adminService = adminService;
         this.producerService = producerService;
-        this.stepFunctionService = new StepFunctionService("us-east-1");
+        //this.stepFunctionService = new StepFunctionService("us-east-1");
+        //this.parameterStoreUtil = new ParameterStoreUtil();
+
 
         registerMoveQueueJobHandler(jobHandlerRegistry);
         _queueSizeCache = CacheBuilder.newBuilder()
@@ -164,12 +168,12 @@ abstract class AbstractQueueService implements BaseQueueService {
 
             //Checking if topic exists, if not create a new topic
             if (!adminService.isTopicExists(topic)) {
-                String stateMachineArn= "arn:aws:iam::549050352176:role/service-role/StepFunctions-polloi_cert_agrippasrc_srcprdusdal--role-8ek4btwpg";
-                // Prepare the input payload using the new method
-
-                String inputPayload = createInputPayload(1000000, 1000, queueType, topic, 10);
-                //fire the step function at this point
-                stepFunctionService.startExecution(stateMachineArn, inputPayload);
+//                String stateMachineArn= "arn:aws:iam::549050352176:role/service-role/StepFunctions-polloi_cert_agrippasrc_srcprdusdal--role-8ek4btwpg";
+//                // Prepare the input payload using the new method
+//
+//                String inputPayload = createInputPayload(1000000, 1000, queueType, topic, 10);
+//                //fire the step function at this point
+//                stepFunctionService.startExecution(stateMachineArn, inputPayload);
 
                 _log.info("Topic '{}' does not exist. Creating it now...", topic);
                 adminService.createTopic(topic, 1, (short) 2, queueType);  // Create the topic if it doesn't exist
