@@ -337,10 +337,10 @@ public class BlobStoreResource1 {
     )
     public Iterator<BlobMetadata> scanMetadata(@PathParam("table") String table,
                                                @QueryParam("from") String blobId,
-                                               @QueryParam("limit") @DefaultValue("10") LongParam limit,
-                                               @Authenticated Subject subject) {
-        _scanMetadataRequestsByApiKey.getUnchecked(subject.getId()).mark();
-        return streamingIterator(_blobStore.scanMetadata(table, Strings.emptyToNull(blobId), limit.get()));
+                                               @QueryParam("limit") @DefaultValue("10") LongParam limit) {
+        //_scanMetadataRequestsByApiKey.getUnchecked(subject.getId()).mark();
+        _log.info("Table : {}", table);
+        return _blobStore.scanMetadata(table, Strings.emptyToNull(blobId), limit.get());
     }
 
     /**
@@ -388,9 +388,11 @@ public class BlobStoreResource1 {
         for (Map.Entry<String, String> entry : headers.entrySet()) {
             String headerName = entry.getKey();
             String headerValue = entry.getValue();
-            if(headerName.equalsIgnoreCase("Content-Type")
-                    || headerName.equalsIgnoreCase("Content-Length"))
+            if(headerName != null && (headerName.equalsIgnoreCase("Content-Type")
+                    || headerName.equalsIgnoreCase("Content-Length"))) {
+                System.out.println(" headerName : " + headerName + " headerValue : " + headerValue);
                 response.header(headerName, headerValue);
+            }
         }
         return response.build();
     }

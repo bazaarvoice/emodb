@@ -17,20 +17,20 @@ import java.util.*;
 public class ApiClient {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiClient.class);
-//    private final String BASE_URL = "https://cert-blob-media-service.qa.us-east-1.nexus.bazaarvoice.com/blob";
-    private final String BASE_URL = "https://uat-blob-media-service.prod.us-east-1.nexus.bazaarvoice.com/blob";
+    private final String BASE_URL = "https://cert-blob-media-service.qa.us-east-1.nexus.bazaarvoice.com/blob";
+//    private final String BASE_URL = "https://uat-blob-media-service.prod.us-east-1.nexus.bazaarvoice.com/blob";
+//    private final String BASE_URL = "http://localhost:8082/blob";
     private final String TENANT_NAME = "datastorage";
     public final String SUCCESS_MSG = "Successfully deleted blob.";
 
     public Iterator<BlobMetadata> getBlobMetadata(String fromBlobIdExclusive) {
         try {
             LOGGER.debug("  Constructing URL and consuming datastorage-media-service URL  ");
-
             // Constructing URL with path variable and query parameters.
             String urlString = String.format("%s/%s/%s",
                     BASE_URL,
                     URLEncoder.encode(fromBlobIdExclusive, "UTF-8"),
-                    "/metadata");
+                    "metadata");
 
             URL url = new URL(urlString);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -40,7 +40,6 @@ public class ApiClient {
             connection.setRequestProperty("Accept", "application/json");
 
             int responseCode = connection.getResponseCode();
-
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
                 String inputLine;
@@ -246,27 +245,31 @@ public class ApiClient {
 
     private List<BlobMetadata> mapResponseToBlobMetaData(String response) {
 
-        // Parse JSON string to JsonArray
+        // Parse JSON string to JsonObject
         JsonReader jsonReader = Json.createReader(new StringReader(response));
-        JsonArray jsonArray = jsonReader.readArray();
+        JsonObject jsonObject = jsonReader.readObject(); // Change from readArray() to readObject()
         jsonReader.close();
 
-        // Convert JsonArray to List<POJO>
-        List<BlobMetadata> blobMetadata = new ArrayList<>();
-        for (JsonObject jsonObject : jsonArray.getValuesAs(JsonObject.class)) {
-            long length = Long.parseLong(String.valueOf(jsonObject.getInt("length")));
+        // Create a BlobMetadata object from the JsonObject
+        long length = Long.parseLong(String.valueOf(jsonObject.getInt("length")));
 
-            Map<String, String> attributes = convertStringAttributesToMap((JsonObject) jsonObject.get("attributes"));
-            BlobMetadata blobMetadataObject = new DefaultBlobMetadata(jsonObject.getString("id"),
-                    convertToDate(jsonObject.getString("timestamp")),
-                    length,
-                    jsonObject.getString("md5"),
-                    jsonObject.getString("sha1"),
-                    attributes);
-            blobMetadata.add(blobMetadataObject);
-        }
-        LOGGER.debug(" After mapping of the response {} ", blobMetadata);
+        Map<String, String> attributes = convertStringAttributesToMap(jsonObject.getJsonObject("attributes"));
+        BlobMetadata blobMetadataObject = new DefaultBlobMetadata(
+                jsonObject.getString("id"),
+                convertToDate(jsonObject.getString("timestamp")),
+                length,
+                jsonObject.getString("md5"),
+                jsonObject.getString("sha1"),
+                attributes
+        );
+
+        // Add to List
+        List<BlobMetadata> blobMetadata = new ArrayList<>();
+        blobMetadata.add(blobMetadataObject);
+
+        LOGGER.debug("After mapping of the response: {}", blobMetadata);
         return blobMetadata;
+
     }
 
     private Date convertToDate(String timestamp) {
@@ -318,7 +321,7 @@ public class ApiClient {
 
     private UploadByteRequestBody createUploadBlobRequestBody(String table, String clientName, String blobId, String md5,
                                                               String sha1, Map<String, String> attributes,
-                                                              InputStream inputStream) {
+                                                              InputStream inputStream) throws Exception {
         PlatformClient platformClient = new PlatformClient(table, clientName);
         Attributes attributesForRequest = new Attributes(clientName, "image/jpeg",
                 "", platformClient.getTable() + ":" + platformClient.getClientName(), "", "photo");
@@ -340,30 +343,14 @@ public class ApiClient {
         return formatter.format(currentDate);
     }
 
-    private String convertInputStreamToBase64(InputStream inputStream) {
-        try {
-            // Convert InputStream to Base64 encoded string
-            return convertToBase64(inputStream);
-        } catch (IOException e) {
-            LOGGER.error(" InputStream cannot be converted into base64... ", e);
+    private String convertInputStreamToBase64(InputStream in) throws Exception {
+        StringBuilder stringBuilder = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                stringBuilder.append(line);
+            }
         }
-        return null;
-    }
-
-    public String convertToBase64(InputStream inputStream) throws IOException {
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        byte[] buffer = new byte[8192];
-        int bytesRead;
-
-        // Read bytes from the InputStream and write them to the ByteArrayOutputStream
-        while ((bytesRead = inputStream.read(buffer)) != -1) {
-            outputStream.write(buffer, 0, bytesRead);
-        }
-
-        // Convert the ByteArrayOutputStream to a byte array
-        byte[] byteArray = outputStream.toByteArray();
-
-        // Encode the byte array to a Base64 encoded string
-        return Base64.getEncoder().encodeToString(byteArray);
+        return stringBuilder.toString();
     }
 }
