@@ -3,7 +3,7 @@
     <parent>
         <artifactId>emodb</artifactId>
         <groupId>com.bazaarvoice.emodb</groupId>
-        <version>6.5.175-SNAPSHOT</version>
+        <version>6.5.175</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
