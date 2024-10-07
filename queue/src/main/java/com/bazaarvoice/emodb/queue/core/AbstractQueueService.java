@@ -18,9 +18,11 @@ import com.bazaarvoice.emodb.queue.api.MoveQueueStatus;
 import com.bazaarvoice.emodb.queue.api.Names;
 import com.bazaarvoice.emodb.queue.api.UnknownMoveException;
 import com.bazaarvoice.emodb.queue.core.kafka.KafkaAdminService;
-import com.bazaarvoice.emodb.queue.core.kafka.KafkaConfig;
 import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
+import com.bazaarvoice.emodb.queue.core.stepfn.StepFunctionService;
 import com.bazaarvoice.emodb.sortedq.core.ReadOnlyQueueException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.cache.CacheBuilder;
@@ -53,6 +55,7 @@ abstract class AbstractQueueService implements BaseQueueService {
     private final KafkaProducerService producerService;
 
     public static final int MAX_MESSAGE_SIZE_IN_BYTES = 30 * 1024;
+    private final StepFunctionService stepFunctionService;
 
     protected AbstractQueueService(BaseEventStore eventStore, JobService jobService,
                                    JobHandlerRegistry jobHandlerRegistry,
@@ -63,6 +66,7 @@ abstract class AbstractQueueService implements BaseQueueService {
         _moveQueueJobType = moveQueueJobType;
         this.adminService = adminService;
         this.producerService = producerService;
+        this.stepFunctionService = new StepFunctionService("us-east-1");
 
         registerMoveQueueJobHandler(jobHandlerRegistry);
         _queueSizeCache = CacheBuilder.newBuilder()
@@ -160,6 +164,13 @@ abstract class AbstractQueueService implements BaseQueueService {
 
             //Checking if topic exists, if not create a new topic
             if (!adminService.isTopicExists(topic)) {
+                String stateMachineArn= "arn:aws:iam::549050352176:role/service-role/StepFunctions-polloi_cert_agrippasrc_srcprdusdal--role-8ek4btwpg";
+                // Prepare the input payload using the new method
+
+                String inputPayload = createInputPayload(1000000, 1000, queueType, topic, 10);
+                //fire the step function at this point
+                stepFunctionService.startExecution(stateMachineArn, inputPayload);
+
                 _log.info("Topic '{}' does not exist. Creating it now...", topic);
                 adminService.createTopic(topic, 1, (short) 2, queueType);  // Create the topic if it doesn't exist
                 _log.info("Topic '{}' created.", topic);
@@ -180,8 +191,6 @@ abstract class AbstractQueueService implements BaseQueueService {
         List<ByteBuffer> events = Lists.newArrayListWithCapacity(messages.size());
         for (Object message : messages) {
             ByteBuffer messageByteBuffer = MessageSerializer.toByteBuffer(JsonValidator.checkValid(message));
-            checkArgument(messageByteBuffer.limit() <= MAX_MESSAGE_SIZE_IN_BYTES, "Message size (" + messageByteBuffer.limit() + ") is greater than the maximum allowed (" + MAX_MESSAGE_SIZE_IN_BYTES + ") message size");
-
             events.add(messageByteBuffer);
         }
         builder.putAll(queue, events);
@@ -331,5 +340,20 @@ abstract class AbstractQueueService implements BaseQueueService {
                 "Queue name must be a lowercase ASCII string between 1 and 255 characters in length. " +
                         "Allowed punctuation characters are -.:@_ and the queue name may not start with a single underscore character. " +
                         "An example of a valid table name would be 'polloi:provision'.");
+    }
+    private String createInputPayload(int queueThreshold, int batchSize, String queueType, String topicName, int interval) {
+        Map<String, Object> payloadData = new HashMap<>();
+        payloadData.put("queueThreshold", queueThreshold);
+        payloadData.put("batchSize", batchSize);
+        payloadData.put("queueName", queueType);
+        payloadData.put("topicName", topicName);
+        payloadData.put("interval", interval);
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            return objectMapper.writeValueAsString(payloadData);
+        } catch (JsonProcessingException e) {
+            _log.error("Error while converting map to JSON", e);
+            return "{}"; // Return empty JSON object on error
+        }
     }
 }
