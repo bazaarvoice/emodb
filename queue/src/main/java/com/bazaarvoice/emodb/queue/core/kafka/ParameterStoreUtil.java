@@ -13,7 +13,6 @@ public class ParameterStoreUtil {
     public ParameterStoreUtil() {
         // Create SSM client with default credentials and region
         ssmClient = AWSSimpleSystemsManagementClientBuilder.standard()
-                .withCredentials( new ProfileCredentialsProvider("emodb-nexus-qa"))
                 .build();
     }
 
