@@ -57,7 +57,7 @@ abstract class AbstractQueueService implements BaseQueueService {
 
     public static final int MAX_MESSAGE_SIZE_IN_BYTES = 30 * 1024;
     //private final StepFunctionService stepFunctionService;
-    //private final ParameterStoreUtil parameterStoreUtil;
+    private final ParameterStoreUtil parameterStoreUtil;
 
     protected AbstractQueueService(BaseEventStore eventStore, JobService jobService,
                                    JobHandlerRegistry jobHandlerRegistry,
@@ -69,7 +69,7 @@ abstract class AbstractQueueService implements BaseQueueService {
         this.adminService = adminService;
         this.producerService = producerService;
         //this.stepFunctionService = new StepFunctionService("us-east-1");
-        //this.parameterStoreUtil = new ParameterStoreUtil();
+        this.parameterStoreUtil = new ParameterStoreUtil();
 
 
         registerMoveQueueJobHandler(jobHandlerRegistry);
@@ -174,7 +174,8 @@ abstract class AbstractQueueService implements BaseQueueService {
 //                String inputPayload = createInputPayload(1000000, 1000, queueType, topic, 10);
 //                //fire the step function at this point
 //                stepFunctionService.startExecution(stateMachineArn, inputPayload);
-
+                String BatchSize = parameterStoreUtil.getParameter("/emodb/kafka/batchSize");
+                _log.info("Batch size is "+BatchSize);
                 _log.info("Topic '{}' does not exist. Creating it now...", topic);
                 adminService.createTopic(topic, 1, (short) 2, queueType);  // Create the topic if it doesn't exist
                 _log.info("Topic '{}' created.", topic);
