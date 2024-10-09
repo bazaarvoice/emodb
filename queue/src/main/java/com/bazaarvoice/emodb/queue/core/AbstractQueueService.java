@@ -56,7 +56,7 @@ abstract class AbstractQueueService implements BaseQueueService {
     private final KafkaProducerService producerService;
 
     public static final int MAX_MESSAGE_SIZE_IN_BYTES = 30 * 1024;
-    //private final StepFunctionService stepFunctionService;
+    private final StepFunctionService stepFunctionService;
     private final ParameterStoreUtil parameterStoreUtil;
 
     protected AbstractQueueService(BaseEventStore eventStore, JobService jobService,
@@ -68,7 +68,7 @@ abstract class AbstractQueueService implements BaseQueueService {
         _moveQueueJobType = moveQueueJobType;
         this.adminService = adminService;
         this.producerService = producerService;
-        //this.stepFunctionService = new StepFunctionService("us-east-1");
+        this.stepFunctionService = new StepFunctionService("us-east-1");
         this.parameterStoreUtil = new ParameterStoreUtil();
 
 
@@ -168,17 +168,18 @@ abstract class AbstractQueueService implements BaseQueueService {
 
             //Checking if topic exists, if not create a new topic
             if (!adminService.isTopicExists(topic)) {
-//                String stateMachineArn= "arn:aws:iam::549050352176:role/service-role/StepFunctions-polloi_cert_agrippasrc_srcprdusdal--role-8ek4btwpg";
-//                // Prepare the input payload using the new method
-//
-//                String inputPayload = createInputPayload(1000000, 1000, queueType, topic, 10);
-//                //fire the step function at this point
-//                stepFunctionService.startExecution(stateMachineArn, inputPayload);
-                String BatchSize = parameterStoreUtil.getParameter("/emodb/kafka/batchSize");
-                _log.info("Batch size is "+BatchSize);
                 _log.info("Topic '{}' does not exist. Creating it now...", topic);
                 adminService.createTopic(topic, 1, (short) 2, queueType);  // Create the topic if it doesn't exist
                 _log.info("Topic '{}' created.", topic);
+
+                String stateMachineArn= "arn:aws:iam::549050352176:role/service-role/StepFunctions-polloi_cert_agrippasrc_srcprdusdal--role-8ek4btwpg";
+                // Prepare the input payload using the new method
+
+                String inputPayload = createInputPayload(1000000, 1000, queueType, topic, 10);
+                //fire the step function at this point
+                stepFunctionService.startExecution(stateMachineArn, inputPayload);
+                String BatchSize = parameterStoreUtil.getParameter("/emodb/kafka/batchSize");
+                _log.info("Batch size is "+BatchSize);
             }
             producerService.sendMessages(topic, events, queueType);
             _log.info("Messages sent to topic: {}", topic);
