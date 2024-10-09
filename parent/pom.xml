@@ -6,7 +6,7 @@
         <groupId>com.bazaarvoice.commons</groupId>
         <artifactId>bv-opensource-super-pom</artifactId>
         <version>1.12</version>
-        <relativePath />
+        <relativePath/>
     </parent>
 
     <groupId>com.bazaarvoice.emodb</groupId>
@@ -28,11 +28,11 @@
         <dropwizard-metrics-datadog.version>1.1.13</dropwizard-metrics-datadog.version>
         <cassandra.version>3.11.12</cassandra.version>
         <cassandra-maven-plugin.version>${cassandra.version}.1</cassandra-maven-plugin.version>
-        <curator.version>2.4.2</curator.version>
+        <curator.version>2.9.0</curator.version>
         <curator-jersey2.version>4.2.0</curator-jersey2.version>
         <curator-extensions.version>1.4.2</curator-extensions.version>
-        <dropwizard.version>0.7.1</dropwizard.version>
-        <guava.version>20.0</guava.version>
+        <dropwizard.version>2.0.3</dropwizard.version>
+        <guava.version>32.0.0-android</guava.version>
         <guava-jersey2.version>27.0.1-jre</guava-jersey2.version>
         <guice.version>4.0</guice.version>
         <jackson.version>2.10.5</jackson.version>
@@ -961,9 +961,9 @@
                                     <version>[${java.minimum.version},)</version>
                                     <message>requires ${java.minimum.version}+</message>
                                 </requireJavaVersion>
-                                <dependencyConvergence />
-                                <requireUpperBoundDeps />
-                                <banDuplicatePomDependencyVersions />
+                                <dependencyConvergence/>
+                                <requireUpperBoundDeps/>
+                                <banDuplicatePomDependencyVersions/>
                                 <bannedDependencies>
                                     <excludes>
                                         <!-- This should not exist until DW 0.8.x+ upgrade -->
