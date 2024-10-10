@@ -1,9 +1,10 @@
-package  com.bazaarvoice.emodb.queue.core.stepfn;
+package com.bazaarvoice.emodb.queue.core.stepfn;
 
-import com.amazonaws.services.stepfunctions.AWSStepFunctions;
-import com.amazonaws.services.stepfunctions.AWSStepFunctionsClientBuilder;
-import com.amazonaws.services.stepfunctions.model.StartExecutionRequest;
-import com.amazonaws.services.stepfunctions.model.StartExecutionResult;
+import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.sfn.SfnClient;
+import software.amazon.awssdk.services.sfn.model.StartExecutionRequest;
+import software.amazon.awssdk.services.sfn.model.StartExecutionResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,14 +14,15 @@ import org.slf4j.LoggerFactory;
 public class StepFunctionService {
 
     private static final Logger logger = LoggerFactory.getLogger(StepFunctionService.class);
-    private final AWSStepFunctions stepFunctionsClient;
+    private final SfnClient stepFunctionsClient;
 
     /**
-     * Constructor to initialize Step Function Client with AWS profile and region.
+     * Constructor to initialize Step Function Client with AWS region.
      */
     public StepFunctionService(String region) {
-        this.stepFunctionsClient = AWSStepFunctionsClientBuilder.standard()
-                .withRegion(region)
+        this.stepFunctionsClient = SfnClient.builder()
+                .region(Region.US_EAST_1)
+                .credentialsProvider(ProfileCredentialsProvider.create("emodb-nexus-qa"))
                 .build();
     }
 
@@ -42,13 +44,15 @@ public class StepFunctionService {
         }
 
         try {
-            StartExecutionRequest startExecutionRequest = new StartExecutionRequest()
-                    .withStateMachineArn(stateMachineArn)
-                    .withInput(inputPayload);
+            StartExecutionRequest startExecutionRequest = StartExecutionRequest.builder()
+                    .stateMachineArn(stateMachineArn)
+                    .input(inputPayload)
+                    .build();
 
-            StartExecutionResult startExecutionResult = stepFunctionsClient.startExecution(startExecutionRequest);
+            StartExecutionResponse startExecutionResponse = stepFunctionsClient.startExecution(startExecutionRequest);
+
             logger.info("Successfully started execution for state machine ARN: {}", stateMachineArn);
-            logger.debug("Execution ARN: {}", startExecutionResult.getExecutionArn());
+            logger.debug("Execution ARN: {}", startExecutionResponse.executionArn());
         } catch (Exception e) {
             logger.error("Error starting Step Function execution: {}", e.getMessage(), e);
             throw e;

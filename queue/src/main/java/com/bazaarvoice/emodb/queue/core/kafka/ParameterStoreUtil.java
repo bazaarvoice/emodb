@@ -1,23 +1,30 @@
 package com.bazaarvoice.emodb.queue.core.kafka;
-import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagement;
-import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagementClientBuilder;
-import com.amazonaws.services.simplesystemsmanagement.model.GetParameterRequest;
-import com.amazonaws.services.simplesystemsmanagement.model.GetParameterResult;
+
+
+import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.ssm.SsmClient;
+import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
+import software.amazon.awssdk.services.ssm.model.GetParameterResponse;
 
 public class ParameterStoreUtil {
 
-    private final AWSSimpleSystemsManagement ssmClient;
+    private final SsmClient ssmClient;
 
     public ParameterStoreUtil() {
         // Create SSM client with default credentials and region
-        ssmClient = AWSSimpleSystemsManagementClientBuilder.standard()
-                .withRegion("us-east-1")
+        ssmClient = SsmClient.builder()
+                .credentialsProvider(ProfileCredentialsProvider.create("emodb-nexus-qa"))// et your region
                 .build();
     }
 
     public String getParameter(String parameterName) {
-        GetParameterRequest request = new GetParameterRequest().withName(parameterName).withWithDecryption(true);
-        GetParameterResult result = ssmClient.getParameter(request);
-        return result.getParameter().getValue();
+        GetParameterRequest request = GetParameterRequest.builder()
+                .name(parameterName)
+                .withDecryption(true)
+                .build();
+
+        GetParameterResponse response = ssmClient.getParameter(request);
+        return response.parameter().value();
     }
 }
