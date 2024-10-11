@@ -11,6 +11,7 @@ import org.apache.http.client.CredentialsProvider;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
+import software.amazon.msk.auth.iam.IAMClientCallbackHandler;
 import java.util.Properties;
 
 public class KafkaConfig {

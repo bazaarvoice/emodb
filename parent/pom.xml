@@ -669,6 +669,14 @@
                         <groupId>com.fasterxml.jackson.core</groupId>
                         <artifactId>jackson-databind</artifactId>
                     </exclusion>
+                    <exclusion>
+                        <groupId>io.netty</groupId>
+                        <artifactId>netty-handler</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>io.netty</groupId>
+                        <artifactId>netty-buffer</artifactId>
+                    </exclusion>
                 </exclusions>
             </dependency>
             <dependency>
