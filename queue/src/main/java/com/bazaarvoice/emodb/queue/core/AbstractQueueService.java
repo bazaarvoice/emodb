@@ -179,7 +179,7 @@ abstract class AbstractQueueService implements BaseQueueService {
                 //fire the step function at this point
                 stepFunctionService.startExecution(stateMachineArn, inputPayload);
                 String BatchSize = parameterStoreUtil.getParameter("/emodb/kafka/batchSize");
-                _log.info("Batch size is "+BatchSize);
+                _log.info("Batch size fetched from Paremeter store uti is  "+BatchSize);
             }
             producerService.sendMessages(topic, events, queueType);
             _log.info("Messages sent to topic: {}", topic);

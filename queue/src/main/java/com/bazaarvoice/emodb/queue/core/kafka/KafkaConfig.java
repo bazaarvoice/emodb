@@ -41,6 +41,13 @@ public class KafkaConfig {
 //        }
 public static Properties getProducerProps () {
     Properties producerProps = new Properties();
+
+    // Enable IAM authentication
+    producerProps.put("security.protocol", "SASL_SSL");
+    producerProps.put("sasl.mechanism", "AWS_MSK_IAM");
+    producerProps.put("sasl.jaas.config", "software.amazon.msk.auth.iam.IAMLoginModule required;");
+    producerProps.put("sasl.client.callback.handler.class", "software.amazon.msk.auth.iam.IAMClientCallbackHandler");
+
     producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
     producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
     producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
@@ -55,6 +62,11 @@ public static Properties getProducerProps () {
         public static Properties getAdminProps () {
             Properties adminProps = new Properties();
             adminProps.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+            // Enable IAM authentication
+            adminProps.put("security.protocol", "SASL_SSL");
+            adminProps.put("sasl.mechanism", "AWS_MSK_IAM");
+            adminProps.put("sasl.jaas.config", "software.amazon.msk.auth.iam.IAMLoginModule required;");
+            adminProps.put("sasl.client.callback.handler.class", "software.amazon.msk.auth.iam.IAMClientCallbackHandler");
             return adminProps;
         }
 }
