@@ -62,13 +62,13 @@ abstract class AbstractQueueService implements BaseQueueService {
     protected AbstractQueueService(BaseEventStore eventStore, JobService jobService,
                                    JobHandlerRegistry jobHandlerRegistry,
                                    JobType<MoveQueueRequest, MoveQueueResult> moveQueueJobType,
-                                   Clock clock, KafkaAdminService adminService, KafkaProducerService producerService) {
+                                   Clock clock, KafkaAdminService adminService, KafkaProducerService producerService, StepFunctionService stepFunctionService) {
         _eventStore = eventStore;
         _jobService = jobService;
         _moveQueueJobType = moveQueueJobType;
         this.adminService = adminService;
         this.producerService = producerService;
-        this.stepFunctionService = new StepFunctionService("us-east-1");
+        this.stepFunctionService = stepFunctionService;
         this.parameterStoreUtil = new ParameterStoreUtil();
 
 
@@ -172,14 +172,12 @@ abstract class AbstractQueueService implements BaseQueueService {
                 adminService.createTopic(topic, 1, (short) 2, queueType);  // Create the topic if it doesn't exist
                 _log.info("Topic '{}' created.", topic);
 
-                String stateMachineArn= "arn:aws:iam::549050352176:role/service-role/StepFunctions-polloi_cert_agrippasrc_srcprdusdal--role-8ek4btwpg";
+                String stateMachineArn= parameterStoreUtil.getParameter("/emodb/stepfn/stateMachineArn");
                 // Prepare the input payload using the new method
-
                 String inputPayload = createInputPayload(1000000, 1000, queueType, topic, 10);
-                //fire the step function at this point
+               // fire the step function at this point
                 stepFunctionService.startExecution(stateMachineArn, inputPayload);
-                String BatchSize = parameterStoreUtil.getParameter("/emodb/kafka/batchSize");
-                _log.info("Batch size fetched from Paremeter store uti is  "+BatchSize);
+
             }
             producerService.sendMessages(topic, events, queueType);
             _log.info("Messages sent to topic: {}", topic);
