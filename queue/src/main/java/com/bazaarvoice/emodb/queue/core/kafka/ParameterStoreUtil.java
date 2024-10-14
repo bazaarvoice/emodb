@@ -2,11 +2,9 @@ package com.bazaarvoice.emodb.queue.core.kafka;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
 import software.amazon.awssdk.services.ssm.SsmClient;
 import software.amazon.awssdk.services.ssm.model.*;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -25,7 +23,6 @@ public class ParameterStoreUtil {
     public ParameterStoreUtil() {
         // Create SSM client with specific profile credentials and default region
         this.ssmClient = SsmClient.builder()
-                .credentialsProvider(ProfileCredentialsProvider.create("emodb-nexus-qa"))
                 .build();
     }
 

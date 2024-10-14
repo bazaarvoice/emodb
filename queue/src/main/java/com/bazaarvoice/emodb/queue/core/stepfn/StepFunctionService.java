@@ -2,7 +2,6 @@ package com.bazaarvoice.emodb.queue.core.stepfn;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sfn.SfnClient;
 import software.amazon.awssdk.services.sfn.model.SfnException;
@@ -29,7 +28,6 @@ public class StepFunctionService {
     public StepFunctionService() {
         this.stepFunctionsClient = SfnClient.builder()
                 .region(Region.US_EAST_1)
-                .credentialsProvider(ProfileCredentialsProvider.create("emodb-nexus-qa"))
                 .build();
     }
 

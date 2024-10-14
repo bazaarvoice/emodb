@@ -24,7 +24,6 @@ public class KafkaConfig {
 
     // Static SSM Client and configuration
     private static final SsmClient ssmClient = SsmClient.builder()
-            .credentialsProvider(ProfileCredentialsProvider.create("emodb-nexus-qa"))
             .build();
 
     private static final String DEFAULT_BOOTSTRAP_SERVERS =
@@ -83,6 +82,11 @@ public class KafkaConfig {
     // Kafka Producer properties
     public static Properties getProducerProps() {
         Properties producerProps = new Properties();
+
+        producerProps.put("security.protocol", "SASL_SSL");
+        producerProps.put("sasl.mechanism", "AWS_MSK_IAM");
+        producerProps.put("sasl.jaas.config", "software.amazon.msk.auth.iam.IAMLoginModule required;");
+        producerProps.put("sasl.client.callback.handler.class", "software.amazon.msk.auth.iam.IAMLoginCallbackHandler");
         producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServersConfig);
         producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
@@ -98,6 +102,12 @@ public class KafkaConfig {
     // Kafka Admin properties
     public static Properties getAdminProps() {
         Properties adminProps = new Properties();
+
+        adminProps.put("security.protocol", "SASL_SSL");
+        adminProps.put("sasl.mechanism", "AWS_MSK_IAM");
+        adminProps.put("sasl.jaas.config", "software.amazon.msk.auth.iam.IAMLoginModule required;");
+        adminProps.put("sasl.client.callback.handler.class", "software.amazon.msk.auth.iam.IAMLoginCallbackHandler");
+
         adminProps.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServersConfig);
         logger.info("Kafka Admin properties initialized.");
         return adminProps;
