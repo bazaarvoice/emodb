@@ -4,12 +4,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
 import software.amazon.awssdk.services.ssm.SsmClient;
-import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
-import software.amazon.awssdk.services.ssm.model.GetParameterResponse;
-import software.amazon.awssdk.services.ssm.model.ParameterNotFoundException;
-import software.amazon.awssdk.services.ssm.model.SsmException;
+import software.amazon.awssdk.services.ssm.model.*;
 
 import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Utility class for interacting with AWS Parameter Store.
@@ -67,6 +67,51 @@ public class ParameterStoreUtil {
             throw new RuntimeException("Unexpected error fetching parameter: " + parameterName, e);
         }
     }
+
+    /**
+     * Fetches multiple parameters from AWS Parameter Store in a batch.
+     *
+     * @param parameterNames The list of parameter names to fetch
+     * @return A map of parameter names to their values
+     * @throws IllegalArgumentException If the parameterNames list is null or empty
+     */
+    public Map<String, String> getParameters(List<String> parameterNames) {
+        if (parameterNames == null || parameterNames.isEmpty()) {
+            logger.error("Parameter names list cannot be null or empty");
+            throw new IllegalArgumentException("Parameter names list cannot be null or empty");
+        }
+
+        try {
+            logger.info("Fetching parameters from AWS Parameter Store: {}", parameterNames);
+
+            GetParametersRequest request = GetParametersRequest.builder()
+                    .names(parameterNames)
+                    .build();
+
+            GetParametersResponse response = ssmClient.getParameters(request);
+
+            // Map the result to a Map of parameter names and values
+            Map<String, String> parameters = response.parameters().stream()
+                    .collect(Collectors.toMap(p -> p.name(), p -> p.value()));
+
+            // Log any parameters that were not found
+            if (!response.invalidParameters().isEmpty()) {
+                logger.warn("The following parameters were not found: {}", response.invalidParameters());
+            }
+
+            logger.info("Successfully retrieved {} parameters", parameters.size());
+            return parameters;
+
+        } catch (SsmException e) {
+            logger.error("Error fetching parameters from AWS SSM: {}", e.getMessage(), e);
+            throw new RuntimeException("Error fetching parameters from AWS SSM: " + parameterNames, e);
+
+        } catch (Exception e) {
+            logger.error("Unexpected error while fetching parameters: {}", parameterNames, e);
+            throw new RuntimeException("Unexpected error fetching parameters: " + parameterNames, e);
+        }
+    }
+
 
     /**
      * Shutdown the SsmClient to release resources.
