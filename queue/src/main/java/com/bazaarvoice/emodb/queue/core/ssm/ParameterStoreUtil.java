@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.queue.core.kafka;
+package com.bazaarvoice.emodb.queue.core.ssm;
 
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagement;
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagementClientBuilder;
@@ -29,7 +29,6 @@ public class ParameterStoreUtil {
     public ParameterStoreUtil() {
         // Create SSM client with default credentials and region
         ssmClient = AWSSimpleSystemsManagementClientBuilder.standard()
-                .withRegion("us-east-1")
                 .build();
     }
 

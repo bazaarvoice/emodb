@@ -24,9 +24,9 @@ public class StepFunctionService {
     /**
      * Constructor to initialize Step Function Client with AWS region and credentials.
      */
-    public StepFunctionService(String region) {
+    public StepFunctionService() {
         this.stepFunctionsClient = AWSStepFunctionsClientBuilder.standard()
-                .withRegion(region)
+                .withRegion("us-east-1")
                 .build();
     }
 
