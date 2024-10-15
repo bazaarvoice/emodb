@@ -25,11 +25,11 @@ public class KafkaProducerService {
      * @param topic   The Kafka topic.
      * @param events  The collection of messages to be sent.
      */
-    public void sendMessages(String topic, Collection<String> events, String queueType) {
+    public <T> void sendMessages(String topic, Collection<T> events, String queueType) {
         _log.info("Sending {} messages to topic '{}'", events.size(), topic);
-        for (String event : events) {
+        for (T event : events) {
             _log.debug("Sending message: {}", event);
-            sendMessage(topic, event,queueType);
+            sendMessage(topic, event.toString(),queueType);
         }
         _log.info("Finished sending messages to topic '{}'", topic);
     }
