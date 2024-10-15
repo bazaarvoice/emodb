@@ -1,22 +1,28 @@
-package  com.bazaarvoice.emodb.queue.core.stepfn;
+package com.bazaarvoice.emodb.queue.core.stepfn;
+
 
 import com.amazonaws.services.stepfunctions.AWSStepFunctions;
 import com.amazonaws.services.stepfunctions.AWSStepFunctionsClientBuilder;
 import com.amazonaws.services.stepfunctions.model.StartExecutionRequest;
 import com.amazonaws.services.stepfunctions.model.StartExecutionResult;
+import com.amazonaws.services.stepfunctions.model.StateMachineDoesNotExistException;
+import com.amazonaws.services.stepfunctions.model.InvalidArnException;
+import com.amazonaws.services.stepfunctions.model.InvalidExecutionInputException;
+import com.amazonaws.services.stepfunctions.model.AWSStepFunctionsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Service to interact with AWS Step Functions.
+ * Production-level service to interact with AWS Step Functions using AWS SDK v1.
  */
 public class StepFunctionService {
 
     private static final Logger logger = LoggerFactory.getLogger(StepFunctionService.class);
+
     private final AWSStepFunctions stepFunctionsClient;
 
     /**
-     * Constructor to initialize Step Function Client with AWS profile and region.
+     * Constructor to initialize Step Function Client with AWS region and credentials.
      */
     public StepFunctionService(String region) {
         this.stepFunctionsClient = AWSStepFunctionsClientBuilder.standard()
@@ -25,10 +31,11 @@ public class StepFunctionService {
     }
 
     /**
-     * Starts the execution of a Step Function.
+     * Starts the execution of a Step Function with the given state machine ARN and input payload.
      *
      * @param stateMachineArn ARN of the state machine
-     * @param inputPayload Input for the state machine execution
+     * @param inputPayload    Input for the state machine execution
+     * @throws IllegalArgumentException If the stateMachineArn is invalid
      */
     public void startExecution(String stateMachineArn, String inputPayload) {
         if (stateMachineArn == null || stateMachineArn.isEmpty()) {
@@ -47,11 +54,22 @@ public class StepFunctionService {
                     .withInput(inputPayload);
 
             StartExecutionResult startExecutionResult = stepFunctionsClient.startExecution(startExecutionRequest);
+
             logger.info("Successfully started execution for state machine ARN: {}", stateMachineArn);
             logger.debug("Execution ARN: {}", startExecutionResult.getExecutionArn());
+
+        } catch (StateMachineDoesNotExistException e) {
+            logger.error("State Machine does not exist: {}", stateMachineArn, e);
+        } catch (InvalidArnException e) {
+            logger.error("Invalid ARN provided: {}", stateMachineArn, e);
+        } catch (InvalidExecutionInputException e) {
+            logger.error("Invalid execution input provided: {}", inputPayload, e);
+        } catch (AWSStepFunctionsException e) {
+            logger.error("Error executing Step Function: {}", e.getMessage(), e);
+            throw e; // Re-throw after logging
         } catch (Exception e) {
-            logger.error("Error starting Step Function execution: {}", e.getMessage(), e);
-            throw e;
+            logger.error("Unexpected error occurred during Step Function execution: {}", e.getMessage(), e);
+            throw e; // Re-throw unexpected exceptions
         }
     }
 }

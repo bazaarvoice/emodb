@@ -68,7 +68,7 @@ abstract class AbstractQueueService implements BaseQueueService {
         _moveQueueJobType = moveQueueJobType;
         this.adminService = adminService;
         this.producerService = producerService;
-        this.stepFunctionService = new StepFunctionService("us-east-1");
+        this.stepFunctionService =  new StepFunctionService("us-east-1");
         this.parameterStoreUtil = new ParameterStoreUtil();
 
 
@@ -154,10 +154,10 @@ abstract class AbstractQueueService implements BaseQueueService {
 
         Multimap<String, String> eventsByChannel = builder.build();
         _log.info("Prepared {} channels to send messages.", eventsByChannel.asMap().size());
-        String queueType = "queue";
-        if (_eventStore.getClass().getName().equals("com.bazaarvoice.emodb.event.dedup.DefaultDedupEventStore")) {
-            queueType = "dedup";
-        }
+
+
+
+        String queueType = determineQueueType();
         for (Map.Entry<String, Collection<String>> topicEntry : eventsByChannel.asMap().entrySet()) {
             String topic = topicEntry.getKey();
             Collection<String> events = topicEntry.getValue();
@@ -167,19 +167,14 @@ abstract class AbstractQueueService implements BaseQueueService {
             _log.debug("Sending {} messages to topic: {}", events.size(), topic);
 
             //Checking if topic exists, if not create a new topic
+            // Check if the topic exists, if not create it and execute Step Function
             if (!adminService.isTopicExists(topic)) {
                 _log.info("Topic '{}' does not exist. Creating it now...", topic);
-                adminService.createTopic(topic, 1, (short) 2, queueType);  // Create the topic if it doesn't exist
+                adminService.createTopic(topic, 1, (short) 2, queueType);
                 _log.info("Topic '{}' created.", topic);
-
-                String stateMachineArn= "arn:aws:iam::549050352176:role/service-role/StepFunctions-polloi_cert_agrippasrc_srcprdusdal--role-8ek4btwpg";
-                // Prepare the input payload using the new method
-
-                String inputPayload = createInputPayload(1000000, 1000, queueType, topic, 10);
-                //fire the step function at this point
-                stepFunctionService.startExecution(stateMachineArn, inputPayload);
-                String BatchSize = parameterStoreUtil.getParameter("/emodb/kafka/batchSize");
-                _log.info("Batch size is "+BatchSize);
+                Map<String, String> parameters = fetchStepFunctionParameters();
+                // Execute Step Function after topic creation
+                executeStepFunction(parameters, queueType, topic);
             }
             producerService.sendMessages(topic, events, queueType);
             _log.info("Messages sent to topic: {}", topic);
@@ -347,6 +342,54 @@ abstract class AbstractQueueService implements BaseQueueService {
                         "Allowed punctuation characters are -.:@_ and the queue name may not start with a single underscore character. " +
                         "An example of a valid table name would be 'polloi:provision'.");
     }
+    /**
+     * Fetches the necessary Step Function parameters from AWS Parameter Store.
+     */
+    private Map<String, String> fetchStepFunctionParameters() {
+        List<String> parameterNames = Arrays.asList(
+                "/emodb/stepfn/stateMachineArn",
+                "/emodb/stepfn/queueThreshold",
+                "/emodb/stepfn/batchSize",
+                "/emodb/stepfn/interval"
+        );
+
+        try {
+            return parameterStoreUtil.getParameters(parameterNames);
+        } catch (Exception e) {
+            _log.error("Failed to fetch Step Function parameters from Parameter Store", e);
+            throw new RuntimeException("Error fetching Step Function parameters", e);
+        }
+    }
+    /**
+     * Executes the Step Function for a given topic after it has been created.
+     */
+    private void executeStepFunction(Map<String, String> parameters, String queueType, String topic) {
+        try {
+            String stateMachineArn = parameters.get("/emodb/stepfn/stateMachineArn");
+            int queueThreshold = Integer.parseInt(parameters.get("/emodb/stepfn/queueThreshold"));
+            int batchSize = Integer.parseInt(parameters.get("/emodb/stepfn/batchSize"));
+            int interval = Integer.parseInt(parameters.get("/emodb/stepfn/interval"));
+
+            String inputPayload = createInputPayload(queueThreshold, batchSize, queueType, topic, interval);
+            stepFunctionService.startExecution(stateMachineArn, inputPayload);
+
+            _log.info("Step Function executed for topic: {}", topic);
+        } catch (Exception e) {
+            _log.error("Error executing Step Function for topic: {}", topic, e);
+            throw new RuntimeException("Error executing Step Function for topic: " + topic, e);
+        }
+    }
+
+    /**
+     * Determines the queue type based on the event store.
+     */
+    private String determineQueueType() {
+        if (_eventStore.getClass().getName().equals("com.bazaarvoice.emodb.event.dedup.DefaultDedupEventStore")) {
+            return "dedup";
+        }
+        return "queue";
+    }
+
     private String createInputPayload(int queueThreshold, int batchSize, String queueType, String topicName, int interval) {
         Map<String, Object> payloadData = new HashMap<>();
         payloadData.put("queueThreshold", queueThreshold);
