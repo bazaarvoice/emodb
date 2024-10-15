@@ -5,6 +5,7 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.json.deferred.LazyJsonMap;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.AuditsUnavailableException;
@@ -104,6 +105,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     private static final int NUM_COMPACTION_THREADS = 2;
     private static final int MAX_COMPACTION_QUEUE_LENGTH = 100;
+    public static final String UPDATE_AUDIT_TOPIC = "master_bus";
 
     private final Logger _log = LoggerFactory.getLogger(DefaultDataStore.class);
 
@@ -126,6 +128,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     private final CompactionControlSource _compactionControlSource;
     private final MapStore<DataStoreMinSplitSize> _minSplitSizeMap;
     private final Clock _clock;
+    private final KafkaProducerService _kafkaProducerService;
 
     private StashTableDAO _stashTableDao;
 
@@ -134,10 +137,10 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                             DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao, SlowQueryLog slowQueryLog, HistoryStore historyStore,
                             @StashRoot Optional<URI> stashRootDirectory, @LocalCompactionControl CompactionControlSource compactionControlSource,
                             @StashBlackListTableCondition Condition stashBlackListTableCondition, AuditWriter auditWriter,
-                            @MinSplitSizeMap MapStore<DataStoreMinSplitSize> minSplitSizeMap, Clock clock) {
+                            @MinSplitSizeMap MapStore<DataStoreMinSplitSize> minSplitSizeMap, Clock clock, KafkaProducerService kafkaProducerService) {
         this(eventWriterRegistry, tableDao, dataReaderDao, dataWriterDao, slowQueryLog, defaultCompactionExecutor(lifeCycle),
                 historyStore, stashRootDirectory, compactionControlSource, stashBlackListTableCondition, auditWriter,
-                minSplitSizeMap, metricRegistry, clock);
+                minSplitSizeMap, metricRegistry, clock, kafkaProducerService);
     }
 
     @VisibleForTesting
@@ -146,7 +149,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                             SlowQueryLog slowQueryLog, ExecutorService compactionExecutor, HistoryStore historyStore,
                             Optional<URI> stashRootDirectory, CompactionControlSource compactionControlSource,
                             Condition stashBlackListTableCondition, AuditWriter auditWriter,
-                            MapStore<DataStoreMinSplitSize> minSplitSizeMap, MetricRegistry metricRegistry, Clock clock) {
+                            MapStore<DataStoreMinSplitSize> minSplitSizeMap, MetricRegistry metricRegistry, Clock clock, KafkaProducerService kafkaProducerService) {
         _eventWriterRegistry = requireNonNull(eventWriterRegistry, "eventWriterRegistry");
         _tableDao = requireNonNull(tableDao, "tableDao");
         _dataReaderDao = requireNonNull(dataReaderDao, "dataReaderDao");
@@ -166,6 +169,8 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         _compactionControlSource = requireNonNull(compactionControlSource, "compactionControlSource");
         _minSplitSizeMap = requireNonNull(minSplitSizeMap, "minSplitSizeMap");
         _clock = requireNonNull(clock, "clock");
+        _kafkaProducerService = requireNonNull(kafkaProducerService, "kafkaProducerService");
+
     }
 
     /**
@@ -737,7 +742,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                 // If the update isn't replicated to another datacenter SoR, but the databus event is, then poller will just wait for replication to finish
                 // before polling the event.
 
-                List<UpdateRef> updateRefs = Lists.newArrayListWithCapacity(updateBatch.size());
+                /*List<UpdateRef> updateRefs = Lists.newArrayListWithCapacity(updateBatch.size());
                 for (RecordUpdate update : updateBatch) {
                     if (!update.getTable().isInternal()) {
                         updateRefs.add(new UpdateRef(update.getTable().getName(), update.getKey(), update.getChangeId(), tags));
@@ -745,10 +750,18 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                 }
                 if (!updateRefs.isEmpty()) {
                     _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefs);
-                }
+                }*/
             }
 
             public void afterWrite(Collection<RecordUpdate> updateBatch) {
+                // Publish the audit to the kafka topic after we know the delta has written sucessfully.
+                List<UpdateRef> updateRefs = Lists.newArrayListWithCapacity(updateBatch.size());
+                for (RecordUpdate update : updateBatch) {
+                    if (!update.getTable().isInternal()) {
+                        updateRefs.add(new UpdateRef(update.getTable().getName(), update.getKey(), update.getChangeId(), tags));
+                    }
+                }
+                _kafkaProducerService.sendMessages(UPDATE_AUDIT_TOPIC, updateRefs, "update");
                 // Write the audit to the audit store after we know the delta has written sucessfully.
                 // Using this model for writing audits, there should never be any audit written for a delta that
                 // didn't end in Cassandra. However, it is absolutely possible for audits to be missing if Emo
