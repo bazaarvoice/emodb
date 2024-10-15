@@ -19,7 +19,7 @@ import com.bazaarvoice.emodb.queue.api.Names;
 import com.bazaarvoice.emodb.queue.api.UnknownMoveException;
 import com.bazaarvoice.emodb.queue.core.kafka.KafkaAdminService;
 import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
-import com.bazaarvoice.emodb.queue.core.kafka.ParameterStoreUtil;
+import com.bazaarvoice.emodb.queue.core.ssm.ParameterStoreUtil;
 import com.bazaarvoice.emodb.queue.core.stepfn.StepFunctionService;
 import com.bazaarvoice.emodb.sortedq.core.ReadOnlyQueueException;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -62,13 +62,13 @@ abstract class AbstractQueueService implements BaseQueueService {
     protected AbstractQueueService(BaseEventStore eventStore, JobService jobService,
                                    JobHandlerRegistry jobHandlerRegistry,
                                    JobType<MoveQueueRequest, MoveQueueResult> moveQueueJobType,
-                                   Clock clock, KafkaAdminService adminService, KafkaProducerService producerService) {
+                                   Clock clock, KafkaAdminService adminService, KafkaProducerService producerService, StepFunctionService stepFunctionService) {
         _eventStore = eventStore;
         _jobService = jobService;
         _moveQueueJobType = moveQueueJobType;
         this.adminService = adminService;
         this.producerService = producerService;
-        this.stepFunctionService =  new StepFunctionService("us-east-1");
+        this.stepFunctionService = stepFunctionService;
         this.parameterStoreUtil = new ParameterStoreUtil();
 
 

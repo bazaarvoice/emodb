@@ -23,6 +23,7 @@ import com.bazaarvoice.emodb.queue.core.DefaultQueueService;
 import com.bazaarvoice.emodb.queue.core.QueueChannelConfiguration;
 import com.bazaarvoice.emodb.queue.core.kafka.KafkaAdminService;
 import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
+import com.bazaarvoice.emodb.queue.core.stepfn.StepFunctionService;
 import com.bazaarvoice.ostrich.HostDiscovery;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Supplier;
@@ -87,6 +88,10 @@ public class QueueModule extends PrivateModule {
         // Bind Kafka services
         bind (KafkaAdminService.class).asEagerSingleton();
         bind(KafkaProducerService.class).asEagerSingleton();
+
+        // Bind Step Function Service
+        bind(StepFunctionService.class).asEagerSingleton();
+
 
         // Bind the Queue instance that the rest of the application will consume
         bind(QueueService.class).to(DefaultQueueService.class).asEagerSingleton();
