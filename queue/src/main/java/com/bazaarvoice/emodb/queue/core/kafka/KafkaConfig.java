@@ -14,7 +14,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import java.util.Properties;
 
 public class KafkaConfig {
-    private static String bootstrapServers="b-3.certemodbqueueqa.2ndps1.c4.kafka.us-east-1.amazonaws.com:9098,b-2.certemodbqueueqa.2ndps1.c4.kafka.us-east-1.amazonaws.com:9098,b-1.certemodbqueueqa.2ndps1.c4.kafka.us-east-1.amazonaws.com:9098";
+    private static String bootstrapServers="b-1.qaemodbpocmsk.q4panq.c10.kafka.us-east-1.amazonaws.com:9092,b-2.qaemodbpocmsk.q4panq.c10.kafka.us-east-1.amazonaws.com:9092";
     //private static final AWSSimpleSystemsManagement ssmClient = AWSSimpleSystemsManagementClientBuilder.standard().withCredentials( new ProfileCredentialsProvider("emodb-nexus-qa")).build();
 
 
