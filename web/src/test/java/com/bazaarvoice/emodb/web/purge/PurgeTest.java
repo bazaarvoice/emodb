@@ -11,6 +11,7 @@ import com.bazaarvoice.emodb.job.dao.JobStatusDAO;
 import com.bazaarvoice.emodb.job.handler.DefaultJobHandlerRegistry;
 import com.bazaarvoice.emodb.job.service.DefaultJobService;
 import com.bazaarvoice.emodb.queue.api.QueueService;
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
@@ -84,7 +85,7 @@ public class PurgeTest {
                 lifeCycleRegistry, _queueService, "testqueue", _jobHandlerRegistry, _jobStatusDAO, _curator,
                 1, Duration.ZERO, 100, Duration.ofHours(1));
 
-        _store = new InMemoryDataStore(new MetricRegistry());
+        _store = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
         _dataStoreResource = new DataStoreResource1(_store, new DefaultDataStoreAsync(_store, _service, _jobHandlerRegistry),
                 mock(CompactionControlSource.class), new UnlimitedDataStoreUpdateThrottler());
 
