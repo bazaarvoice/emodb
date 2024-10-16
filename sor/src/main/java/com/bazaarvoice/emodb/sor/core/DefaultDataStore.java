@@ -742,26 +742,18 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                 // If the update isn't replicated to another datacenter SoR, but the databus event is, then poller will just wait for replication to finish
                 // before polling the event.
 
-                /*List<UpdateRef> updateRefs = Lists.newArrayListWithCapacity(updateBatch.size());
-                for (RecordUpdate update : updateBatch) {
-                    if (!update.getTable().isInternal()) {
-                        updateRefs.add(new UpdateRef(update.getTable().getName(), update.getKey(), update.getChangeId(), tags));
-                    }
-                }
-                if (!updateRefs.isEmpty()) {
-                    _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefs);
-                }*/
-            }
-
-            public void afterWrite(Collection<RecordUpdate> updateBatch) {
-                // Publish the audit to the kafka topic after we know the delta has written sucessfully.
                 List<UpdateRef> updateRefs = Lists.newArrayListWithCapacity(updateBatch.size());
                 for (RecordUpdate update : updateBatch) {
                     if (!update.getTable().isInternal()) {
                         updateRefs.add(new UpdateRef(update.getTable().getName(), update.getKey(), update.getChangeId(), tags));
                     }
                 }
-                _kafkaProducerService.sendMessages(UPDATE_AUDIT_TOPIC, updateRefs, "update");
+                if (!updateRefs.isEmpty()) {
+                    _kafkaProducerService.sendMessages(UPDATE_AUDIT_TOPIC, updateRefs, "update");
+                }
+            }
+
+            public void afterWrite(Collection<RecordUpdate> updateBatch) {
                 // Write the audit to the audit store after we know the delta has written sucessfully.
                 // Using this model for writing audits, there should never be any audit written for a delta that
                 // didn't end in Cassandra. However, it is absolutely possible for audits to be missing if Emo
