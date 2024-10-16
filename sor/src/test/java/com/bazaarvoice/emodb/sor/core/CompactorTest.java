@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.sor.core;
 
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.ChangeBuilder;
@@ -485,7 +486,7 @@ public class CompactorTest {
             }
         };
 
-        final DataStore dataStore = new InMemoryDataStore(dataDAO, new MetricRegistry());
+        final DataStore dataStore = new InMemoryDataStore(dataDAO, new MetricRegistry(), new KafkaProducerService());
 
         // Create a table for our test
         dataStore.createTable(tableName,
@@ -571,7 +572,7 @@ public class CompactorTest {
         // Configure the data DAO to read 10 columns initially, causing other column reads to be read lazily
         dataDAO.setColumnBatchSize(10);
 
-        final DataStore dataStore = new InMemoryDataStore(dataDAO, new MetricRegistry());
+        final DataStore dataStore = new InMemoryDataStore(dataDAO, new MetricRegistry(), new KafkaProducerService());
 
         // Create a table for our test
         dataStore.createTable(tableName,
