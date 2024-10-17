@@ -216,8 +216,6 @@ abstract class AbstractQueueService implements BaseQueueService {
         _log.info("All messages have been sent to their respective queues.");
     }
 
-
-
     @Override
     public void sendAll(String queue, Collection<?> messages, boolean fromKafka) {
         //incoming message from kafka consume, save to cassandra
@@ -401,10 +399,10 @@ abstract class AbstractQueueService implements BaseQueueService {
             throw new RuntimeException("Error fetching Step Function parameters", e);
         }
     }
+
     /**
      * Executes the Step Function for a given topic after it has been created.
      */
-
 
     private void executeStepFunction(Map<String, String> parameters, String queueType, String queueName, String topic) {
         try {
@@ -444,7 +442,7 @@ abstract class AbstractQueueService implements BaseQueueService {
     private List<String> fetchAllowedQueues() {
         try {
             // Fetch the 'allowedQueues' parameter using ParameterStoreUtil
-            String allowedQueuesStr = parameterStoreUtil.getParameter("allowedQueues");
+            String allowedQueuesStr = parameterStoreUtil.getParameter("/emodb/experiment/allowedQueues");
             return Arrays.asList(allowedQueuesStr.split(","));
         } catch (Exception e) {
             // Handle the case when the parameter is not found or fetching fails
