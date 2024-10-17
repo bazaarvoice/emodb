@@ -113,14 +113,53 @@ abstract class AbstractQueueService implements BaseQueueService {
 
     @Override
     public void send(String queue, Object message) {
-        sendAll(Collections.singletonMap(queue, Collections.singleton(message)));
+        List<String> allowedQueues = fetchAllowedQueues();
+        boolean isExperiment = Boolean.parseBoolean(parameterStoreUtil.getParameter("/emodb/experiment/isExperiment"));
+        if (allowedQueues.contains(queue) && isExperiment) {
+            // If queue is allowed and experiment is true , call the original sendAll method
+            sendAll(Collections.singletonMap(queue, Collections.singleton(message)));
+        } else {
+            // Otherwise, call the alternative sendAll method with isExperiment flag
+            sendAll(queue, Collections.singleton(message), isExperiment);
+        }
     }
 
     @Override
     public void sendAll(String queue, Collection<?> messages) {
-        sendAll(Collections.singletonMap(queue, messages));
+        List<String> allowedQueues = fetchAllowedQueues();
+        boolean isExperiment = Boolean.parseBoolean(parameterStoreUtil.getParameter("/emodb/experiment/isExperiment"));
+        if (allowedQueues.contains(queue) && isExperiment) {
+            // If queue is allowed and experiment is true , call the original sendAll method
+            sendAll(Collections.singletonMap(queue, messages));
+        } else {
+            // Otherwise, call the alternative sendAll method with isExperiment flag
+            sendAll(queue, messages, isExperiment);
+        }
     }
 
+
+    private void validateMessage(Object message) {
+        _log.debug("Validating message: {}", message);
+
+        // Check if the message is valid using JsonValidator
+        ByteBuffer messageByteBuffer = MessageSerializer.toByteBuffer(JsonValidator.checkValid(message));
+
+        // Check if the message size exceeds the allowed limit
+        checkArgument(messageByteBuffer.limit() <= MAX_MESSAGE_SIZE_IN_BYTES,
+                "Message size (" + messageByteBuffer.limit() + ") is greater than the maximum allowed (" + MAX_MESSAGE_SIZE_IN_BYTES + ") message size");
+
+        _log.debug("Message size is valid. Size: {}", messageByteBuffer.limit());
+    }
+
+    private void validateQueue(String queue, Collection<?> messages) {
+        requireNonNull(queue, "Queue name cannot be null");
+        requireNonNull(messages, "Messages collection cannot be null");
+
+        // Check if the queue name is legal
+        checkLegalQueueName(queue);
+
+        _log.debug("Queue name '{}' is valid and contains {} messages", queue, messages.size());
+    }
 
     @Override
     public void sendAll(Map<String, ? extends Collection<?>> messagesByQueue) {
@@ -133,19 +172,15 @@ abstract class AbstractQueueService implements BaseQueueService {
             Collection<?> messages = entry.getValue();
 
             _log.debug("Processing queue: {}", queue);
-            checkLegalQueueName(queue);
-            requireNonNull(messages, "messages");
+            // Validate the queue and messages
+            validateQueue(queue, messages);
 
             List<Object> events = Lists.newArrayListWithCapacity(messages.size());
             _log.info("Processing {} messages for queue: {}", messages.size(), queue);
 
+            // Validate each message
             for (Object message : messages) {
-                _log.debug("Validating message: {}", message);
-                ByteBuffer messageByteBuffer = MessageSerializer.toByteBuffer(JsonValidator.checkValid(message));
-                checkArgument(messageByteBuffer.limit() <= MAX_MESSAGE_SIZE_IN_BYTES,
-                        "Message size (" + messageByteBuffer.limit() + ") is greater than the maximum allowed (" + MAX_MESSAGE_SIZE_IN_BYTES + ") message size");
-
-                _log.debug("Message size is valid. Size: {}", messageByteBuffer.limit());
+                validateMessage(message);
                 events.add(message);
             }
             _log.info("Adding {} events to queue: {}", events.size(), queue);
@@ -156,17 +191,16 @@ abstract class AbstractQueueService implements BaseQueueService {
         _log.info("Prepared {} channels to send messages.", eventsByChannel.asMap().size());
 
 
-
         String queueType = determineQueueType();
         for (Map.Entry<String, Collection<String>> topicEntry : eventsByChannel.asMap().entrySet()) {
             String topic = topicEntry.getKey();
+            String queueName= topic;
             Collection<String> events = topicEntry.getValue();
             if ("dedup".equals(queueType)) {
                 topic = "dedup_" + topic;
             }
             _log.debug("Sending {} messages to topic: {}", events.size(), topic);
 
-            //Checking if topic exists, if not create a new topic
             // Check if the topic exists, if not create it and execute Step Function
             if (!adminService.isTopicExists(topic)) {
                 _log.info("Topic '{}' does not exist. Creating it now...", topic);
@@ -174,7 +208,7 @@ abstract class AbstractQueueService implements BaseQueueService {
                 _log.info("Topic '{}' created.", topic);
                 Map<String, String> parameters = fetchStepFunctionParameters();
                 // Execute Step Function after topic creation
-                executeStepFunction(parameters, queueType, topic);
+                executeStepFunction(parameters, queueType,queueName, topic);
             }
             producerService.sendMessages(topic, events, queueType);
             _log.info("Messages sent to topic: {}", topic);
@@ -185,13 +219,20 @@ abstract class AbstractQueueService implements BaseQueueService {
 
 
     @Override
-    public void sendAll(String queue, Collection<?> messages, boolean isFlush) {
+    public void sendAll(String queue, Collection<?> messages, boolean fromKafka) {
         //incoming message from kafka consume, save to cassandra
 
+        if(!fromKafka){
+            validateQueue(queue, messages);
+        }
         ImmutableMultimap.Builder<String, ByteBuffer> builder = ImmutableMultimap.builder();
         List<ByteBuffer> events = Lists.newArrayListWithCapacity(messages.size());
+
+
         for (Object message : messages) {
             ByteBuffer messageByteBuffer = MessageSerializer.toByteBuffer(JsonValidator.checkValid(message));
+            checkArgument(messageByteBuffer.limit() <= MAX_MESSAGE_SIZE_IN_BYTES,
+                    "Message size (" + messageByteBuffer.limit() + ") is greater than the maximum allowed (" + MAX_MESSAGE_SIZE_IN_BYTES + ") message size");
             events.add(messageByteBuffer);
         }
         builder.putAll(queue, events);
@@ -363,17 +404,27 @@ abstract class AbstractQueueService implements BaseQueueService {
     /**
      * Executes the Step Function for a given topic after it has been created.
      */
-    private void executeStepFunction(Map<String, String> parameters, String queueType, String topic) {
+
+
+    private void executeStepFunction(Map<String, String> parameters, String queueType, String queueName, String topic) {
         try {
             String stateMachineArn = parameters.get("/emodb/stepfn/stateMachineArn");
             int queueThreshold = Integer.parseInt(parameters.get("/emodb/stepfn/queueThreshold"));
             int batchSize = Integer.parseInt(parameters.get("/emodb/stepfn/batchSize"));
             int interval = Integer.parseInt(parameters.get("/emodb/stepfn/interval"));
 
-            String inputPayload = createInputPayload(queueThreshold, batchSize, queueType, topic, interval);
-            stepFunctionService.startExecution(stateMachineArn, inputPayload);
+            String inputPayload = createInputPayload(queueThreshold, batchSize, queueType, queueName, topic, interval);
 
-            _log.info("Step Function executed for topic: {}", topic);
+            // Create the timestamp
+            String timestamp = String.valueOf(System.currentTimeMillis()); // Current time in milliseconds
+
+            // Check if queueType is "dedup" and prepend "D" to execution name if true
+            String executionName = (queueType.equalsIgnoreCase("dedup") ? "D_" : "") + queueName + "_" + timestamp;
+
+            // Start the Step Function execution
+            stepFunctionService.startExecution(stateMachineArn, inputPayload, executionName);
+
+            _log.info("Step Function executed for topic: {} with executionName: {}", topic, executionName);
         } catch (Exception e) {
             _log.error("Error executing Step Function for topic: {}", topic, e);
             throw new RuntimeException("Error executing Step Function for topic: " + topic, e);
@@ -390,11 +441,24 @@ abstract class AbstractQueueService implements BaseQueueService {
         return "queue";
     }
 
-    private String createInputPayload(int queueThreshold, int batchSize, String queueType, String topicName, int interval) {
+    private List<String> fetchAllowedQueues() {
+        try {
+            // Fetch the 'allowedQueues' parameter using ParameterStoreUtil
+            String allowedQueuesStr = parameterStoreUtil.getParameter("allowedQueues");
+            return Arrays.asList(allowedQueuesStr.split(","));
+        } catch (Exception e) {
+            // Handle the case when the parameter is not found or fetching fails
+            _log.error("Error fetching allowedQueues: " + e.getMessage());
+            return Collections.singletonList("");  // Default to an empty list if the parameter is missing
+        }
+    }
+
+    private String createInputPayload(int queueThreshold, int batchSize, String queueType,String queueName, String topicName, int interval) {
         Map<String, Object> payloadData = new HashMap<>();
         payloadData.put("queueThreshold", queueThreshold);
         payloadData.put("batchSize", batchSize);
-        payloadData.put("queueName", queueType);
+        payloadData.put("queueType", queueType);
+        payloadData.put("queueName",queueName);
         payloadData.put("topicName", topicName);
         payloadData.put("interval", interval);
         try {

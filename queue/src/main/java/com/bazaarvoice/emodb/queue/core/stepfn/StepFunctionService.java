@@ -37,7 +37,7 @@ public class StepFunctionService {
      * @param inputPayload    Input for the state machine execution
      * @throws IllegalArgumentException If the stateMachineArn is invalid
      */
-    public void startExecution(String stateMachineArn, String inputPayload) {
+    public void startExecution(String stateMachineArn, String inputPayload, String executionName) {
         if (stateMachineArn == null || stateMachineArn.isEmpty()) {
             logger.error("State Machine ARN cannot be null or empty");
             throw new IllegalArgumentException("State Machine ARN cannot be null or empty");
@@ -51,7 +51,8 @@ public class StepFunctionService {
         try {
             StartExecutionRequest startExecutionRequest = new StartExecutionRequest()
                     .withStateMachineArn(stateMachineArn)
-                    .withInput(inputPayload);
+                    .withInput(inputPayload)
+                    .withName(executionName);
 
             StartExecutionResult startExecutionResult = stepFunctionsClient.startExecution(startExecutionRequest);
 
