@@ -121,6 +121,8 @@ public class QueueResource1 {
         return SuccessResponse.instance();
     }
 
+
+// endpoint to write to cassandra after throttled messages come from kafka
     @POST
     @Path("{queue}/sendbatch1")
     @Consumes(MediaType.APPLICATION_JSON)

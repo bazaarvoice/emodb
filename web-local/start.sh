@@ -53,7 +53,7 @@ if [[ $# -gt 0 ]]; then
                 ;;
             --ddl-file)
                 DDL_FILE="${2}"
-                shif
+                shift 2
                 ;;
             --config-file)
                 CONFIG_FILE="${2}"
@@ -71,4 +71,4 @@ if [[ $# -gt 0 ]]; then
 fi
 
 
-mvn verify -P init-cassandra,start-emodb -Dconfig.file="${CONFIG_FILE}" -Dddl.file="${DDL_FILE}" -Dpermissions.file="${PERMISSIONS_FILE}" -DskipTests -DskipITs
+mvn verify -P init-cassandra,start-emodb -Dconfig.file="${CONFIG_FILE}" -Dddl.file="${DDL_FILE}" -Dpermissions.file="${PERMISSIONS_FILE}"

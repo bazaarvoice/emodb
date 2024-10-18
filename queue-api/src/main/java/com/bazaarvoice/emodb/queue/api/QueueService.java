@@ -16,6 +16,7 @@ public interface QueueService extends BaseQueueService {
 
     void sendAll(Map<String, ? extends Collection<?>> messagesByQueue);
 
+    //Overloaded sendAll method to send to cassandra
     void sendAll(String queue, Collection<?> messages, boolean isFlush);
 
     /**

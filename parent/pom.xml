@@ -638,7 +638,7 @@
             <dependency>
                 <groupId>com.amazonaws</groupId>
                 <artifactId>aws-java-sdk-stepfunctions</artifactId>
-                <version>${aws-sdk.version}</version> <!-- Use the latest stable version -->
+                <version>${aws-sdk.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>

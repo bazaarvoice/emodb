@@ -196,6 +196,7 @@ abstract class AbstractQueueService implements BaseQueueService {
             String topic = topicEntry.getKey();
             String queueName= topic;
             Collection<String> events = topicEntry.getValue();
+            // append dedup to topic name if queueType is dedup
             if ("dedup".equals(queueType)) {
                 topic = "dedup_" + topic;
             }
@@ -221,6 +222,7 @@ abstract class AbstractQueueService implements BaseQueueService {
         //incoming message from kafka consume, save to cassandra
 
         if(!fromKafka){
+            // if message is not from kafka, means it's not an experimental queue and directly message is sent to cassandra without being sent to kafka, so do validations
             validateQueue(queue, messages);
         }
         ImmutableMultimap.Builder<String, ByteBuffer> builder = ImmutableMultimap.builder();
@@ -451,6 +453,9 @@ abstract class AbstractQueueService implements BaseQueueService {
         }
     }
 
+    /**
+     * Creates the input payload for the Step Function execution.
+     */
     private String createInputPayload(int queueThreshold, int batchSize, String queueType,String queueName, String topicName, int interval) {
         Map<String, Object> payloadData = new HashMap<>();
         payloadData.put("queueThreshold", queueThreshold);
