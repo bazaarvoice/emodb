@@ -7,6 +7,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 public class KafkaAdminService {
@@ -48,6 +50,15 @@ public class KafkaAdminService {
     public boolean isTopicExists(String topic) {
         try {
             return adminClient.listTopics().names().get().contains(topic);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    public Set<String> listAllTopics() {
+        try {
+            return adminClient.listTopics().names().get();
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } catch (ExecutionException e) {

@@ -102,6 +102,14 @@ public class KafkaConfig {
         logger.info("Kafka Admin properties initialized.");
         return adminProps;
     }
+    public static  Properties getConsumerProps() {
+        Properties config = new Properties();
+        config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServersConfig);
+        config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        config.put("group.id", "message-counter-group");;
+        return config;
+    }
 
     // Ensure the SSM client is closed when the application shuts down
     public static void shutdown() {

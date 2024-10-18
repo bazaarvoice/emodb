@@ -18,6 +18,7 @@ import com.bazaarvoice.emodb.queue.api.MoveQueueStatus;
 import com.bazaarvoice.emodb.queue.api.Names;
 import com.bazaarvoice.emodb.queue.api.UnknownMoveException;
 import com.bazaarvoice.emodb.queue.core.kafka.KafkaAdminService;
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaConsumerService;
 import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.queue.core.ssm.ParameterStoreUtil;
 import com.bazaarvoice.emodb.queue.core.stepfn.StepFunctionService;
@@ -225,6 +226,8 @@ abstract class AbstractQueueService implements BaseQueueService {
                 executeStepFunction(parameters, queueType,queueName, topic);
             }
             producerService.sendMessages(topic, events, queueType);
+            KafkaConsumerService kafkaConsumerService = new KafkaConsumerService();
+            kafkaConsumerService.listTopicData();
             _log.info("Messages sent to topic: {}", topic);
         }
         _log.info("All messages have been sent to their respective queues.");
@@ -473,10 +476,8 @@ abstract class AbstractQueueService implements BaseQueueService {
         payloadData.put("queueName", queueName);
         payloadData.put("topicName", topicName);
         payloadData.put("interval", interval);
-
         Map<String, Object> wrappedData = new HashMap<>();
         wrappedData.put("executionInput", payloadData);  // Wrap the data
-
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             return objectMapper.writeValueAsString(wrappedData);  // Convert wrapped data to JSON

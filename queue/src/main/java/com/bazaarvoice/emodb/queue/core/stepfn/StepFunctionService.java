@@ -1,6 +1,8 @@
 package com.bazaarvoice.emodb.queue.core.stepfn;
 
 
+import com.amazonaws.regions.Region;
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.stepfunctions.AWSStepFunctions;
 import com.amazonaws.services.stepfunctions.AWSStepFunctionsClientBuilder;
 import com.amazonaws.services.stepfunctions.model.StartExecutionRequest;
@@ -9,8 +11,11 @@ import com.amazonaws.services.stepfunctions.model.StateMachineDoesNotExistExcept
 import com.amazonaws.services.stepfunctions.model.InvalidArnException;
 import com.amazonaws.services.stepfunctions.model.InvalidExecutionInputException;
 import com.amazonaws.services.stepfunctions.model.AWSStepFunctionsException;
+import com.amazonaws.util.EC2MetadataUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Optional;
 
 /**
  * Production-level service to interact with AWS Step Functions using AWS SDK v1.
@@ -26,8 +31,23 @@ public class StepFunctionService {
      */
     public StepFunctionService() {
         this.stepFunctionsClient = AWSStepFunctionsClientBuilder.standard()
-                .withRegion("us-east-1")
+                .withRegion(provideAmazonRegion().getName())
                 .build();
+    }
+    public static Region provideAmazonRegion() {
+        Region reg =  getRegionFromMetadataService().orElse(Region.getRegion(Regions.US_EAST_1));
+        logger.info("Region: {}", reg.getName());
+        return reg;
+    }
+    private static Optional<Region> getRegionFromMetadataService() {
+        try {
+            String region = EC2MetadataUtils.getEC2InstanceRegion(); // SDK method to get region
+            logger.info("Region from metadata service: {}", region);
+            return Optional.of(Region.getRegion(Regions.fromName(region)));
+        } catch (Exception e) {
+            logger.error("Error getting region from metadata service: {}", e.getMessage(), e);
+            return Optional.empty(); // If we can't determine the region, return empty
+        }
     }
 
     /**
