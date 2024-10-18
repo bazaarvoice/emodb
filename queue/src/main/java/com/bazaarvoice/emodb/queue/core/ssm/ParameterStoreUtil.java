@@ -46,12 +46,12 @@ public class ParameterStoreUtil {
         }
 
         try {
-            logger.info("Fetching parameter from AWS Parameter Store: {}", parameterName);
+            //logger.info("Fetching parameter from AWS Parameter Store: {}", parameterName);
 
             GetParameterRequest request = new GetParameterRequest().withName(parameterName);
             GetParameterResult result = ssmClient.getParameter(request);
 
-            logger.info("Successfully retrieved parameter: {}", parameterName);
+            //logger.info("Successfully retrieved parameter: {}", parameterName);
             return result.getParameter().getValue();
 
         } catch (ParameterNotFoundException e) {

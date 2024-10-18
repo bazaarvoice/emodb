@@ -115,12 +115,19 @@ abstract class AbstractQueueService implements BaseQueueService {
     public void send(String queue, Object message) {
         List<String> allowedQueues = fetchAllowedQueues();
         boolean isExperiment = Boolean.parseBoolean(parameterStoreUtil.getParameter("/emodb/experiment/isExperiment"));
-        if (allowedQueues.contains(queue) && isExperiment) {
-            // If queue is allowed and experiment is true , call the original sendAll method
+        if (!isExperiment) {
+            // experiment is over now, send everything to kafka
             sendAll(Collections.singletonMap(queue, Collections.singleton(message)));
         } else {
-            // Otherwise, call the alternative sendAll method with isExperiment flag
-            sendAll(queue, Collections.singleton(message), isExperiment);
+            // Experiment is still running, check if the queue is allowed
+            if(allowedQueues.contains(queue)){
+                //send kafka , only if its allowed queue
+                sendAll(Collections.singletonMap(queue, Collections.singleton(message)));
+            }
+            else {
+                //send to  cassandra, (rollback plan)
+                sendAll(queue, Collections.singleton(message), false);
+            }
         }
     }
 
@@ -128,12 +135,19 @@ abstract class AbstractQueueService implements BaseQueueService {
     public void sendAll(String queue, Collection<?> messages) {
         List<String> allowedQueues = fetchAllowedQueues();
         boolean isExperiment = Boolean.parseBoolean(parameterStoreUtil.getParameter("/emodb/experiment/isExperiment"));
-        if (allowedQueues.contains(queue) && isExperiment) {
-            // If queue is allowed and experiment is true , call the original sendAll method
+        if (!isExperiment) {
+            // experiment is over now, send everything to kafka
             sendAll(Collections.singletonMap(queue, messages));
         } else {
-            // Otherwise, call the alternative sendAll method with isExperiment flag
-            sendAll(queue, messages, isExperiment);
+            // Experiment is still running, check if the queue is allowed
+            if(allowedQueues.contains(queue)){
+                //send kafka , only if its allowed queue
+                sendAll(Collections.singletonMap(queue, messages));
+            }
+            else {
+                //send to  cassandra, (rollback plan)
+                sendAll(queue, messages, false);
+            }
         }
     }
 
@@ -196,7 +210,6 @@ abstract class AbstractQueueService implements BaseQueueService {
             String topic = topicEntry.getKey();
             String queueName= topic;
             Collection<String> events = topicEntry.getValue();
-            // append dedup to topic name if queueType is dedup
             if ("dedup".equals(queueType)) {
                 topic = "dedup_" + topic;
             }
@@ -222,7 +235,6 @@ abstract class AbstractQueueService implements BaseQueueService {
         //incoming message from kafka consume, save to cassandra
 
         if(!fromKafka){
-            // if message is not from kafka, means it's not an experimental queue and directly message is sent to cassandra without being sent to kafka, so do validations
             validateQueue(queue, messages);
         }
         ImmutableMultimap.Builder<String, ByteBuffer> builder = ImmutableMultimap.builder();
@@ -453,23 +465,22 @@ abstract class AbstractQueueService implements BaseQueueService {
         }
     }
 
-    /**
-     * Creates the input payload for the Step Function execution.
-     */
-    private String createInputPayload(int queueThreshold, int batchSize, String queueType,String queueName, String topicName, int interval) {
+    private String createInputPayload(int queueThreshold, int batchSize, String queueType, String queueName, String topicName, int interval) {
         Map<String, Object> payloadData = new HashMap<>();
         payloadData.put("queueThreshold", queueThreshold);
         payloadData.put("batchSize", batchSize);
         payloadData.put("queueType", queueType);
-        payloadData.put("queueName",queueName);
+        payloadData.put("queueName", queueName);
         payloadData.put("topicName", topicName);
         payloadData.put("interval", interval);
+        Map<String, Object> wrappedData = new HashMap<>();
+        wrappedData.put("executionInput", payloadData);  // Wrap the data
         try {
             ObjectMapper objectMapper = new ObjectMapper();
-            return objectMapper.writeValueAsString(payloadData);
+            return objectMapper.writeValueAsString(wrappedData);  // Convert wrapped data to JSON
         } catch (JsonProcessingException e) {
             _log.error("Error while converting map to JSON", e);
-            return "{}"; // Return empty JSON object on error
+            return "{}";  // Return empty JSON object on error
         }
     }
 }
