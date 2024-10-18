@@ -64,4 +64,6 @@ public interface AuthDedupQueueService {
 
     /** Delete all messages in the queue, for debugging/testing. */
     void purge(@Credential String apiKey, String queue);
+
+    void sendAll(String apiKey, String queue, Collection<?> messages, boolean isFlush);
 }

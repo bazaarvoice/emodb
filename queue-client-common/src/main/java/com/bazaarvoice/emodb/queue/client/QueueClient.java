@@ -32,6 +32,7 @@ public class QueueClient extends AbstractQueueClient implements AuthQueueService
         super(endPoint, partitionSafe, client);
     }
 
+
     @Override
     public long getMessageCount(String apiKey, String queue) {
         // Any server can handle this request, no need for @PartitionKey

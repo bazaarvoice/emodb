@@ -381,8 +381,6 @@ public class BlobStoreResource1 {
         _getTablePlacementsRequestsByApiKey.getUnchecked(subject.getId()).mark();
         return _blobStore.getTablePlacements();
     }
-
-
     /**
      * Retrieves the current version of a piece of content from the data store.
      */

@@ -13,7 +13,11 @@ public interface QueueService extends BaseQueueService {
 
     void sendAll(String queue, Collection<?> messages);
 
+
     void sendAll(Map<String, ? extends Collection<?>> messagesByQueue);
+
+    //Overloaded sendAll method to send to cassandra
+    void sendAll(String queue, Collection<?> messages, boolean isFlush);
 
     /**
      * Counts pending messages for the specified queue.  The count will include messages that are currently claimed
