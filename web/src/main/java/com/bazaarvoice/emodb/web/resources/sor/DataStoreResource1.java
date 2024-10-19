@@ -8,19 +8,7 @@ import com.bazaarvoice.emodb.common.json.LoggingIterator;
 import com.bazaarvoice.emodb.common.json.OrderedJson;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.datacenter.api.DataCenter;
-import com.bazaarvoice.emodb.sor.api.Audit;
-import com.bazaarvoice.emodb.sor.api.Change;
-import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
-import com.bazaarvoice.emodb.sor.api.Coordinate;
-import com.bazaarvoice.emodb.sor.api.DataStore;
-import com.bazaarvoice.emodb.sor.api.FacadeOptions;
-import com.bazaarvoice.emodb.sor.api.Intrinsic;
-import com.bazaarvoice.emodb.sor.api.PurgeStatus;
-import com.bazaarvoice.emodb.sor.api.Table;
-import com.bazaarvoice.emodb.sor.api.TableOptions;
-import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
-import com.bazaarvoice.emodb.sor.api.Update;
-import com.bazaarvoice.emodb.sor.api.WriteConsistency;
+import com.bazaarvoice.emodb.sor.api.*;
 import com.bazaarvoice.emodb.sor.core.DataStoreAsync;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
@@ -773,6 +761,27 @@ public class DataStoreResource1 {
         Set<String> tagsSet = (tags == null) ? ImmutableSet.of() : Sets.newHashSet(tags);
         Iterable<Update> updates = asSubjectSafeUpdateIterable(new JsonStreamingArrayParser<>(in, Update.class), subject, true);
         _dataStore.updateAllForFacade(updates, tagsSet);
+        return SuccessResponse.instance();
+    }
+
+    @POST
+    @Path("_updateRef")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Timed(name = "bv.emodb.sor.DataStoreResource1.updateRef", absolute = true)
+    @ApiOperation(value = "Updates a reference",
+            notes = "Updates a reference",
+            response = SuccessResponse.class
+    )
+    public SuccessResponse updateRefToDatabus(InputStream in,
+                                              @QueryParam("consistency") @DefaultValue("STRONG") WriteConsistencyParam consistency,
+                                              @QueryParam("tag") List<String> tags,
+                                              @Authenticated Subject subject) {
+
+        Set<String> tagsSet = (tags == null) ? ImmutableSet.of() : Sets.newHashSet(tags);
+        Iterable<Update> updates = asSubjectSafeUpdateIterable(new JsonStreamingArrayParser<>(in, Update.class), subject, true);
+
+        // Perform the update by writing to Databus
+        _dataStore.updateRefInDatabus(updates, tagsSet, false);
         return SuccessResponse.instance();
     }
 

@@ -6,29 +6,7 @@ import com.bazaarvoice.emodb.common.json.deferred.LazyJsonMap;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
 import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
-import com.bazaarvoice.emodb.sor.api.Audit;
-import com.bazaarvoice.emodb.sor.api.AuditBuilder;
-import com.bazaarvoice.emodb.sor.api.AuditsUnavailableException;
-import com.bazaarvoice.emodb.sor.api.Change;
-import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
-import com.bazaarvoice.emodb.sor.api.Coordinate;
-import com.bazaarvoice.emodb.sor.api.DataStore;
-import com.bazaarvoice.emodb.sor.api.DefaultTable;
-import com.bazaarvoice.emodb.sor.api.FacadeOptions;
-import com.bazaarvoice.emodb.sor.api.History;
-import com.bazaarvoice.emodb.sor.api.Intrinsic;
-import com.bazaarvoice.emodb.sor.api.Names;
-import com.bazaarvoice.emodb.sor.api.ReadConsistency;
-import com.bazaarvoice.emodb.sor.api.StashNotAvailableException;
-import com.bazaarvoice.emodb.sor.api.StashRunTimeInfo;
-import com.bazaarvoice.emodb.sor.api.StashTimeKey;
-import com.bazaarvoice.emodb.sor.api.TableOptions;
-import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
-import com.bazaarvoice.emodb.sor.api.UnknownTableException;
-import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
-import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEventType;
-import com.bazaarvoice.emodb.sor.api.Update;
-import com.bazaarvoice.emodb.sor.api.WriteConsistency;
+import com.bazaarvoice.emodb.sor.api.*;
 import com.bazaarvoice.emodb.sor.audit.AuditWriter;
 import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.bazaarvoice.emodb.sor.condition.Condition;
@@ -684,17 +662,8 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     }
 
-    private void updateAll(Iterable<Update> updates, final boolean isFacade,
-                           @NotNull final Set<String> tags) {
-        requireNonNull(updates, "updates");
-        checkLegalTags(tags);
-        requireNonNull(tags, "tags");
-        Iterator<Update> updatesIter = updates.iterator();
-        if (!updatesIter.hasNext()) {
-            return;
-        }
-
-        _dataWriterDao.updateAll(Iterators.transform(updatesIter, new Function<Update, RecordUpdate>() {
+    private Iterator<RecordUpdate> transformUpdates(Iterator<Update> updatesIter, boolean isFacade, final Set<String> tags) {
+        return Iterators.transform(updatesIter, new Function<Update, RecordUpdate>() {
             @Override
             public RecordUpdate apply(Update update) {
                 requireNonNull(update, "update");
@@ -727,7 +696,20 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
                 return new RecordUpdate(table, key, changeId, delta, audit, tags, update.getConsistency());
             }
-        }), new DataWriterDAO.UpdateListener() {
+        });
+    }
+
+    private void updateAll(Iterable<Update> updates, final boolean isFacade,
+                           @NotNull final Set<String> tags) {
+        requireNonNull(updates, "updates");
+        checkLegalTags(tags);
+        requireNonNull(tags, "tags");
+        Iterator<Update> updatesIter = updates.iterator();
+        if (!updatesIter.hasNext()) {
+            return;
+        }
+
+        _dataWriterDao.updateAll(transformUpdates(updatesIter, isFacade, tags), new DataWriterDAO.UpdateListener() {
             @Override
             public void beforeWrite(Collection<RecordUpdate> updateBatch) {
                 // Tell the databus we're about to write.
@@ -1029,5 +1011,25 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     private String getMetricName(String name) {
         return MetricRegistry.name("bv.emodb.sor", "DefaultDataStore", name);
+    }
+
+    @Override
+    public void updateRefInDatabus(Iterable<Update> updates, Set<String> tags, boolean isFacade) {
+        Iterator<Update> updatesIter = updates.iterator();
+        if (!updatesIter.hasNext()) {
+            return;
+        }
+        Iterator<RecordUpdate> recordUpdates = transformUpdates(updatesIter, isFacade, tags);
+
+        while (recordUpdates.hasNext()) {
+            RecordUpdate update = recordUpdates.next();
+            List<UpdateRef> updateRefs = Lists.newArrayListWithCapacity(Collections.singleton(update).size());
+            if (!update.getTable().isInternal()) {
+                updateRefs.add(new UpdateRef(update.getTable().getName(), update.getKey(), update.getChangeId(), tags));
+            }
+            if (!updateRefs.isEmpty()) {
+                _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefs);
+            }
+        }
     }
 }
