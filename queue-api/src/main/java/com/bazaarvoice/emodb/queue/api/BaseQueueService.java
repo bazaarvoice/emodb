@@ -27,6 +27,10 @@ public interface BaseQueueService {
      */
     long getMessageCount(String queue);
 
+    default long getUncachedSize(String queue){
+        return 0;
+    }
+
     /**
      * Counts the total number of messages for the specified queue, accurate up to the specified limit.  Beyond the
      * specified limit the message count will be a rough estimate, allowing the caller to make the trade-off between

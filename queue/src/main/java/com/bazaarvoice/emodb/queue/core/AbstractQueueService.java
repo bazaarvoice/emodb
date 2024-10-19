@@ -248,6 +248,11 @@ abstract class AbstractQueueService implements BaseQueueService {
     }
 
     @Override
+    public long getUncachedSize(String queue){
+        return internalMessageCountUpTo(queue, Long.MAX_VALUE);
+    }
+
+    @Override
     public long getMessageCountUpTo(String queue, long limit) {
         // We get the size from cache as a tuple of size, and the limit used to estimate that size
         // So, the key is the size, and value is the limit used to estimate the size
