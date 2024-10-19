@@ -50,14 +50,26 @@ public class KafkaConfig {
             );
 
             // Set configurations with fallback to defaults if not present
+            // Sets the batch size for Kafka producer, which controls the amount of data to batch before sending.
             batchSizeConfig = parameterValues.getOrDefault("/emodb/kafka/batchSize", "16384");
+
+            // Sets the number of retry attempts for failed Kafka message sends.
             retriesConfig = parameterValues.getOrDefault("/emodb/kafka/retries", "3");
+
+            // Sets the number of milliseconds a producer is willing to wait before sending a batch out
             lingerMsConfig = parameterValues.getOrDefault("/emodb/kafka/lingerMs", "1");
+
+            // Configures the Kafka broker addresses for producer connections.
             bootstrapServersConfig = parameterValues.getOrDefault("/emodb/kafka/bootstrapServers", DEFAULT_BOOTSTRAP_SERVERS);
 
             logger.info("Kafka configurations loaded successfully from SSM.");
         } catch (AmazonServiceException e) {
             logger.error("Failed to load configurations from SSM. Using default values.", e);
+            throw e;
+        }
+        catch (Exception e) {
+            logger.error("Unexpected error occurred while loading configurations from SSM. Using default values.", e);
+            throw e;
         }
     }
 

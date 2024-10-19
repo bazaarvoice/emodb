@@ -56,6 +56,9 @@ abstract class AbstractQueueService implements BaseQueueService {
     private final KafkaAdminService adminService;
     private final KafkaProducerService producerService;
 
+    // Configuration keys for Kafka topic settings
+    private static final Integer TOPIC_PARTITION_COUNT = 1;
+    private static final Short TOPIC_REPLICATION_FACTOR =2;
     public static final int MAX_MESSAGE_SIZE_IN_BYTES = 30 * 1024;
     private final StepFunctionService stepFunctionService;
     private final ParameterStoreUtil parameterStoreUtil;
@@ -179,53 +182,37 @@ abstract class AbstractQueueService implements BaseQueueService {
     @Override
     public void sendAll(Map<String, ? extends Collection<?>> messagesByQueue) {
         requireNonNull(messagesByQueue, "messagesByQueue");
-        _log.info("Starting to send messages to queues. Total queues: {}", messagesByQueue.size());
 
         ImmutableMultimap.Builder<String, String> builder = ImmutableMultimap.builder();
         for (Map.Entry<String, ? extends Collection<?>> entry : messagesByQueue.entrySet()) {
             String queue = entry.getKey();
             Collection<?> messages = entry.getValue();
 
-            _log.debug("Processing queue: {}", queue);
-            // Validate the queue and messages
             validateQueue(queue, messages);
 
             List<Object> events = Lists.newArrayListWithCapacity(messages.size());
-            _log.info("Processing {} messages for queue: {}", messages.size(), queue);
 
             // Validate each message
             for (Object message : messages) {
                 validateMessage(message);
                 events.add(message);
             }
-            _log.info("Adding {} events to queue: {}", events.size(), queue);
             builder.putAll(queue, String.valueOf(events));
         }
 
         Multimap<String, String> eventsByChannel = builder.build();
-        _log.info("Prepared {} channels to send messages.", eventsByChannel.asMap().size());
-
 
         String queueType = determineQueueType();
         for (Map.Entry<String, Collection<String>> topicEntry : eventsByChannel.asMap().entrySet()) {
-            String topic = topicEntry.getKey();
-            String queueName= topic;
-            Collection<String> events = topicEntry.getValue();
-            if ("dedup".equals(queueType)) {
-                topic = "dedup_" + topic;
-            }
-            _log.debug("Sending {} messages to topic: {}", events.size(), topic);
-
+            String queueName= topicEntry.getKey();
+            String topic = "dsq_" + (("dedup".equals(queueType)) ?  "dedup_" + queueName : queueName);
             // Check if the topic exists, if not create it and execute Step Function
-            if (!adminService.isTopicExists(topic)) {
-                _log.info("Topic '{}' does not exist. Creating it now...", topic);
-                adminService.createTopic(topic, 1, (short) 2, queueType);
-                _log.info("Topic '{}' created.", topic);
+            if (!adminService.createTopicIfNotExists(topic, TOPIC_PARTITION_COUNT, TOPIC_REPLICATION_FACTOR, queueType)) {
                 Map<String, String> parameters = fetchStepFunctionParameters();
                 // Execute Step Function after topic creation
-                executeStepFunction(parameters, queueType,queueName, topic);
+                startStepFunctionExecution(parameters, queueType,queueName, topic);
             }
-            producerService.sendMessages(topic, events, queueType);
+            producerService.sendMessages(topic, topicEntry.getValue(), queueType);
             KafkaConsumerService kafkaConsumerService = new KafkaConsumerService();
             kafkaConsumerService.listTopicData();
             _log.info("Messages sent to topic: {}", topic);
@@ -236,7 +223,6 @@ abstract class AbstractQueueService implements BaseQueueService {
     @Override
     public void sendAll(String queue, Collection<?> messages, boolean fromKafka) {
         //incoming message from kafka consume, save to cassandra
-
         if(!fromKafka){
             validateQueue(queue, messages);
         }
@@ -421,7 +407,7 @@ abstract class AbstractQueueService implements BaseQueueService {
      * Executes the Step Function for a given topic after it has been created.
      */
 
-    private void executeStepFunction(Map<String, String> parameters, String queueType, String queueName, String topic) {
+    private void startStepFunctionExecution(Map<String, String> parameters, String queueType, String queueName, String topic) {
         try {
             String stateMachineArn = parameters.get("/emodb/stepfn/stateMachineArn");
             int queueThreshold = Integer.parseInt(parameters.get("/emodb/stepfn/queueThreshold"));
