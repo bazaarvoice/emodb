@@ -2,12 +2,10 @@ package com.bazaarvoice.emodb.queue.core.kafka;
 
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
-import org.apache.kafka.common.errors.TopicExistsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
-import java.util.concurrent.ExecutionException;
 
 public class KafkaAdminService {
     private static final Logger _log = LoggerFactory.getLogger(KafkaAdminService.class);
@@ -24,22 +22,22 @@ public class KafkaAdminService {
      * @param numPartitions     Number of partitions.
      * @param replicationFactor Replication factor.
      */
-    public void createTopic(String topic, int numPartitions, short replicationFactor, String queueType) {
-        NewTopic newTopic = new NewTopic(topic, numPartitions, replicationFactor);
-        try {
-            adminClient.createTopics(Collections.singleton(newTopic)).all().get();
-            _log.info("Created topic: {}", topic);
-        } catch (ExecutionException e) {
-            if (e.getCause() instanceof TopicExistsException) {
-                _log.warn("Topic {} already exists.", topic);
-            } else {
-                _log.error("Error creating topic {}: {}", topic, e.getMessage());
+    public Boolean createTopicIfNotExists(String topic, int numPartitions, short replicationFactor, String queueType) {
+        Boolean isExisting =isTopicExists(topic);
+        if (! isExisting) {
+            //create the topic now
+            NewTopic newTopic = new NewTopic(topic, numPartitions, replicationFactor);
+            try {
+                adminClient.createTopics(Collections.singleton(newTopic)).all().get();
+                _log.info("Created topic: {} with numPartitions: {} ", topic, numPartitions, replicationFactor);
+            } catch (Exception e) {
+                 _log.error("Error creating topic {}: {}", topic, e.getMessage());
+                throw new RuntimeException(e);
             }
-        } catch (InterruptedException e) {
-            _log.error("Interrupted while creating topic {}: {}", topic, e.getMessage());
-            Thread.currentThread().interrupt();
         }
+        return isExisting;
     }
+
 
     /**
      *  Determines if a topic already exists in AWS MSK
@@ -48,9 +46,7 @@ public class KafkaAdminService {
     public boolean isTopicExists(String topic) {
         try {
             return adminClient.listTopics().names().get().contains(topic);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        } catch (ExecutionException e) {
+        } catch (Exception  e) {
             throw new RuntimeException(e);
         }
     }

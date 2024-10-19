@@ -27,7 +27,6 @@ public class KafkaProducerService {
     public void sendMessages(String topic, Collection<String> events, String queueType) {
         _log.info("Sending {} messages to topic '{}'", events.size(), topic);
         for (String event : events) {
-            _log.debug("Sending message: {}", event);
             sendMessage(topic, event,queueType);
         }
         _log.info("Finished sending messages to topic '{}'", topic);
@@ -41,23 +40,17 @@ public class KafkaProducerService {
      */
     public void sendMessage(String topic, String message, String queueType) {
         ProducerRecord<String, String> record = new ProducerRecord<>(topic, message);
-        _log.debug("Preparing to send message to topic '{}' with value: {}", topic, message);
-
         try {
             Future<RecordMetadata> future = producer.send(record, (metadata, exception) -> {
                 if (exception != null) {
                     _log.error("Failed to send message to topic '{}'. Error: {}", topic, exception.getMessage());
-                } else {
-                    _log.debug("Message sent to topic '{}' partition {} at offset {}",
-                            metadata.topic(), metadata.partition(), metadata.offset());
                 }
             });
             // Optionally, you can wait for the send to complete
             RecordMetadata metadata = future.get(); // Blocking call
-            _log.info("Message sent successfully to topic '{}' partition {} at offset {}",
-                    metadata.topic(), metadata.partition(), metadata.offset());
         } catch (Exception e) {
             _log.error("Failed to send message to topic '{}'. Exception: {}", topic, e.getMessage());
+            throw new RuntimeException("Error sending message to kafka"+e.getMessage());
         }
     }
 

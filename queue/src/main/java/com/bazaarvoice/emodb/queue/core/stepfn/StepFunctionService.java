@@ -13,7 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Production-level service to interact with AWS Step Functions using AWS SDK v1.
+ * Service to interact with AWS Step Functions using AWS SDK v1.
  */
 public class StepFunctionService {
 
@@ -26,7 +26,6 @@ public class StepFunctionService {
      */
     public StepFunctionService() {
         this.stepFunctionsClient = AWSStepFunctionsClientBuilder.standard()
-                .withRegion("us-east-1")
                 .build();
     }
 
@@ -59,18 +58,9 @@ public class StepFunctionService {
             logger.info("Successfully started execution for state machine ARN: {}", stateMachineArn);
             logger.debug("Execution ARN: {}", startExecutionResult.getExecutionArn());
 
-        } catch (StateMachineDoesNotExistException e) {
-            logger.error("State Machine does not exist: {}", stateMachineArn, e);
-        } catch (InvalidArnException e) {
-            logger.error("Invalid ARN provided: {}", stateMachineArn, e);
-        } catch (InvalidExecutionInputException e) {
-            logger.error("Invalid execution input provided: {}", inputPayload, e);
-        } catch (AWSStepFunctionsException e) {
-            logger.error("Error executing Step Function: {}", e.getMessage(), e);
-            throw e; // Re-throw after logging
-        } catch (Exception e) {
+        }  catch (Exception e) {
             logger.error("Unexpected error occurred during Step Function execution: {}", e.getMessage(), e);
-            throw e; // Re-throw unexpected exceptions
+            throw e;
         }
     }
 }
