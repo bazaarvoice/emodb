@@ -17,9 +17,9 @@
     <name>EmoDB Parent</name>
 
     <scm>
-        <connection>scm:git:git@github.com:bazaarvoice/emodb.git</connection>
-        <developerConnection>scm:git:git@github.com:bazaarvoice/emodb.git</developerConnection>
-        <url>scm:git:git@github.com:bazaarvoice/emodb.git</url>
+        <connection>scm:git:git@github.com:bvengineering/emodb.git</connection>
+        <developerConnection>scm:git:git@github.com:bvengineering/emodb.git</developerConnection>
+        <url>scm:git:git@github.com:bvengineering/emodb.git</url>
         <tag>emodb-6.5.98</tag>
     </scm>
 
