@@ -95,4 +95,9 @@ public class TrustedQueueService implements AuthQueueService {
     public void sendAll(String apiKey, Map<String, ? extends Collection<?>> messagesByQueue) {
         _queueService.sendAll(messagesByQueue);
     }
+
+    @Override
+    public void sendAll(String apiKey, String queue, Collection<?> messages, boolean isFlush) {
+
+    }
 }

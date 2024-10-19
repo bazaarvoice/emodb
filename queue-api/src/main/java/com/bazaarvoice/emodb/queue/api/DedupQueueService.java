@@ -15,6 +15,8 @@ public interface DedupQueueService extends BaseQueueService {
 
     void sendAll(Map<String, ? extends Collection<?>> messagesByQueue);
 
+    void sendAll(String queue, Collection<?>messages, boolean isFlush);
+
     /**
      * Counts pending messages for the specified queue.  The count will include messages that are currently claimed
      * and not returned by the {@link #poll} method.
