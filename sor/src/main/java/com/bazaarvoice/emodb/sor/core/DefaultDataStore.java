@@ -5,29 +5,8 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.json.deferred.LazyJsonMap;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
-import com.bazaarvoice.emodb.sor.api.Audit;
-import com.bazaarvoice.emodb.sor.api.AuditBuilder;
-import com.bazaarvoice.emodb.sor.api.AuditsUnavailableException;
-import com.bazaarvoice.emodb.sor.api.Change;
-import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
-import com.bazaarvoice.emodb.sor.api.Coordinate;
-import com.bazaarvoice.emodb.sor.api.DataStore;
-import com.bazaarvoice.emodb.sor.api.DefaultTable;
-import com.bazaarvoice.emodb.sor.api.FacadeOptions;
-import com.bazaarvoice.emodb.sor.api.History;
-import com.bazaarvoice.emodb.sor.api.Intrinsic;
-import com.bazaarvoice.emodb.sor.api.Names;
-import com.bazaarvoice.emodb.sor.api.ReadConsistency;
-import com.bazaarvoice.emodb.sor.api.StashNotAvailableException;
-import com.bazaarvoice.emodb.sor.api.StashRunTimeInfo;
-import com.bazaarvoice.emodb.sor.api.StashTimeKey;
-import com.bazaarvoice.emodb.sor.api.TableOptions;
-import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
-import com.bazaarvoice.emodb.sor.api.UnknownTableException;
-import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
-import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEventType;
-import com.bazaarvoice.emodb.sor.api.Update;
-import com.bazaarvoice.emodb.sor.api.WriteConsistency;
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
+import com.bazaarvoice.emodb.sor.api.*;
 import com.bazaarvoice.emodb.sor.audit.AuditWriter;
 import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.bazaarvoice.emodb.sor.condition.Condition;
@@ -104,6 +83,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     private static final int NUM_COMPACTION_THREADS = 2;
     private static final int MAX_COMPACTION_QUEUE_LENGTH = 100;
+    public static final String UPDATE_AUDIT_TOPIC = "master_bus";
 
     private final Logger _log = LoggerFactory.getLogger(DefaultDataStore.class);
 
@@ -126,6 +106,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     private final CompactionControlSource _compactionControlSource;
     private final MapStore<DataStoreMinSplitSize> _minSplitSizeMap;
     private final Clock _clock;
+    private final KafkaProducerService _kafkaProducerService;
 
     private StashTableDAO _stashTableDao;
 
@@ -134,10 +115,10 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                             DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao, SlowQueryLog slowQueryLog, HistoryStore historyStore,
                             @StashRoot Optional<URI> stashRootDirectory, @LocalCompactionControl CompactionControlSource compactionControlSource,
                             @StashBlackListTableCondition Condition stashBlackListTableCondition, AuditWriter auditWriter,
-                            @MinSplitSizeMap MapStore<DataStoreMinSplitSize> minSplitSizeMap, Clock clock) {
+                            @MinSplitSizeMap MapStore<DataStoreMinSplitSize> minSplitSizeMap, Clock clock, KafkaProducerService kafkaProducerService) {
         this(eventWriterRegistry, tableDao, dataReaderDao, dataWriterDao, slowQueryLog, defaultCompactionExecutor(lifeCycle),
                 historyStore, stashRootDirectory, compactionControlSource, stashBlackListTableCondition, auditWriter,
-                minSplitSizeMap, metricRegistry, clock);
+                minSplitSizeMap, metricRegistry, clock, kafkaProducerService);
     }
 
     @VisibleForTesting
@@ -146,7 +127,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                             SlowQueryLog slowQueryLog, ExecutorService compactionExecutor, HistoryStore historyStore,
                             Optional<URI> stashRootDirectory, CompactionControlSource compactionControlSource,
                             Condition stashBlackListTableCondition, AuditWriter auditWriter,
-                            MapStore<DataStoreMinSplitSize> minSplitSizeMap, MetricRegistry metricRegistry, Clock clock) {
+                            MapStore<DataStoreMinSplitSize> minSplitSizeMap, MetricRegistry metricRegistry, Clock clock, KafkaProducerService kafkaProducerService) {
         _eventWriterRegistry = requireNonNull(eventWriterRegistry, "eventWriterRegistry");
         _tableDao = requireNonNull(tableDao, "tableDao");
         _dataReaderDao = requireNonNull(dataReaderDao, "dataReaderDao");
@@ -166,6 +147,8 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         _compactionControlSource = requireNonNull(compactionControlSource, "compactionControlSource");
         _minSplitSizeMap = requireNonNull(minSplitSizeMap, "minSplitSizeMap");
         _clock = requireNonNull(clock, "clock");
+        _kafkaProducerService = requireNonNull(kafkaProducerService, "kafkaProducerService");
+
     }
 
     /**
@@ -679,17 +662,8 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     }
 
-    private void updateAll(Iterable<Update> updates, final boolean isFacade,
-                           @NotNull final Set<String> tags) {
-        requireNonNull(updates, "updates");
-        checkLegalTags(tags);
-        requireNonNull(tags, "tags");
-        Iterator<Update> updatesIter = updates.iterator();
-        if (!updatesIter.hasNext()) {
-            return;
-        }
-
-        _dataWriterDao.updateAll(Iterators.transform(updatesIter, new Function<Update, RecordUpdate>() {
+    private Iterator<RecordUpdate> transformUpdates(Iterator<Update> updatesIter, boolean isFacade, final Set<String> tags) {
+        return Iterators.transform(updatesIter, new Function<Update, RecordUpdate>() {
             @Override
             public RecordUpdate apply(Update update) {
                 requireNonNull(update, "update");
@@ -722,7 +696,20 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
                 return new RecordUpdate(table, key, changeId, delta, audit, tags, update.getConsistency());
             }
-        }), new DataWriterDAO.UpdateListener() {
+        });
+    }
+
+    private void updateAll(Iterable<Update> updates, final boolean isFacade,
+                           @NotNull final Set<String> tags) {
+        requireNonNull(updates, "updates");
+        checkLegalTags(tags);
+        requireNonNull(tags, "tags");
+        Iterator<Update> updatesIter = updates.iterator();
+        if (!updatesIter.hasNext()) {
+            return;
+        }
+
+        _dataWriterDao.updateAll(transformUpdates(updatesIter, isFacade, tags), new DataWriterDAO.UpdateListener() {
             @Override
             public void beforeWrite(Collection<RecordUpdate> updateBatch) {
                 // Tell the databus we're about to write.
@@ -744,7 +731,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                     }
                 }
                 if (!updateRefs.isEmpty()) {
-                    _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefs);
+                    _kafkaProducerService.sendMessages(UPDATE_AUDIT_TOPIC, updateRefs, "update");
                 }
             }
 
@@ -1024,5 +1011,25 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     private String getMetricName(String name) {
         return MetricRegistry.name("bv.emodb.sor", "DefaultDataStore", name);
+    }
+
+    @Override
+    public void updateRefInDatabus(Iterable<Update> updates, Set<String> tags, boolean isFacade) {
+        Iterator<Update> updatesIter = updates.iterator();
+        if (!updatesIter.hasNext()) {
+            return;
+        }
+        Iterator<RecordUpdate> recordUpdates = transformUpdates(updatesIter, isFacade, tags);
+
+        while (recordUpdates.hasNext()) {
+            RecordUpdate update = recordUpdates.next();
+            List<UpdateRef> updateRefs = Lists.newArrayListWithCapacity(Collections.singleton(update).size());
+            if (!update.getTable().isInternal()) {
+                updateRefs.add(new UpdateRef(update.getTable().getName(), update.getKey(), update.getChangeId(), tags));
+            }
+            if (!updateRefs.isEmpty()) {
+                _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefs);
+            }
+        }
     }
 }

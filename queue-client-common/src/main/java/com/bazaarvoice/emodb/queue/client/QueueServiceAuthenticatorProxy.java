@@ -39,6 +39,11 @@ class QueueServiceAuthenticatorProxy implements QueueService {
     }
 
     @Override
+    public void sendAll(String queue, Collection<?> messages, boolean isFlush) {
+        _authQueueService.sendAll(_apiKey, queue, messages, isFlush);
+    }
+
+    @Override
     public MoveQueueStatus getMoveStatus(String reference) {
         return _authQueueService.getMoveStatus(_apiKey, reference);
     }

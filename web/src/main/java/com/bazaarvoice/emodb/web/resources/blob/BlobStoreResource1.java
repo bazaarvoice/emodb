@@ -54,6 +54,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.StreamSupport;
+
 import static java.lang.String.format;
 
 @Path("/blob/1")
@@ -96,6 +97,7 @@ public class BlobStoreResource1 {
         _blobStore = blobStore;
         _approvedContentTypes = approvedContentTypes;
         _metricRegistry = metricRegistry;
+
         _listTableRequestsByApiKey = createMetricCache("listTablesByApiKey");
         _createTableRequestsByApiKey = createMetricCache("createTableByApiKey");
         _dropTableRequestsByApiKey = createMetricCache("dropTableByApiKey");
@@ -172,6 +174,7 @@ public class BlobStoreResource1 {
         if (!subject.hasPermission(Permissions.createBlobTable(resource))) {
             throw new UnauthorizedException();
         }
+
         _blobStore.createTable(table, options, attributes, audit);
         try {
             _messagingService.sendCreateTableSQS(table,options,attributes,audit);
@@ -382,7 +385,7 @@ public class BlobStoreResource1 {
         return _blobStore.getTablePlacements();
     }
 
-
+    //change
     /**
      * Retrieves the current version of a piece of content from the data store.
      */
