@@ -28,6 +28,17 @@ public class KafkaConfig {
     private static String retriesConfig;
     private static String lingerMsConfig;
     private static final Logger logger = LoggerFactory.getLogger(KafkaConfig.class);
+    // Static SSM Client and configuration using AWS SDK v1
+    private static final AWSSimpleSystemsManagement ssmClient = AWSSimpleSystemsManagementClientBuilder
+            .standard()
+            .build();
+
+    private static final String DEFAULT_BOOTSTRAP_SERVERS =
+            "b-1.qaemodbpocmsk.q4panq.c10.kafka.us-east-1.amazonaws.com:9092," +
+                    "b-2.qaemodbpocmsk.q4panq.c10.kafka.us-east-1.amazonaws.com:9092";
+
+
+
     static {
         try {
             // Fetch the UNIVERSE environment variable
@@ -77,16 +88,6 @@ public class KafkaConfig {
             throw e;
         }
     }
-
-
-    // Static SSM Client and configuration using AWS SDK v1
-    private static final AWSSimpleSystemsManagement ssmClient = AWSSimpleSystemsManagementClientBuilder
-            .standard()
-            .build();
-
-    private static final String DEFAULT_BOOTSTRAP_SERVERS =
-            "b-1.qaemodbpocmsk.q4panq.c10.kafka.us-east-1.amazonaws.com:9092," +
-                    "b-2.qaemodbpocmsk.q4panq.c10.kafka.us-east-1.amazonaws.com:9092";
 
 
 
