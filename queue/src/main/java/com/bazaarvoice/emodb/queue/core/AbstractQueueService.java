@@ -63,7 +63,7 @@ abstract class AbstractQueueService implements BaseQueueService {
     private final StepFunctionService stepFunctionService;
     private final ParameterStoreUtil parameterStoreUtil;
 
-    private final String UNIVERSE = System.getenv("UNIVERSE");
+    private static final String UNIVERSE = "cert"; //System.getenv("UNIVERSE");
 
     protected AbstractQueueService(BaseEventStore eventStore, JobService jobService,
                                    JobHandlerRegistry jobHandlerRegistry,

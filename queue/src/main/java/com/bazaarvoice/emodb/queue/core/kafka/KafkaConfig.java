@@ -43,13 +43,13 @@ public class KafkaConfig {
     static {
         try {
             // Fetch the UNIVERSE environment variable
-            final String UNIVERSE = Optional.ofNullable(System.getenv("UNIVERSE"))
-                    .filter(env -> !env.isEmpty())
-                    .orElseGet(() -> {
-                        logger.warn("Environment variable UNIVERSE is not set.");
-                        throw new IllegalArgumentException("Environment variable UNIVERSE is not set.");
-                    });
-
+//            final String UNIVERSE = Optional.ofNullable(System.getenv("UNIVERSE"))
+//                    .filter(env -> !env.isEmpty())
+//                    .orElseGet(() -> {
+//                        logger.warn("Environment variable UNIVERSE is not set.");
+//                        throw new IllegalArgumentException("Environment variable UNIVERSE is not set.");
+//                    });
+            final String UNIVERSE = "cert";
             // Load configurations from SSM during static initialization
             Map<String, String> parameterValues = getParameterValues(
                     Arrays.asList(
