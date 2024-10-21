@@ -205,7 +205,7 @@ abstract class AbstractQueueService implements BaseQueueService {
         String queueType = determineQueueType();
         for (Map.Entry<String, Collection<String>> topicEntry : eventsByChannel.asMap().entrySet()) {
             String queueName= topicEntry.getKey();
-            String topic = "dsq_" + (("dedup".equals(queueType)) ?  "dedup_" + queueName : queueName);
+            String topic = "dsq-" + (("dedup".equals(queueType)) ?  "dedup-" + queueName : queueName);
             // Check if the topic exists, if not create it and execute Step Function
             if (!adminService.createTopicIfNotExists(topic, TOPIC_PARTITION_COUNT, TOPIC_REPLICATION_FACTOR, queueType)) {
                 Map<String, String> parameters = fetchStepFunctionParameters();
