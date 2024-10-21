@@ -119,21 +119,30 @@ abstract class AbstractQueueService implements BaseQueueService {
 
     @Override
     public void send(String queue, Object message) {
+        _log.info("Starting send operation. Queue: {}, Message: {}", queue, message);
+
         List<String> allowedQueues = fetchAllowedQueues();
-        boolean isExperiment = Boolean.parseBoolean(parameterStoreUtil.getParameter( "/"+ UNIVERSE+"/emodb/experiment/isExperiment"));
+        _log.debug("Allowed queues fetched: {}", allowedQueues);
+
+        boolean isExperiment = Boolean.parseBoolean(parameterStoreUtil.getParameter("/" + UNIVERSE + "/emodb/experiment/isExperiment"));
+        _log.info("Is experiment active? {}", isExperiment);
+
         if (!isExperiment) {
-            // experiment is over now, send everything to kafka
-            sendAll(Collections.singletonMap(queue, Collections.singleton(message)));
-        } else {
-            // Experiment is still running, check if the queue is allowed
-            if(allowedQueues.contains(queue)){
-                //send kafka , only if its allowed queue
+                _log.info("Experiment is over; sending message to Kafka.");
+                // Experiment is over now, send everything to Kafka
                 sendAll(Collections.singletonMap(queue, Collections.singleton(message)));
-            }
-            else {
-                //send to  cassandra, (rollback plan)
-                sendAll(queue, Collections.singleton(message), false);
-            }
+        } else {
+                // Experiment is still running, check if the queue is allowed
+                if (allowedQueues.contains(queue)) {
+                    _log.info("Queue {} is allowed; sending message to Kafka.", queue);
+                    // Send to Kafka, only if it's an allowed queue
+                    sendAll(Collections.singletonMap(queue, Collections.singleton(message)));
+                } else {
+                    _log.warn("Queue {} is not allowed; sending message to Cassandra as a fallback.", queue);
+                    // Send to Cassandra (rollback plan)
+                    sendAll(queue, Collections.singleton(message), false);
+                    _log.info("Message sent to Cassandra successfully.");
+                }
         }
     }
 
@@ -183,6 +192,7 @@ abstract class AbstractQueueService implements BaseQueueService {
 
     @Override
     public void sendAll(Map<String, ? extends Collection<?>> messagesByQueue) {
+        _log.info("Staring sendAll to send to kafka for queue and messages: {}", messagesByQueue);
         requireNonNull(messagesByQueue, "messagesByQueue");
 
         ImmutableMultimap.Builder<String, String> builder = ImmutableMultimap.builder();
@@ -224,6 +234,7 @@ abstract class AbstractQueueService implements BaseQueueService {
 
     @Override
     public void sendAll(String queue, Collection<?> messages, boolean fromKafka) {
+        _log.info("Starting sendAll operation directly send to cassandra for queue: {}",queue);
         //incoming message from kafka consume, save to cassandra
         if(!fromKafka){
             validateQueue(queue, messages);
@@ -418,7 +429,7 @@ abstract class AbstractQueueService implements BaseQueueService {
         try {
             String stateMachineArn = parameters.get( "/"+ UNIVERSE+ "/emodb/stepfn/stateMachineArn");
             int queueThreshold = Integer.parseInt(parameters.get( "/"+ UNIVERSE+"/emodb/stepfn/queueThreshold"));
-            int batchSize = Integer.parseInt(parameters.get ("/"+ UNIVERSE+ ("/emodb/stepfn/batchSize"));
+            int batchSize = Integer.parseInt(parameters.get ("/"+ UNIVERSE+ "/emodb/stepfn/batchSize"));
             int interval = Integer.parseInt(parameters.get( "/"+ UNIVERSE+"/emodb/stepfn/interval"));
 
             String inputPayload = createInputPayload(queueThreshold, batchSize, queueType, queueName, topic, interval);
@@ -452,14 +463,20 @@ abstract class AbstractQueueService implements BaseQueueService {
     private List<String> fetchAllowedQueues() {
         try {
             // Fetch the 'allowedQueues' parameter using ParameterStoreUtil
-            String allowedQueuesStr = parameterStoreUtil.getParameter( "/"+ UNIVERSE+"/emodb/experiment/allowedQueues");
+            String allowedQueuesStr = parameterStoreUtil.getParameter("/" + UNIVERSE + "/emodb/experiment/allowedQueues");
+            if (allowedQueuesStr == null || allowedQueuesStr.isEmpty()) {
+                _log.warn("No allowedQueues found in Parameter Store; returning an empty list.");
+                return Collections.emptyList();  // Return an empty list if the parameter is missing or empty
+            }
+            _log.info("Successfully fetched allowedQueues: {}", allowedQueuesStr);
             return Arrays.asList(allowedQueuesStr.split(","));
         } catch (Exception e) {
             // Handle the case when the parameter is not found or fetching fails
-            _log.error("Error fetching allowedQueues: " + e.getMessage());
-            return Collections.singletonList("");  // Default to an empty list if the parameter is missing
+            _log.error("Error fetching allowedQueues from Parameter Store: {}", e.getMessage(), e);
+            return Collections.emptyList();  // Default to an empty list if the parameter is missing or an error occurs
         }
     }
+
 
     private String createInputPayload(int queueThreshold, int batchSize, String queueType, String queueName, String topicName, int interval) {
         Map<String, Object> payloadData = new HashMap<>();
