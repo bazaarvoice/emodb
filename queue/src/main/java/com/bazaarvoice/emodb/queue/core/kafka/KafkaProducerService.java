@@ -39,7 +39,7 @@ public class KafkaProducerService {
      * @param message The message to be sent.
      */
     public void sendMessage(String topic, String message, String queueType) {
-        ProducerRecord<String, String> record = new ProducerRecord<>(topic, message);
+        ProducerRecord<String, String> record = new ProducerRecord<>(topic, message, message);
         try {
             Future<RecordMetadata> future = producer.send(record, (metadata, exception) -> {
                 if (exception != null) {
