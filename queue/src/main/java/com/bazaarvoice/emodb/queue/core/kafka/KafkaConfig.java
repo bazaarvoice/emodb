@@ -23,23 +23,11 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class KafkaConfig {
-
-    private static final Logger logger = LoggerFactory.getLogger(KafkaConfig.class);
-
-    // Static SSM Client and configuration using AWS SDK v1
-    private static final AWSSimpleSystemsManagement ssmClient = AWSSimpleSystemsManagementClientBuilder
-            .standard()
-            .build();
-
-    private static final String DEFAULT_BOOTSTRAP_SERVERS =
-            "b-1.qaemodbpocmsk.q4panq.c10.kafka.us-east-1.amazonaws.com:9092," +
-                    "b-2.qaemodbpocmsk.q4panq.c10.kafka.us-east-1.amazonaws.com:9092";
-
     private static String bootstrapServersConfig;
     private static String batchSizeConfig;
     private static String retriesConfig;
     private static String lingerMsConfig;
-
+    private static final Logger logger = LoggerFactory.getLogger(KafkaConfig.class);
     static {
         try {
             // Fetch the UNIVERSE environment variable
@@ -50,6 +38,12 @@ public class KafkaConfig {
 //                        throw new IllegalArgumentException("Environment variable UNIVERSE is not set.");
 //                    });
             final String UNIVERSE = "cert";
+            String universe1 = System.getenv("UNIVERSE");
+            if (universe1 == null) {
+                universe1 = "NOTFOUND";
+            }
+
+            logger.info("Fetched environment variable UNIVERSE: {}", universe1);
             // Load configurations from SSM during static initialization
             Map<String, String> parameterValues = getParameterValues(
                     Arrays.asList(
@@ -83,6 +77,20 @@ public class KafkaConfig {
             throw e;
         }
     }
+
+
+    // Static SSM Client and configuration using AWS SDK v1
+    private static final AWSSimpleSystemsManagement ssmClient = AWSSimpleSystemsManagementClientBuilder
+            .standard()
+            .build();
+
+    private static final String DEFAULT_BOOTSTRAP_SERVERS =
+            "b-1.qaemodbpocmsk.q4panq.c10.kafka.us-east-1.amazonaws.com:9092," +
+                    "b-2.qaemodbpocmsk.q4panq.c10.kafka.us-east-1.amazonaws.com:9092";
+
+
+
+
 
     // Fetch parameters from AWS SSM using AWS SDK v1
     private static Map<String, String> getParameterValues(List<String> parameterNames) {

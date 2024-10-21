@@ -26,6 +26,7 @@ public class KafkaProducerService {
      */
     public void sendMessages(String topic, Collection<String> events, String queueType) {
         _log.info("Sending {} messages to topic '{}'", events.size(), topic);
+
         for (String event : events) {
             sendMessage(topic, event,queueType);
         }
