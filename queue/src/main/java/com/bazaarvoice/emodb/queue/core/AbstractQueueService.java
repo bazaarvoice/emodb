@@ -63,6 +63,8 @@ abstract class AbstractQueueService implements BaseQueueService {
     private final StepFunctionService stepFunctionService;
     private final ParameterStoreUtil parameterStoreUtil;
 
+    private final String UNIVERSE = System.getenv("UNIVERSE");
+
     protected AbstractQueueService(BaseEventStore eventStore, JobService jobService,
                                    JobHandlerRegistry jobHandlerRegistry,
                                    JobType<MoveQueueRequest, MoveQueueResult> moveQueueJobType,
@@ -118,7 +120,7 @@ abstract class AbstractQueueService implements BaseQueueService {
     @Override
     public void send(String queue, Object message) {
         List<String> allowedQueues = fetchAllowedQueues();
-        boolean isExperiment = Boolean.parseBoolean(parameterStoreUtil.getParameter("/emodb/experiment/isExperiment"));
+        boolean isExperiment = Boolean.parseBoolean(parameterStoreUtil.getParameter( "/"+ UNIVERSE+"/emodb/experiment/isExperiment"));
         if (!isExperiment) {
             // experiment is over now, send everything to kafka
             sendAll(Collections.singletonMap(queue, Collections.singleton(message)));
@@ -138,7 +140,7 @@ abstract class AbstractQueueService implements BaseQueueService {
     @Override
     public void sendAll(String queue, Collection<?> messages) {
         List<String> allowedQueues = fetchAllowedQueues();
-        boolean isExperiment = Boolean.parseBoolean(parameterStoreUtil.getParameter("/emodb/experiment/isExperiment"));
+        boolean isExperiment = Boolean.parseBoolean(parameterStoreUtil.getParameter( "/"+ UNIVERSE+"/emodb/experiment/isExperiment"));
         if (!isExperiment) {
             // experiment is over now, send everything to kafka
             sendAll(Collections.singletonMap(queue, messages));
@@ -394,10 +396,10 @@ abstract class AbstractQueueService implements BaseQueueService {
      */
     private Map<String, String> fetchStepFunctionParameters() {
         List<String> parameterNames = Arrays.asList(
-                "/emodb/stepfn/stateMachineArn",
-                "/emodb/stepfn/queueThreshold",
-                "/emodb/stepfn/batchSize",
-                "/emodb/stepfn/interval"
+                "/"+ UNIVERSE+ "/emodb/stepfn/stateMachineArn",
+                "/"+ UNIVERSE+ "/emodb/stepfn/queueThreshold",
+                "/"+ UNIVERSE+ "/emodb/stepfn/batchSize",
+                "/"+ UNIVERSE+ "/emodb/stepfn/interval"
         );
 
         try {
@@ -414,10 +416,10 @@ abstract class AbstractQueueService implements BaseQueueService {
 
     private void startStepFunctionExecution(Map<String, String> parameters, String queueType, String queueName, String topic) {
         try {
-            String stateMachineArn = parameters.get("/emodb/stepfn/stateMachineArn");
-            int queueThreshold = Integer.parseInt(parameters.get("/emodb/stepfn/queueThreshold"));
-            int batchSize = Integer.parseInt(parameters.get("/emodb/stepfn/batchSize"));
-            int interval = Integer.parseInt(parameters.get("/emodb/stepfn/interval"));
+            String stateMachineArn = parameters.get( "/"+ UNIVERSE+ "/emodb/stepfn/stateMachineArn");
+            int queueThreshold = Integer.parseInt(parameters.get( "/"+ UNIVERSE+"/emodb/stepfn/queueThreshold"));
+            int batchSize = Integer.parseInt(parameters.get ("/"+ UNIVERSE+ ("/emodb/stepfn/batchSize"));
+            int interval = Integer.parseInt(parameters.get( "/"+ UNIVERSE+"/emodb/stepfn/interval"));
 
             String inputPayload = createInputPayload(queueThreshold, batchSize, queueType, queueName, topic, interval);
 
@@ -450,7 +452,7 @@ abstract class AbstractQueueService implements BaseQueueService {
     private List<String> fetchAllowedQueues() {
         try {
             // Fetch the 'allowedQueues' parameter using ParameterStoreUtil
-            String allowedQueuesStr = parameterStoreUtil.getParameter("/emodb/experiment/allowedQueues");
+            String allowedQueuesStr = parameterStoreUtil.getParameter( "/"+ UNIVERSE+"/emodb/experiment/allowedQueues");
             return Arrays.asList(allowedQueuesStr.split(","));
         } catch (Exception e) {
             // Handle the case when the parameter is not found or fetching fails

@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class KafkaConfig {
@@ -41,28 +42,36 @@ public class KafkaConfig {
 
     static {
         try {
+            // Fetch the UNIVERSE environment variable
+            final String UNIVERSE = Optional.ofNullable(System.getenv("UNIVERSE"))
+                    .filter(env -> !env.isEmpty())
+                    .orElseGet(() -> {
+                        logger.warn("Environment variable UNIVERSE is not set.");
+                        throw new IllegalArgumentException("Environment variable UNIVERSE is not set.");
+                    });
+
             // Load configurations from SSM during static initialization
             Map<String, String> parameterValues = getParameterValues(
                     Arrays.asList(
-                            "/emodb/kafka/batchSize",
-                            "/emodb/kafka/retries",
-                            "/emodb/kafka/lingerMs",
-                            "/emodb/kafka/bootstrapServers"
+                            "/" + UNIVERSE + "/emodb/kafka/batchSize",
+                            "/" + UNIVERSE + "/emodb/kafka/retries",
+                            "/" + UNIVERSE + "/emodb/kafka/lingerMs",
+                            "/" + UNIVERSE + "/emodb/kafka/bootstrapServers"
                     )
             );
 
             // Set configurations with fallback to defaults if not present
             // Sets the batch size for Kafka producer, which controls the amount of data to batch before sending.
-            batchSizeConfig = parameterValues.getOrDefault("/emodb/kafka/batchSize", "16384");
+            batchSizeConfig = parameterValues.getOrDefault("/"+UNIVERSE+"/emodb/kafka/batchSize", "16384");
 
             // Sets the number of retry attempts for failed Kafka message sends.
-            retriesConfig = parameterValues.getOrDefault("/emodb/kafka/retries", "3");
+            retriesConfig = parameterValues.getOrDefault("/"+UNIVERSE+"/emodb/kafka/retries", "3");
 
             // Sets the number of milliseconds a producer is willing to wait before sending a batch out
-            lingerMsConfig = parameterValues.getOrDefault("/emodb/kafka/lingerMs", "1");
+            lingerMsConfig = parameterValues.getOrDefault("/"+UNIVERSE+"/emodb/kafka/lingerMs", "1");
 
             // Configures the Kafka broker addresses for producer connections.
-            bootstrapServersConfig = parameterValues.getOrDefault("/emodb/kafka/bootstrapServers", DEFAULT_BOOTSTRAP_SERVERS);
+            bootstrapServersConfig = parameterValues.getOrDefault("/"+UNIVERSE+"/emodb/kafka/bootstrapServers", DEFAULT_BOOTSTRAP_SERVERS);
 
             logger.info("Kafka configurations loaded successfully from SSM.");
         } catch (AmazonServiceException e) {
