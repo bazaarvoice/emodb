@@ -6,11 +6,17 @@ import com.bazaarvoice.emodb.queue.api.Message;
 import com.bazaarvoice.emodb.queue.api.MoveQueueStatus;
 import com.bazaarvoice.emodb.queue.api.QueueService;
 import com.bazaarvoice.emodb.queue.client.QueueServiceAuthenticator;
+import com.bazaarvoice.emodb.queue.core.ssm.ParameterStoreUtil;
+import com.bazaarvoice.emodb.queue.core.stepfn.StepFunctionService;
+import com.bazaarvoice.emodb.queue.core.Entities.QueueExecutionAttributes;
 import com.bazaarvoice.emodb.web.auth.Permissions;
 import com.bazaarvoice.emodb.web.auth.resource.NamedResource;
 import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.codahale.metrics.annotation.Timed;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import io.dropwizard.jersey.params.BooleanParam;
@@ -18,19 +24,11 @@ import io.dropwizard.jersey.params.IntParam;
 import io.dropwizard.jersey.params.LongParam;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import org.apache.kafka.common.protocol.types.Field;
 import org.apache.shiro.authz.annotation.RequiresAuthentication;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.DefaultValue;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.nio.ByteBuffer;
@@ -49,10 +47,14 @@ public class QueueResource1 {
 
     private final QueueService _queueService;
     private final QueueServiceAuthenticator _queueClient;
+    private final ParameterStoreUtil _parameterStoreUtil;
+    private final StepFunctionService _stepFunctionService;
 
     public QueueResource1(QueueService queueService, QueueServiceAuthenticator queueClient) {
         _queueService = requireNonNull(queueService, "queueService");
         _queueClient = requireNonNull(queueClient, "queueClient");
+        _parameterStoreUtil = new ParameterStoreUtil();
+        _stepFunctionService = new StepFunctionService();
     }
 
     @POST
@@ -284,6 +286,98 @@ public class QueueResource1 {
         getService(partitioned, subject.getAuthenticationId()).purge(queue);
         return SuccessResponse.instance();
     }
+
+    @PUT
+    @Consumes(MediaType.APPLICATION_JSON)
+    @ApiOperation (value = "update param operation at aws ssm .",
+            notes = "Returns a SuccessResponse.", response = SuccessResponse.class)
+    public SuccessResponse updateParam(Object keyValuePair) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            String asJson = objectMapper.writeValueAsString(keyValuePair);
+            Map<String, String> map = objectMapper.readValue(asJson, new TypeReference<Map<String, String>>() {});
+            String key = map.keySet().iterator().next();
+            String value = map.get(key);
+
+            Long update_version = _parameterStoreUtil.updateParameter(key, value);
+            return SuccessResponse.instance().with(ImmutableMap.of("status", "200 | ssm-parameter updated successfully, update_version: " + update_version));
+        } catch (Exception e) {
+            return SuccessResponse.instance().with(ImmutableMap.of("status", "500 | Failed to update ssm parameter: " + e.getMessage()));
+        }
+
+    }
+
+    @PUT
+    @Path("/QueueExecutionAttributes/{queue_type}/{queue_name}")
+    @RequiresPermissions("queue|poll|{queue_name}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @ApiOperation (value = "update queue execution attributes .", notes = "Returns a SuccessResponse.", response = SuccessResponse.class)
+    public SuccessResponse updateQueueExecutionAttributes(@PathParam("queue_type") String queueType, @PathParam("queue_name") String queueName, QueueExecutionAttributes newExecAttributes) {
+        // {queueThreshold, batchSize, interval, status} which all are mandatory ?? assumptions ??
+
+        QueueExecutionAttributes existingAttributes = _stepFunctionService.getExistingSFNAttributes(queueType, queueName);
+
+        if(existingAttributes == null) {
+            return SuccessResponse.instance().with(ImmutableMap.of("status", "500 | no such state machine ARN exists"));
+        }
+
+        if((newExecAttributes == null)
+                || (newExecAttributes.getQueueThreshold() == null && newExecAttributes.getBatchSize() == null && newExecAttributes.getInterval() == null)) {
+
+            try {
+                //1. fetch any active execution
+                _stepFunctionService.stopActiveExecutions(queueType, queueName);
+                //2. restart it
+                _stepFunctionService.startExecution(queueType, queueName, existingAttributes);
+                return SuccessResponse.instance().with(ImmutableMap.of("status", "200 | step function re-started successfully"));
+            } catch (Exception e) {
+                return SuccessResponse.instance().with(ImmutableMap.of("status", "500 | failed to re-start step function"));
+            }
+        }
+
+        if (newExecAttributes.getStatus() != null && "DISABLED".equals(newExecAttributes.getStatus())) {
+            try {
+                //1. fetch active executions and stop them
+                _stepFunctionService.stopActiveExecutions(queueType, queueName);
+                return SuccessResponse.instance().with(ImmutableMap.of("status", "200 | step function stopped successfully"));
+            } catch (Exception e) {
+                return SuccessResponse.instance().with(ImmutableMap.of("status", "500 | failed to stop step function"));
+            }
+        }
+
+
+        try {
+            //2. stop it
+            _stepFunctionService.stopActiveExecutions(queueType, queueName);
+
+            //0. start a new execution
+            if(newExecAttributes.getQueueThreshold() != null && !newExecAttributes.getQueueThreshold().isEmpty() && newExecAttributes.getQueueThreshold() != existingAttributes.getQueueThreshold()) {
+                existingAttributes.setQueueThreshold(newExecAttributes.getQueueThreshold());
+            }
+            if(newExecAttributes.getBatchSize() != null && !newExecAttributes.getBatchSize().isEmpty() && newExecAttributes.getBatchSize() != existingAttributes.getBatchSize()) {
+                existingAttributes.setBatchSize(newExecAttributes.getBatchSize());
+            }
+            if(newExecAttributes.getInterval() != null && !newExecAttributes.getInterval().isEmpty() && newExecAttributes.getInterval() != existingAttributes.getInterval()) {
+                existingAttributes.setInterval(newExecAttributes.getInterval());
+            }
+
+            _stepFunctionService.startExecution(queueType, queueName,  existingAttributes);
+            return SuccessResponse.instance().with(ImmutableMap.of("status", "200 | started step function with updated attributes"));
+        } catch (Exception e) {
+            return SuccessResponse.instance().with(ImmutableMap.of("status", "500 | failed to stop step function. " + e));
+        }
+
+
+
+
+    }
+
+    /*PUT /QueueExecutionAttributes/<queue_type>/<queue_name> which takes in the optional new values for queueThreshold, batchSize, interval, status (note that the combination of batchSize and queueThreshold operate as the rateLimit mechanism to write into Cassandra).
+    If status is provided as disabled, then queue execution will stop or not initiate.
+    Default waitTime is 15 mins, it can be modified as this value will be passed as input to Step Function execution.
+    If provided, EmoWeb will fetch the active executions for the queueName and stop the execution. If no active executions it will proceed to next step.
+    it starts a new step function execution for the providedQueue with provided values (others from the old execution or default values if no old execution).
+    if nothing is provided as inputs, the current execution is restarted.*/
 
     private QueueService getService(BooleanParam partitioned, String apiKey) {
         return partitioned != null && partitioned.get() ? _queueService : _queueClient.usingCredentials(apiKey);

@@ -4,17 +4,12 @@ package com.bazaarvoice.emodb.queue.core.stepfn;
 import com.amazonaws.services.stepfunctions.AWSStepFunctions;
 import com.amazonaws.services.stepfunctions.AWSStepFunctionsClientBuilder;
 import com.amazonaws.services.stepfunctions.model.*;
+import com.bazaarvoice.emodb.queue.core.Entities.QueueExecutionAttributes;
 import com.bazaarvoice.emodb.queue.core.ssm.ParameterStoreUtil;
-import com.bazaarvoice.emodb.web.Entities.QueueExecutionAttributes;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.kafka.common.protocol.types.Field;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.List;
-import java.util.Map;
-import java.util.MissingResourceException;
 
 /**
  * Production-level service to interact with AWS Step Functions using AWS SDK v1.
@@ -37,28 +32,21 @@ public class StepFunctionService {
                 .build();
     }
 
-    /**
-     * Starts the execution of a Step Function with the given state machine ARN and input payload.
-     *
-     * @param stateMachineArn ARN of the state machine
-     * @param inputPayload    Input for the state machine execution
-     * @throws IllegalArgumentException If the stateMachineArn is invalid
-     */
-    public void startExecution(String stateMachineArn, String inputPayload) {
-        if (stateMachineArn == null || stateMachineArn.isEmpty()) {
-            logger.error("State Machine ARN cannot be null or empty");
-            throw new IllegalArgumentException("State Machine ARN cannot be null or empty");
-        }
+    public void startExecution(String queueName, String queueType, QueueExecutionAttributes executionAttributes) throws JsonProcessingException {
 
-        if (inputPayload == null) {
+        String payload = "{}";
+        if(executionAttributes == null) {
             logger.warn("Input payload is null; using empty JSON object");
-            inputPayload = "{}"; // Default to empty payload if null
+        } else {
+            ObjectMapper objectMapper = new ObjectMapper();
+            payload = objectMapper.writeValueAsString(executionAttributes);
         }
 
         try {
+            String stateMachineArn = getStateMachineARN(queueType, queueName);
             StartExecutionRequest startExecutionRequest = new StartExecutionRequest()
                     .withStateMachineArn(stateMachineArn)
-                    .withInput(inputPayload);
+                    .withInput(payload);
 
             StartExecutionResult startExecutionResult = stepFunctionsClient.startExecution(startExecutionRequest);
 
@@ -66,11 +54,11 @@ public class StepFunctionService {
             logger.debug("Execution ARN: {}", startExecutionResult.getExecutionArn());
 
         } catch (StateMachineDoesNotExistException e) {
-            logger.error("State Machine does not exist: {}", stateMachineArn, e);
+            logger.error("State Machine does not exist for queue_type: " + queueType + ", queue_name: " + queueName, e);
         } catch (InvalidArnException e) {
-            logger.error("Invalid ARN provided: {}", stateMachineArn, e);
+            logger.error("Invalid ARN provided for queue_type: " + queueType + ", queue_name: " + queueName, e);
         } catch (InvalidExecutionInputException e) {
-            logger.error("Invalid execution input provided: {}", inputPayload, e);
+            logger.error("Invalid execution input provided: {}", payload, e);
         } catch (AWSStepFunctionsException e) {
             logger.error("Error executing Step Function: {}", e.getMessage(), e);
             throw e; // Re-throw after logging
@@ -122,17 +110,11 @@ public class StepFunctionService {
 
     public String getActiveExecutionArn(String queueType, String queueName) {
 
-        // TODO: Extend this fetch part later based on queueType : queue/dedup/databus
-        // TODO: String universe = KafkaConfig::getUniverseFromEnv()  // add universe below
-        String stateMachineArn = _parameterStoreUtil.getParameter("/emodb/stepfn/stateMachineArn");   //databus/stateMachineArn
-
-        if(stateMachineArn == null || stateMachineArn.isEmpty()) {
-            throw new IllegalArgumentException("state machine arn can not be null/empty");
-        }
-
         try {
+            String stateMachineArn = getStateMachineARN(queueType, queueName);
+
             ListExecutionsRequest listExecutionRequest = new ListExecutionsRequest().withStateMachineArn(stateMachineArn)
-                    .withStatusFilter(ExecutionStatus.RUNNING);
+                                                                                    .withStatusFilter(ExecutionStatus.RUNNING);
 
             ListExecutionsResult listExecutionResults = stepFunctionsClient.listExecutions(listExecutionRequest);
 
@@ -148,6 +130,24 @@ public class StepFunctionService {
             logger.error("Unexpected error: {" + e.getMessage() + "} occurred while fetching active execution arn for queue_type: "+ queueType + ", queue_name: " + queueName + " ", e);
             throw e;
         }
+
+    }
+
+    public String getStateMachineARN(String queueType, String queueName) {
+
+        try {
+            // TODO: Extend this fetch part later based on queueType : queue/dedup/databus
+            // TODO: String universe = KafkaConfig::getUniverseFromEnv()  // add universe below
+            String stateMachineArn = _parameterStoreUtil.getParameter("/emodb/stepfn/stateMachineArn");
+
+            if(stateMachineArn != null && !stateMachineArn.isEmpty()) {
+                return stateMachineArn;
+            }
+        } catch (Exception e) {
+            throw new AWSStepFunctionsException("Problem fetching state machine arn for queueType :" + queueType + ", queueName: " + queueName);
+        }
+
+        throw new NullPointerException("state machine arn can not be null/empty");
 
     }
 
