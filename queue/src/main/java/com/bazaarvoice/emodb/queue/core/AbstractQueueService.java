@@ -205,15 +205,15 @@ abstract class AbstractQueueService implements BaseQueueService {
 
             validateQueue(queue, messages);
 
-            List<Object> events = Lists.newArrayListWithCapacity(messages.size());
+            List<String> events = Lists.newArrayListWithCapacity(messages.size());
 
             // Validate each message
             for (Object message : messages) {
                 validateMessage(message);
-                events.add(message);
+                events.add(message.toString());
             }
             _statsDClient.recordGaugeValue("queue.messages.size", events.size(), "queue:" + queue);
-            builder.putAll(queue, String.valueOf(events));
+            builder.putAll(queue, events);
         }
 
         Multimap<String, String> eventsByChannel = builder.build();
