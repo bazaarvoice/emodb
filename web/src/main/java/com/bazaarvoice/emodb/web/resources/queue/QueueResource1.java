@@ -32,6 +32,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -313,9 +314,13 @@ public class QueueResource1 {
     @Consumes(MediaType.APPLICATION_JSON)
     @ApiOperation (value = "update queue execution attributes .", notes = "Returns a SuccessResponse.", response = SuccessResponse.class)
     public SuccessResponse updateQueueExecutionAttributes(@PathParam("queue_type") String queueType, @PathParam("queue_name") String queueName, QueueExecutionAttributes newExecAttributes) {
-        // {queueThreshold, batchSize, interval, status} which all are mandatory ?? assumptions ??
 
-        QueueExecutionAttributes existingAttributes = _stepFunctionService.getExistingSFNAttributes(queueType, queueName);
+        QueueExecutionAttributes existingAttributes;
+        try {
+            existingAttributes = _stepFunctionService.getExistingSFNAttributes(queueType, queueName);
+        } catch (Exception e) {
+            return SuccessResponse.instance().with(ImmutableMap.of("status", "500 | Error getting existing step-function attributes | " + Arrays.toString(e.getStackTrace())));
+        }
 
         if(existingAttributes == null) {
             return SuccessResponse.instance().with(ImmutableMap.of("status", "500 | no such state machine ARN exists"));
