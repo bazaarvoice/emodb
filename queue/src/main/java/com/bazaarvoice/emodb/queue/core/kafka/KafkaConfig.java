@@ -15,11 +15,13 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class KafkaConfig {
@@ -38,7 +40,6 @@ public class KafkaConfig {
                     "b-2.qaemodbpocmsk.q4panq.c10.kafka.us-east-1.amazonaws.com:9092";
 
 
-
     static {
         try {
             // Fetch the UNIVERSE environment variable
@@ -48,13 +49,7 @@ public class KafkaConfig {
 //                        logger.warn("Environment variable UNIVERSE is not set.");
 //                        throw new IllegalArgumentException("Environment variable UNIVERSE is not set.");
 //                    });
-            final String UNIVERSE = "cert";
-            String universe1 = System.getenv("UNIVERSE");
-            if (universe1 == null) {
-                universe1 = "NOTFOUND";
-            }
-
-            logger.info("Fetched environment variable UNIVERSE: {}", universe1);
+            final String UNIVERSE = getUniverseFromEnv();
             // Load configurations from SSM during static initialization
             Map<String, String> parameterValues = getParameterValues(
                     Arrays.asList(
@@ -67,29 +62,65 @@ public class KafkaConfig {
 
             // Set configurations with fallback to defaults if not present
             // Sets the batch size for Kafka producer, which controls the amount of data to batch before sending.
-            batchSizeConfig = parameterValues.getOrDefault("/"+UNIVERSE+"/emodb/kafka/batchSize", "16384");
+            batchSizeConfig = parameterValues.getOrDefault("/" + UNIVERSE + "/emodb/kafka/batchSize", "16384");
 
             // Sets the number of retry attempts for failed Kafka message sends.
-            retriesConfig = parameterValues.getOrDefault("/"+UNIVERSE+"/emodb/kafka/retries", "3");
+            retriesConfig = parameterValues.getOrDefault("/" + UNIVERSE + "/emodb/kafka/retries", "3");
 
             // Sets the number of milliseconds a producer is willing to wait before sending a batch out
-            lingerMsConfig = parameterValues.getOrDefault("/"+UNIVERSE+"/emodb/kafka/lingerMs", "1");
+            lingerMsConfig = parameterValues.getOrDefault("/" + UNIVERSE + "/emodb/kafka/lingerMs", "1");
 
             // Configures the Kafka broker addresses for producer connections.
-            bootstrapServersConfig = parameterValues.getOrDefault("/"+UNIVERSE+"/emodb/kafka/bootstrapServers", DEFAULT_BOOTSTRAP_SERVERS);
+            bootstrapServersConfig = parameterValues.getOrDefault("/" + UNIVERSE + "/emodb/kafka/bootstrapServers", DEFAULT_BOOTSTRAP_SERVERS);
 
             logger.info("Kafka configurations loaded successfully from SSM.");
         } catch (AmazonServiceException e) {
             logger.error("Failed to load configurations from SSM. Using default values.", e);
             throw e;
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             logger.error("Unexpected error occurred while loading configurations from SSM. Using default values.", e);
             throw e;
         }
     }
 
+    public static String getUniverseFromEnv() {
+        String filePath = "/etc/environment";
+        logger.info("Reading environment file: " + filePath);
+        Properties environmentProps = new Properties();
 
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                // Skip empty lines or comments
+                if (line.trim().isEmpty() || line.trim().startsWith("#")) {
+                    continue;
+                }
+
+                // Split the line into key-value pair
+                String[] parts = line.split("=", 2);
+                logger.info("parts: " + Arrays.toString(parts));
+                if (parts.length == 2) {
+                    String key = parts[0].trim();
+                    String value = parts[1].trim();
+                    // Remove any surrounding quotes from value
+                    value = value.replace("\"", "");
+                    environmentProps.put(key, value);
+                }
+            }
+
+            // Access the environment variables
+            String universe = environmentProps.getProperty("UNIVERSE");
+            String region = environmentProps.getProperty("REGION");
+
+            // Print the values
+            logger.info("from etc file UNIVERSE: " + universe);
+            logger.info(" from etc file REGION: " + region);
+            return universe;
+        } catch (IOException e) {
+            logger.error("Error reading environment file: " + e.getMessage());
+            throw new RuntimeException("Error reading environment file: " + e.getMessage());
+        }
+    }
 
 
 

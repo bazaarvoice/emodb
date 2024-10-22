@@ -18,6 +18,7 @@ import com.bazaarvoice.emodb.queue.api.MoveQueueStatus;
 import com.bazaarvoice.emodb.queue.api.Names;
 import com.bazaarvoice.emodb.queue.api.UnknownMoveException;
 import com.bazaarvoice.emodb.queue.core.kafka.KafkaAdminService;
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaConfig;
 import com.bazaarvoice.emodb.queue.core.kafka.KafkaConsumerService;
 import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.queue.core.ssm.ParameterStoreUtil;
@@ -35,6 +36,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.time.Clock;
@@ -48,6 +50,7 @@ import static java.util.Objects.requireNonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
+
 
 abstract class AbstractQueueService implements BaseQueueService {
     private final Logger _log = LoggerFactory.getLogger(AbstractQueueService.class);
@@ -65,7 +68,7 @@ abstract class AbstractQueueService implements BaseQueueService {
     private final StepFunctionService stepFunctionService;
     private final ParameterStoreUtil parameterStoreUtil;
 
-    private static final String UNIVERSE = "cert"; //System.getenv("UNIVERSE");
+    private static final String UNIVERSE = KafkaConfig.getUniverseFromEnv();
 
     protected AbstractQueueService(BaseEventStore eventStore, JobService jobService,
                                    JobHandlerRegistry jobHandlerRegistry,
@@ -121,6 +124,8 @@ abstract class AbstractQueueService implements BaseQueueService {
 
     @Override
     public void send(String queue, Object message) {
+        _log.info("Environment variable UNIVERSE: {}",System.getenv("UNIVERSE" ));
+
         _log.info("Starting send operation. Queue: {}, Message: {}", queue, message);
 
         List<String> allowedQueues = fetchAllowedQueues();
@@ -217,7 +222,6 @@ abstract class AbstractQueueService implements BaseQueueService {
         Multimap<String, String> eventsByChannel = builder.build();
 
         String queueType = determineQueueType();
-        fetchUniverse();
         for (Map.Entry<String, Collection<String>> topicEntry : eventsByChannel.asMap().entrySet()) {
             String queueName= topicEntry.getKey();
             String topic = "dsq-" + (("dedup".equals(queueType)) ?  "dedup-" + queueName : queueName);
@@ -227,12 +231,6 @@ abstract class AbstractQueueService implements BaseQueueService {
                 // Execute Step Function after topic creation
                 startStepFunctionExecution(parameters, queueType,queueName, topic);
             }
-            String universe1 = System.getenv("UNIVERSE");
-            if (universe1 == null) {
-                universe1 = "NOTFOUND";
-            }
-
-            _log.info("Fetched environment variable UNIVERSE: {}", universe1);
             producerService.sendMessages(topic, topicEntry.getValue(), queueType);
             KafkaConsumerService kafkaConsumerService = new KafkaConsumerService();
             kafkaConsumerService.listTopicData();
@@ -241,37 +239,7 @@ abstract class AbstractQueueService implements BaseQueueService {
         _log.info("All messages have been sent to their respective queues.");
     }
 
-    public void fetchUniverse(){
-        Yaml yaml = new Yaml();
-        try (InputStream inputStream = AbstractQueueService.class.getClassLoader().getResourceAsStream("web-local/config-dc2.yaml")) {
-            if (inputStream == null) {
-                _log.info("File not found.");
-                return;
-            }
 
-            // Parse the YAML into a map
-            Map<String, Object> yamlData = yaml.load(inputStream);
-
-            // Navigate to the zooKeeper section and get the namespace value
-            Map<String, Object> zooKeeperConfig = (Map<String, Object>) yamlData.get("zooKeeper");
-            String namespace = (String) zooKeeperConfig.get("namespace");
-
-            if (namespace != null) {
-                // Split the namespace value by "/"
-                String[] parts = namespace.split("/");
-
-                // Print each part
-                for (String part : parts) {
-                    _log.info("fetch unverse yaml : " + part);
-                }
-            } else {
-                _log.info("Namespace not found.");
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
     @Override
     public void sendAll(String queue, Collection<?> messages, boolean fromKafka) {
