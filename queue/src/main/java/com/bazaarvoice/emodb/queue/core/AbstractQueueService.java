@@ -17,9 +17,13 @@ import com.bazaarvoice.emodb.queue.api.Message;
 import com.bazaarvoice.emodb.queue.api.MoveQueueStatus;
 import com.bazaarvoice.emodb.queue.api.Names;
 import com.bazaarvoice.emodb.queue.api.UnknownMoveException;
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaAdminService;
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
+import com.bazaarvoice.emodb.queue.core.ssm.ParameterStoreUtil;
+import com.bazaarvoice.emodb.queue.core.stepfn.StepFunctionService;
 import com.bazaarvoice.emodb.sortedq.core.ReadOnlyQueueException;
-import com.codahale.metrics.Meter;
-import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.cache.CacheBuilder;
@@ -33,39 +37,45 @@ import com.google.common.collect.Multimap;
 import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 abstract class AbstractQueueService implements BaseQueueService {
+    private final Logger _log = LoggerFactory.getLogger(AbstractQueueService.class);
     private final BaseEventStore _eventStore;
     private final JobService _jobService;
     private final JobType<MoveQueueRequest, MoveQueueResult> _moveQueueJobType;
     private final LoadingCache<SizeCacheKey, Map.Entry<Long, Long>> _queueSizeCache;
-    private final Meter _sendAllMeterAQS;
-    private final Meter _sendAllMeterNullAQS;
+    private final KafkaAdminService adminService;
+    private final KafkaProducerService producerService;
 
-    private final Meter _pollAQS;
-    private final Meter _pollNullAQS;
-
+    // Configuration keys for Kafka topic settings
+    private static final Integer TOPIC_PARTITION_COUNT = 1;
+    private static final Short TOPIC_REPLICATION_FACTOR =2;
     public static final int MAX_MESSAGE_SIZE_IN_BYTES = 30 * 1024;
+    private final StepFunctionService stepFunctionService;
+    private final ParameterStoreUtil parameterStoreUtil;
 
     protected AbstractQueueService(BaseEventStore eventStore, JobService jobService,
                                    JobHandlerRegistry jobHandlerRegistry,
                                    JobType<MoveQueueRequest, MoveQueueResult> moveQueueJobType,
-                                   Clock clock, MetricRegistry metricRegistry) {
+                                   Clock clock, KafkaAdminService adminService, KafkaProducerService producerService, StepFunctionService stepFunctionService) {
         _eventStore = eventStore;
         _jobService = jobService;
         _moveQueueJobType = moveQueueJobType;
+        this.adminService = adminService;
+        this.producerService = producerService;
+        this.stepFunctionService = stepFunctionService;
+        this.parameterStoreUtil = new ParameterStoreUtil();
+
 
         registerMoveQueueJobHandler(jobHandlerRegistry);
-
         _queueSizeCache = CacheBuilder.newBuilder()
                 .expireAfterWrite(15, TimeUnit.SECONDS)
                 .maximumSize(2000)
@@ -77,11 +87,6 @@ abstract class AbstractQueueService implements BaseQueueService {
                         return Maps.immutableEntry(internalMessageCountUpTo(key.channelName, key.limitAsked), key.limitAsked);
                     }
                 });
-        _sendAllMeterAQS = metricRegistry.meter(MetricRegistry.name(AbstractQueueService.class, "sendAllAQS"));
-        _sendAllMeterNullAQS = metricRegistry.meter(MetricRegistry.name(AbstractQueueService.class, "sendAllNullAQS"));
-        _pollAQS= metricRegistry.meter(MetricRegistry.name(AbstractQueueService.class,"pollAQS"));
-        _pollNullAQS= metricRegistry.meter(MetricRegistry.name(AbstractQueueService.class,"pollNullAQS"));
-
     }
 
     private void registerMoveQueueJobHandler(JobHandlerRegistry jobHandlerRegistry) {
@@ -111,40 +116,124 @@ abstract class AbstractQueueService implements BaseQueueService {
 
     @Override
     public void send(String queue, Object message) {
-        sendAll(Collections.singletonMap(queue, Collections.singleton(message)));
+        List<String> allowedQueues = fetchAllowedQueues();
+        boolean isExperiment = Boolean.parseBoolean(parameterStoreUtil.getParameter("/emodb/experiment/isExperiment"));
+        if (!isExperiment) {
+            // experiment is over now, send everything to kafka
+            sendAll(Collections.singletonMap(queue, Collections.singleton(message)));
+        } else {
+            // Experiment is still running, check if the queue is allowed
+            if(allowedQueues.contains(queue)){
+                //send kafka , only if its allowed queue
+                sendAll(Collections.singletonMap(queue, Collections.singleton(message)));
+            }
+            else {
+                //send to  cassandra, (rollback plan)
+                sendAll(queue, Collections.singleton(message), false);
+            }
+        }
     }
 
     @Override
     public void sendAll(String queue, Collection<?> messages) {
-        sendAll(Collections.singletonMap(queue, messages));
+        List<String> allowedQueues = fetchAllowedQueues();
+        boolean isExperiment = Boolean.parseBoolean(parameterStoreUtil.getParameter("/emodb/experiment/isExperiment"));
+        if (!isExperiment) {
+            // experiment is over now, send everything to kafka
+            sendAll(Collections.singletonMap(queue, messages));
+        } else {
+            // Experiment is still running, check if the queue is allowed
+            if(allowedQueues.contains(queue)){
+                //send kafka , only if its allowed queue
+                sendAll(Collections.singletonMap(queue, messages));
+            }
+            else {
+                //send to  cassandra, (rollback plan)
+                sendAll(queue, messages, false);
+            }
+        }
+    }
+
+
+    private void validateMessage(Object message) {
+        _log.debug("Validating message: {}", message);
+
+        // Check if the message is valid using JsonValidator
+        ByteBuffer messageByteBuffer = MessageSerializer.toByteBuffer(JsonValidator.checkValid(message));
+
+        // Check if the message size exceeds the allowed limit
+        checkArgument(messageByteBuffer.limit() <= MAX_MESSAGE_SIZE_IN_BYTES,
+                "Message size (" + messageByteBuffer.limit() + ") is greater than the maximum allowed (" + MAX_MESSAGE_SIZE_IN_BYTES + ") message size");
+
+        _log.debug("Message size is valid. Size: {}", messageByteBuffer.limit());
+    }
+
+    private void validateQueue(String queue, Collection<?> messages) {
+        requireNonNull(queue, "Queue name cannot be null");
+        requireNonNull(messages, "Messages collection cannot be null");
+
+        // Check if the queue name is legal
+        checkLegalQueueName(queue);
+
+        _log.debug("Queue name '{}' is valid and contains {} messages", queue, messages.size());
     }
 
     @Override
     public void sendAll(Map<String, ? extends Collection<?>> messagesByQueue) {
         requireNonNull(messagesByQueue, "messagesByQueue");
-        if(messagesByQueue.keySet().isEmpty()){
-            _sendAllMeterNullAQS.mark();
-        } else {
-            _sendAllMeterAQS.mark(messagesByQueue.keySet().size());
-        }
 
-        ImmutableMultimap.Builder<String, ByteBuffer> builder = ImmutableMultimap.builder();
+        ImmutableMultimap.Builder<String, String> builder = ImmutableMultimap.builder();
         for (Map.Entry<String, ? extends Collection<?>> entry : messagesByQueue.entrySet()) {
             String queue = entry.getKey();
             Collection<?> messages = entry.getValue();
 
-            checkLegalQueueName(queue);
-            requireNonNull(messages, "messages");
+            validateQueue(queue, messages);
 
-            List<ByteBuffer> events = Lists.newArrayListWithCapacity(messages.size());
+            List<Object> events = Lists.newArrayListWithCapacity(messages.size());
+
+            // Validate each message
             for (Object message : messages) {
-                ByteBuffer messageByteBuffer = MessageSerializer.toByteBuffer(JsonValidator.checkValid(message));
-                checkArgument(messageByteBuffer.limit() <= MAX_MESSAGE_SIZE_IN_BYTES, "Message size (" + messageByteBuffer.limit() + ") is greater than the maximum allowed (" + MAX_MESSAGE_SIZE_IN_BYTES + ") message size");
-
-                events.add(messageByteBuffer);
+                validateMessage(message);
+                events.add(message);
             }
-            builder.putAll(queue, events);
+            builder.putAll(queue, String.valueOf(events));
         }
+
+        Multimap<String, String> eventsByChannel = builder.build();
+
+        String queueType = determineQueueType();
+        for (Map.Entry<String, Collection<String>> topicEntry : eventsByChannel.asMap().entrySet()) {
+            String queueName= topicEntry.getKey();
+            String topic = "dsq_" + (("dedup".equals(queueType)) ?  "dedup_" + queueName : queueName);
+            // Check if the topic exists, if not create it and execute Step Function
+            if (!adminService.createTopicIfNotExists(topic, TOPIC_PARTITION_COUNT, TOPIC_REPLICATION_FACTOR, queueType)) {
+                Map<String, String> parameters = fetchStepFunctionParameters();
+                // Execute Step Function after topic creation
+                startStepFunctionExecution(parameters, queueType,queueName, topic);
+            }
+            producerService.sendMessages(topic, topicEntry.getValue(), queueType);
+            _log.info("Messages sent to topic: {}", topic);
+        }
+        _log.info("All messages have been sent to their respective queues.");
+    }
+
+    @Override
+    public void sendAll(String queue, Collection<?> messages, boolean fromKafka) {
+        //incoming message from kafka consume, save to cassandra
+        if(!fromKafka){
+            validateQueue(queue, messages);
+        }
+        ImmutableMultimap.Builder<String, ByteBuffer> builder = ImmutableMultimap.builder();
+        List<ByteBuffer> events = Lists.newArrayListWithCapacity(messages.size());
+
+
+        for (Object message : messages) {
+            ByteBuffer messageByteBuffer = MessageSerializer.toByteBuffer(JsonValidator.checkValid(message));
+            checkArgument(messageByteBuffer.limit() <= MAX_MESSAGE_SIZE_IN_BYTES,
+                    "Message size (" + messageByteBuffer.limit() + ") is greater than the maximum allowed (" + MAX_MESSAGE_SIZE_IN_BYTES + ") message size");
+            events.add(messageByteBuffer);
+        }
+        builder.putAll(queue, events);
         Multimap<String, ByteBuffer> eventsByChannel = builder.build();
 
         _eventStore.addAll(eventsByChannel);
@@ -196,14 +285,8 @@ abstract class AbstractQueueService implements BaseQueueService {
         checkLegalQueueName(queue);
         checkArgument(claimTtl.toMillis() >= 0, "ClaimTtl must be >=0");
         checkArgument(limit > 0, "Limit must be >0");
-        List<Message> response = toMessages(_eventStore.poll(queue, claimTtl, limit));
-        if(response.isEmpty()){
-            _pollNullAQS.mark();
-        }
-        else{
-            _pollAQS.mark(response.size());
-        }
-        return  response;
+
+        return toMessages(_eventStore.poll(queue, claimTtl, limit));
     }
 
     @Override
@@ -297,5 +380,93 @@ abstract class AbstractQueueService implements BaseQueueService {
                 "Queue name must be a lowercase ASCII string between 1 and 255 characters in length. " +
                         "Allowed punctuation characters are -.:@_ and the queue name may not start with a single underscore character. " +
                         "An example of a valid table name would be 'polloi:provision'.");
+    }
+    /**
+     * Fetches the necessary Step Function parameters from AWS Parameter Store.
+     */
+    private Map<String, String> fetchStepFunctionParameters() {
+        List<String> parameterNames = Arrays.asList(
+                "/emodb/stepfn/stateMachineArn",
+                "/emodb/stepfn/queueThreshold",
+                "/emodb/stepfn/batchSize",
+                "/emodb/stepfn/interval"
+        );
+
+        try {
+            return parameterStoreUtil.getParameters(parameterNames);
+        } catch (Exception e) {
+            _log.error("Failed to fetch Step Function parameters from Parameter Store", e);
+            throw new RuntimeException("Error fetching Step Function parameters", e);
+        }
+    }
+
+    /**
+     * Executes the Step Function for a given topic after it has been created.
+     */
+
+    private void startStepFunctionExecution(Map<String, String> parameters, String queueType, String queueName, String topic) {
+        try {
+            String stateMachineArn = parameters.get("/emodb/stepfn/stateMachineArn");
+            int queueThreshold = Integer.parseInt(parameters.get("/emodb/stepfn/queueThreshold"));
+            int batchSize = Integer.parseInt(parameters.get("/emodb/stepfn/batchSize"));
+            int interval = Integer.parseInt(parameters.get("/emodb/stepfn/interval"));
+
+            String inputPayload = createInputPayload(queueThreshold, batchSize, queueType, queueName, topic, interval);
+
+            // Create the timestamp
+            String timestamp = String.valueOf(System.currentTimeMillis()); // Current time in milliseconds
+
+            // Check if queueType is "dedup" and prepend "D" to execution name if true
+            String executionName = (queueType.equalsIgnoreCase("dedup") ? "D_" : "") + queueName + "_" + timestamp;
+
+            // Start the Step Function execution
+            stepFunctionService.startExecution(stateMachineArn, inputPayload, executionName);
+
+            _log.info("Step Function executed for topic: {} with executionName: {}", topic, executionName);
+        } catch (Exception e) {
+            _log.error("Error executing Step Function for topic: {}", topic, e);
+            throw new RuntimeException("Error executing Step Function for topic: " + topic, e);
+        }
+    }
+
+    /**
+     * Determines the queue type based on the event store.
+     */
+    private String determineQueueType() {
+        if (_eventStore.getClass().getName().equals("com.bazaarvoice.emodb.event.dedup.DefaultDedupEventStore")) {
+            return "dedup";
+        }
+        return "queue";
+    }
+
+    private List<String> fetchAllowedQueues() {
+        try {
+            // Fetch the 'allowedQueues' parameter using ParameterStoreUtil
+            String allowedQueuesStr = parameterStoreUtil.getParameter("/emodb/experiment/allowedQueues");
+            return Arrays.asList(allowedQueuesStr.split(","));
+        } catch (Exception e) {
+            // Handle the case when the parameter is not found or fetching fails
+            _log.error("Error fetching allowedQueues: " + e.getMessage());
+            return Collections.singletonList("");  // Default to an empty list if the parameter is missing
+        }
+    }
+
+    private String createInputPayload(int queueThreshold, int batchSize, String queueType, String queueName, String topicName, int interval) {
+        Map<String, Object> payloadData = new HashMap<>();
+        payloadData.put("queueThreshold", queueThreshold);
+        payloadData.put("batchSize", batchSize);
+        payloadData.put("queueType", queueType);
+        payloadData.put("queueName", queueName);
+        payloadData.put("topicName", topicName);
+        payloadData.put("interval", interval);
+        Map<String, Object> wrappedData = new HashMap<>();
+        wrappedData.put("executionInput", payloadData);  // Wrap the data
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            return objectMapper.writeValueAsString(wrappedData);  // Convert wrapped data to JSON
+        } catch (JsonProcessingException e) {
+            _log.error("Error while converting map to JSON", e);
+            return "{}";  // Return empty JSON object on error
+        }
     }
 }
