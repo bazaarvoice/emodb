@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.timgroup.statsd.StatsDClient;
 import io.dropwizard.testing.junit.ResourceTestRule;
 import org.apache.http.conn.ConnectTimeoutException;
 import org.junit.After;
@@ -53,10 +54,11 @@ public class DedupQueueJerseyTest extends ResourceTest {
             OstrichAccessors.newPartitionContextTest(AuthDedupQueueService.class, DedupQueueClient.class);
     private final DedupQueueService _server = mock(DedupQueueService.class);
     private final AuthDedupQueueService _proxy = mock(AuthDedupQueueService.class);
+    private final StatsDClient _mockStatsDClient = mock(StatsDClient.class);
 
     @Rule
     public ResourceTestRule _resourceTestRule = setupResourceTestRule(
-            Collections.<Object>singletonList(new DedupQueueResource1(_server, DedupQueueServiceAuthenticator.proxied(_proxy))),
+            Collections.<Object>singletonList(new DedupQueueResource1(_server, DedupQueueServiceAuthenticator.proxied(_proxy), _mockStatsDClient)),
             ImmutableMap.of(
                     APIKEY_QUEUE, new ApiKey("queue", ImmutableSet.of("queue-role")),
                     APIKEY_UNAUTHORIZED, new ApiKey("unauth", ImmutableSet.of("unauthorized-role"))),

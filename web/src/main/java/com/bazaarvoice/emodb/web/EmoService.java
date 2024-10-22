@@ -66,6 +66,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
+import com.timgroup.statsd.StatsDClient;
 import io.dropwizard.Application;
 import io.dropwizard.configuration.ConfigurationException;
 import io.dropwizard.configuration.ConfigurationFactory;
@@ -301,12 +302,14 @@ public class EmoService extends Application<EmoConfiguration> {
         DedupQueueService dedupQueueService = _injector.getInstance(DedupQueueService.class);
         DedupQueueServiceAuthenticator dedupQueueClient = _injector.getInstance(Key.get(DedupQueueServiceAuthenticator.class, PartitionAwareClient.class));
 
+        StatsDClient statsDClient = _injector.getInstance(StatsDClient.class);
+
         // Start the Queue service
         ResourceRegistry resources = _injector.getInstance(ResourceRegistry.class);
         // Start the Queue service
-        resources.addResource(_cluster, "emodb-queue-1", new QueueResource1(queueService, queueClient));
+        resources.addResource(_cluster, "emodb-queue-1", new QueueResource1(queueService, queueClient, statsDClient));
         // Start the Dedup Queue service
-        resources.addResource(_cluster, "emodb-dedupq-1", new DedupQueueResource1(dedupQueueService, dedupQueueClient));
+        resources.addResource(_cluster, "emodb-dedupq-1", new DedupQueueResource1(dedupQueueService, dedupQueueClient, statsDClient));
     }
 
     private void evaluateScanner()

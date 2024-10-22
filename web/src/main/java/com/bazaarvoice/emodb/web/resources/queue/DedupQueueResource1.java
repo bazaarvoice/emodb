@@ -13,6 +13,7 @@ import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
+import com.timgroup.statsd.StatsDClient;
 import io.dropwizard.jersey.params.BooleanParam;
 import io.dropwizard.jersey.params.IntParam;
 import io.dropwizard.jersey.params.LongParam;
@@ -48,10 +49,12 @@ public class DedupQueueResource1 {
 
     private final DedupQueueService _queueService;
     private final DedupQueueServiceAuthenticator _queueClient;
+    private final StatsDClient _statsDClient;
 
-    public DedupQueueResource1(DedupQueueService queueService, DedupQueueServiceAuthenticator queueClient) {
+    public DedupQueueResource1(DedupQueueService queueService, DedupQueueServiceAuthenticator queueClient, StatsDClient statsDClient) {
         _queueService = requireNonNull(queueService, "queueService");
         _queueClient = requireNonNull(queueClient, "queueClient");
+        _statsDClient = statsDClient;
     }
 
     @POST
@@ -65,6 +68,7 @@ public class DedupQueueResource1 {
     )
     public SuccessResponse send(@PathParam("queue") String queue, Object message) {
         // Not partitioned--any server can write messages to Cassandra.
+        _statsDClient.recordGaugeValue("queue.messages.size", 1, "queue:" + queue);
         _queueService.send(queue, message);
         return SuccessResponse.instance();
     }
@@ -80,6 +84,7 @@ public class DedupQueueResource1 {
     )
     public SuccessResponse sendBatch(@PathParam("queue") String queue, Collection<Object> messages) {
         // Not partitioned--any server can write messages to Cassandra.
+        _statsDClient.recordGaugeValue("queue.messages.size", messages.size(), "queue:" + queue);
         _queueService.sendAll(queue, messages);
         return SuccessResponse.instance();
     }
@@ -94,6 +99,7 @@ public class DedupQueueResource1 {
     )
     public SuccessResponse sendBatch1(@PathParam("queue") String queue, Collection<Object> messages) {
         // Not partitioned--any server can write messages to Cassandra.
+        _statsDClient.recordGaugeValue("queue.messages.size", messages.size(), "queue:" + queue);
         _queueService.sendAll(queue, messages,true);
         return SuccessResponse.instance();
     }

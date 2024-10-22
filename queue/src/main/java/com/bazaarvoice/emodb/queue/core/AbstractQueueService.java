@@ -44,6 +44,7 @@ import java.util.concurrent.TimeUnit;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import com.timgroup.statsd.StatsDClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,6 +57,7 @@ abstract class AbstractQueueService implements BaseQueueService {
     private final LoadingCache<SizeCacheKey, Map.Entry<Long, Long>> _queueSizeCache;
     private final KafkaAdminService adminService;
     private final KafkaProducerService producerService;
+    private final StatsDClient _statsDClient;
 
     // Configuration keys for Kafka topic settings
     private static final Integer TOPIC_PARTITION_COUNT = 1;
@@ -69,7 +71,7 @@ abstract class AbstractQueueService implements BaseQueueService {
     protected AbstractQueueService(BaseEventStore eventStore, JobService jobService,
                                    JobHandlerRegistry jobHandlerRegistry,
                                    JobType<MoveQueueRequest, MoveQueueResult> moveQueueJobType,
-                                   Clock clock, KafkaAdminService adminService, KafkaProducerService producerService, StepFunctionService stepFunctionService) {
+                                   Clock clock, KafkaAdminService adminService, KafkaProducerService producerService, StepFunctionService stepFunctionService, StatsDClient statsDClient) {
         _eventStore = eventStore;
         _jobService = jobService;
         _moveQueueJobType = moveQueueJobType;
@@ -77,6 +79,7 @@ abstract class AbstractQueueService implements BaseQueueService {
         this.producerService = producerService;
         this.stepFunctionService = stepFunctionService;
         this.parameterStoreUtil = new ParameterStoreUtil();
+        _statsDClient = statsDClient;
 
 
         registerMoveQueueJobHandler(jobHandlerRegistry);
@@ -209,6 +212,7 @@ abstract class AbstractQueueService implements BaseQueueService {
                 validateMessage(message);
                 events.add(message);
             }
+            _statsDClient.recordGaugeValue("queue.messages.size", messages.size(), "queue:" + queue);
             builder.putAll(queue, String.valueOf(events));
         }
 
