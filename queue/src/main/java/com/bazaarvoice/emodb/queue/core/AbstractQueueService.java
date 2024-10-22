@@ -212,7 +212,7 @@ abstract class AbstractQueueService implements BaseQueueService {
                 validateMessage(message);
                 events.add(message);
             }
-            _statsDClient.recordGaugeValue("queue.messages.size", messages.size(), "queue:" + queue);
+            _statsDClient.recordGaugeValue("queue.messages.size", events.size(), "queue:" + queue);
             builder.putAll(queue, String.valueOf(events));
         }
 
