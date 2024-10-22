@@ -8,6 +8,7 @@ import com.bazaarvoice.emodb.queue.core.Entities.QueueExecutionAttributes;
 import com.bazaarvoice.emodb.queue.core.ssm.ParameterStoreUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,21 +33,70 @@ public class StepFunctionService {
                 .build();
     }
 
-    public void startExecution(String queueName, String queueType, QueueExecutionAttributes executionAttributes) throws JsonProcessingException {
-
-        String payload = "{}";
-        if(executionAttributes == null) {
-            logger.warn("Input payload is null; using empty JSON object");
-        } else {
-            ObjectMapper objectMapper = new ObjectMapper();
-            payload = objectMapper.writeValueAsString(executionAttributes);
+    private void validateExecutionInputs(String queueType, String queueName, QueueExecutionAttributes executionAttributes) {
+        if(queueName == null || queueName.isEmpty()) {
+            throw new IllegalArgumentException("queue name can't be null/empty");
         }
+
+        if(queueType == null || queueType.isEmpty()) {
+            throw new IllegalArgumentException("queue type can't be null/empty");
+        }
+
+        if(!queueType.equals("QUEUE") && !queueType.equals("DEDUP")) {
+            throw new IllegalArgumentException("Illegal queue type provided: " + queueType);
+        }
+
+        if(executionAttributes == null) {
+            throw new IllegalArgumentException("execution attributes can't be null");
+        }
+
+        if(executionAttributes.getInterval() == null || executionAttributes.getInterval().isEmpty()) {
+            throw new IllegalArgumentException("interval can't be null/empty");
+        }
+
+        if(executionAttributes.getBatchSize() == null || executionAttributes.getBatchSize().isEmpty()) {
+            throw new IllegalArgumentException("batch size can't be null/empty");
+        }
+
+        if(executionAttributes.getQueueThreshold() == null || executionAttributes.getQueueThreshold().isEmpty()) {
+            throw new IllegalArgumentException("queue threshold can't be null/empty");
+        }
+    }
+
+    private String constructPayload(String queueName, String queueType, QueueExecutionAttributes executionAttributes) throws JsonProcessingException {
+
+        validateExecutionInputs(queueName, queueType, executionAttributes);
+
+        executionAttributes.setQueueType(queueType);
+        executionAttributes.setQueueName(queueName);
+
+        //TODO_SHAN : Sync up on this topic_name builder and correct it
+        if("DEDUP".equals(queueType)) {
+            executionAttributes.setTopicName("dnq_dedup" + queueName + "_" + System.currentTimeMillis());
+        } else {
+            executionAttributes.setTopicName("dnq_" + queueName + "_" + System.currentTimeMillis());
+        }
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        return objectMapper.writeValueAsString(executionAttributes);
+    }
+
+    public void startExecution(String queueType, String queueName, QueueExecutionAttributes executionAttributes) throws JsonProcessingException {
+
+        if(executionAttributes.getStatus() == null || executionAttributes.getStatus().isEmpty()) {
+            throw new IllegalArgumentException("status can't be null/empty");
+        }
+
+        if(executionAttributes.getStatus().equals("DISABLED")) {
+            throw new IllegalArgumentException("step-function can't be started with status=DISABLED");
+        }
+
+        String payload = constructPayload(queueName, queueType, executionAttributes);
 
         try {
             String stateMachineArn = getStateMachineARN(queueType, queueName);
-            StartExecutionRequest startExecutionRequest = new StartExecutionRequest()
-                    .withStateMachineArn(stateMachineArn)
-                    .withInput(payload);
+            StartExecutionRequest startExecutionRequest = new StartExecutionRequest().withStateMachineArn(stateMachineArn)
+                                                                                     .withInput(payload);
 
             StartExecutionResult startExecutionResult = stepFunctionsClient.startExecution(startExecutionRequest);
 
@@ -136,8 +186,8 @@ public class StepFunctionService {
     public String getStateMachineARN(String queueType, String queueName) {
 
         try {
-            // TODO: Extend this fetch part later based on queueType : queue/dedup/databus
-            // TODO: String universe = KafkaConfig::getUniverseFromEnv()  // add universe below
+            // TODO_SHAN: Extend this fetch part later based on queueType : queue/dedup/databus
+            // TODO_SHAN: String universe = KafkaConfig::getUniverseFromEnv()  // add universe below
             String stateMachineArn = _parameterStoreUtil.getParameter("/emodb/stepfn/stateMachineArn");
 
             if(stateMachineArn != null && !stateMachineArn.isEmpty()) {
@@ -149,6 +199,83 @@ public class StepFunctionService {
 
         throw new NullPointerException("state machine arn can not be null/empty");
 
+    }
+
+    public void startSFNWithAttributes(QueueExecutionAttributes queueExecutionAttributes) {
+        QueueExecutionAttributes existingAttributes;
+
+        //1. fetch attributes for any existing execution
+        try {
+            existingAttributes = getExistingSFNAttributes(queueExecutionAttributes.getQueueType(), queueExecutionAttributes.getQueueName());
+        } catch (Exception e) {
+            logger.error("Error getting existing step-function attributes for " + queueExecutionAttributes.toString());
+            throw new RuntimeException("Error getting existing step-function attributes for " + queueExecutionAttributes);
+        }
+
+        //2. if no running execution exists, start a new one with provided/new attributes
+        if (existingAttributes == null) {
+            try {
+                startExecution(queueExecutionAttributes.getQueueType(), queueExecutionAttributes.getQueueName(), queueExecutionAttributes);
+                return;
+            } catch(Exception e){
+                logger.error("Error starting step-function with attributes " + queueExecutionAttributes);
+                throw new RuntimeException("Error starting step-function with attributes " + queueExecutionAttributes);
+            }
+        }
+
+        try {
+            stopActiveExecutions(queueExecutionAttributes.getQueueType(), queueExecutionAttributes.getQueueName());
+        } catch(Exception e){
+            logger.error("Error stopping step-function for queueName: " + queueExecutionAttributes.getQueueName() + ", queueType: " + queueExecutionAttributes.getQueueType());
+            throw new RuntimeException("Error stopping step-function for queueName: " + queueExecutionAttributes.getQueueName() + ", queueType: " + queueExecutionAttributes.getQueueType());
+        }
+
+        //3.1 if new attributes can't start a fresh execution, re-start the already running sfn
+        //3.2 else start a fresh execution with new attributes
+        syncFreshAttributesFromExistingExecution(queueExecutionAttributes, existingAttributes);
+        try {
+            startExecution(queueExecutionAttributes.getQueueType(), queueExecutionAttributes.getQueueName(), existingAttributes);
+        } catch(Exception e){
+            logger.error("Error re-starting step-function with attributes " + queueExecutionAttributes);
+            throw new RuntimeException("Error re-starting step-function with attributes " + queueExecutionAttributes);
+        }
+    }
+
+    private void syncFreshAttributesFromExistingExecution(QueueExecutionAttributes newQueueExecutionAttributes, QueueExecutionAttributes existingExecutionAttributes) {
+
+        validateExecutionInputs(existingExecutionAttributes.getQueueType(), existingExecutionAttributes.getQueueName(), existingExecutionAttributes);
+
+        if(newQueueExecutionAttributes == null) {
+            newQueueExecutionAttributes = new QueueExecutionAttributes();
+        }
+
+        if(newQueueExecutionAttributes.getQueueType() == null || newQueueExecutionAttributes.getQueueType().isEmpty()) {
+            newQueueExecutionAttributes.setQueueType(existingExecutionAttributes.getQueueType());
+        }
+
+        if(newQueueExecutionAttributes.getQueueName() == null || newQueueExecutionAttributes.getQueueName().isEmpty()) {
+            newQueueExecutionAttributes.setQueueName(existingExecutionAttributes.getQueueName());
+        }
+
+        if(newQueueExecutionAttributes.getQueueThreshold() == null || newQueueExecutionAttributes.getQueueThreshold().isEmpty()) {
+            newQueueExecutionAttributes.setQueueThreshold(existingExecutionAttributes.getQueueThreshold());
+        }
+
+        if(newQueueExecutionAttributes.getBatchSize() == null || newQueueExecutionAttributes.getBatchSize().isEmpty()) {
+            newQueueExecutionAttributes.setBatchSize(existingExecutionAttributes.getBatchSize());
+        }
+
+        if(newQueueExecutionAttributes.getInterval() == null || newQueueExecutionAttributes.getInterval().isEmpty()) {
+            newQueueExecutionAttributes.setInterval(existingExecutionAttributes.getInterval());
+        }
+
+        if(newQueueExecutionAttributes.getTopicName() == null || newQueueExecutionAttributes.getTopicName().isEmpty()) {
+            newQueueExecutionAttributes.setTopicName(existingExecutionAttributes.getTopicName());
+        }
+
+        if(newQueueExecutionAttributes.getStatus() == null || newQueueExecutionAttributes.getStatus().isEmpty()) {
+            newQueueExecutionAttributes.setStatus(existingExecutionAttributes.getStatus());
+        }
     }
 
 }

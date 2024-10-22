@@ -315,65 +315,15 @@ public class QueueResource1 {
     @ApiOperation (value = "update queue execution attributes .", notes = "Returns a SuccessResponse.", response = SuccessResponse.class)
     public SuccessResponse updateQueueExecutionAttributes(@PathParam("queue_type") String queueType, @PathParam("queue_name") String queueName, QueueExecutionAttributes newExecAttributes) {
 
-        QueueExecutionAttributes existingAttributes;
         try {
-            existingAttributes = _stepFunctionService.getExistingSFNAttributes(queueType, queueName);
+            newExecAttributes.setQueueName(queueName);
+            newExecAttributes.setQueueType(queueType);
+            _stepFunctionService.startSFNWithAttributes(newExecAttributes);
+
+            return SuccessResponse.instance().with(ImmutableMap.of("status", "200 | step function successfully started with updated attributes"));
         } catch (Exception e) {
-            return SuccessResponse.instance().with(ImmutableMap.of("status", "500 | Error getting existing step-function attributes | " + Arrays.toString(e.getStackTrace())));
+            return SuccessResponse.instance().with(ImmutableMap.of("status", "500 | failed to start step function with new attributes"));
         }
-
-        if(existingAttributes == null) {
-            return SuccessResponse.instance().with(ImmutableMap.of("status", "500 | no such state machine ARN exists"));
-        }
-
-        if((newExecAttributes == null)
-                || (newExecAttributes.getQueueThreshold() == null && newExecAttributes.getBatchSize() == null && newExecAttributes.getInterval() == null)) {
-
-            try {
-                //1. fetch any active execution
-                _stepFunctionService.stopActiveExecutions(queueType, queueName);
-                //2. restart it
-                _stepFunctionService.startExecution(queueType, queueName, existingAttributes);
-                return SuccessResponse.instance().with(ImmutableMap.of("status", "200 | step function re-started successfully"));
-            } catch (Exception e) {
-                return SuccessResponse.instance().with(ImmutableMap.of("status", "500 | failed to re-start step function"));
-            }
-        }
-
-        if (newExecAttributes.getStatus() != null && "DISABLED".equals(newExecAttributes.getStatus())) {
-            try {
-                //1. fetch active executions and stop them
-                _stepFunctionService.stopActiveExecutions(queueType, queueName);
-                return SuccessResponse.instance().with(ImmutableMap.of("status", "200 | step function stopped successfully"));
-            } catch (Exception e) {
-                return SuccessResponse.instance().with(ImmutableMap.of("status", "500 | failed to stop step function"));
-            }
-        }
-
-
-        try {
-            //2. stop it
-            _stepFunctionService.stopActiveExecutions(queueType, queueName);
-
-            //0. start a new execution
-            if(newExecAttributes.getQueueThreshold() != null && !newExecAttributes.getQueueThreshold().isEmpty() && newExecAttributes.getQueueThreshold() != existingAttributes.getQueueThreshold()) {
-                existingAttributes.setQueueThreshold(newExecAttributes.getQueueThreshold());
-            }
-            if(newExecAttributes.getBatchSize() != null && !newExecAttributes.getBatchSize().isEmpty() && newExecAttributes.getBatchSize() != existingAttributes.getBatchSize()) {
-                existingAttributes.setBatchSize(newExecAttributes.getBatchSize());
-            }
-            if(newExecAttributes.getInterval() != null && !newExecAttributes.getInterval().isEmpty() && newExecAttributes.getInterval() != existingAttributes.getInterval()) {
-                existingAttributes.setInterval(newExecAttributes.getInterval());
-            }
-
-            _stepFunctionService.startExecution(queueType, queueName,  existingAttributes);
-            return SuccessResponse.instance().with(ImmutableMap.of("status", "200 | started step function with updated attributes"));
-        } catch (Exception e) {
-            return SuccessResponse.instance().with(ImmutableMap.of("status", "500 | failed to stop step function. " + e));
-        }
-
-
-
 
     }
 

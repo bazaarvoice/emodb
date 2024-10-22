@@ -13,14 +13,11 @@ import java.util.Objects;
 public class QueueExecutionAttributes {
 
     private String queueName;
-
     private String queueType;
-
     private String topicName;
     private String queueThreshold;
     private String batchSize;
     private String interval;
-
     private String status;
 
     public void setQueueName(String queueName) {
@@ -95,6 +92,19 @@ public class QueueExecutionAttributes {
     @Override
     public int hashCode() {
         return Objects.hash(getQueueName(), getQueueType(), getTopicName(), getQueueThreshold(), getBatchSize(), getInterval());
+    }
+
+    @Override
+    public String toString() {
+        return "QueueExecutionAttributes{" +
+                "queueName='" + queueName + '\'' +
+                ", queueType='" + queueType + '\'' +
+                ", topicName='" + topicName + '\'' +
+                ", queueThreshold='" + queueThreshold + '\'' +
+                ", batchSize='" + batchSize + '\'' +
+                ", interval='" + interval + '\'' +
+                ", status='" + status + '\'' +
+                '}';
     }
 }
 
