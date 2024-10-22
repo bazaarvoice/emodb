@@ -42,13 +42,6 @@ public class KafkaConfig {
 
     static {
         try {
-            // Fetch the UNIVERSE environment variable
-//            final String UNIVERSE = Optional.ofNullable(System.getenv("UNIVERSE"))
-//                    .filter(env -> !env.isEmpty())
-//                    .orElseGet(() -> {
-//                        logger.warn("Environment variable UNIVERSE is not set.");
-//                        throw new IllegalArgumentException("Environment variable UNIVERSE is not set.");
-//                    });
             final String UNIVERSE = getUniverseFromEnv();
             // Load configurations from SSM during static initialization
             Map<String, String> parameterValues = getParameterValues(
@@ -95,7 +88,6 @@ public class KafkaConfig {
                 if (line.trim().isEmpty() || line.trim().startsWith("#")) {
                     continue;
                 }
-
                 // Split the line into key-value pair
                 String[] parts = line.split("=", 2);
                 logger.info("parts: " + Arrays.toString(parts));
@@ -107,15 +99,8 @@ public class KafkaConfig {
                     environmentProps.put(key, value);
                 }
             }
-
             // Access the environment variables
-            String universe = environmentProps.getProperty("UNIVERSE");
-            String region = environmentProps.getProperty("REGION");
-
-            // Print the values
-            logger.info("from etc file UNIVERSE: " + universe);
-            logger.info(" from etc file REGION: " + region);
-            return universe;
+            return environmentProps.getProperty("UNIVERSE");
         } catch (IOException e) {
             logger.error("Error reading environment file: " + e.getMessage());
             throw new RuntimeException("Error reading environment file: " + e.getMessage());

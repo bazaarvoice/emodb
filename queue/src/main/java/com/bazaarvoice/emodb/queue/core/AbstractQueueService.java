@@ -35,9 +35,6 @@ import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
-
-import java.io.FileInputStream;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.time.Duration;
@@ -49,7 +46,6 @@ import static java.util.Objects.requireNonNull;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.yaml.snakeyaml.Yaml;
 
 
 abstract class AbstractQueueService implements BaseQueueService {
@@ -124,9 +120,8 @@ abstract class AbstractQueueService implements BaseQueueService {
 
     @Override
     public void send(String queue, Object message) {
-        _log.info("Environment variable UNIVERSE: {}",System.getenv("UNIVERSE" ));
 
-        _log.info("Starting send operation. Queue: {}, Message: {}", queue, message);
+        _log.info("Starting send operation. Queue: {}", queue);
 
         List<String> allowedQueues = fetchAllowedQueues();
         _log.debug("Allowed queues fetched: {}", allowedQueues);
@@ -135,7 +130,7 @@ abstract class AbstractQueueService implements BaseQueueService {
         _log.info("Is experiment active? {}", isExperiment);
 
         if (!isExperiment) {
-                _log.info("Experiment is over; sending message to Kafka.");
+                _log.info("Experiment is over, sending all message to Kafka.");
                 // Experiment is over now, send everything to Kafka
                 sendAll(Collections.singletonMap(queue, Collections.singleton(message)));
         } else {
@@ -145,10 +140,9 @@ abstract class AbstractQueueService implements BaseQueueService {
                     // Send to Kafka, only if it's an allowed queue
                     sendAll(Collections.singletonMap(queue, Collections.singleton(message)));
                 } else {
-                    _log.warn("Queue {} is not allowed; sending message to Cassandra as a fallback.", queue);
+                    _log.info("Queue {} is not allowed; sending message to Cassandra as a fallback.", queue);
                     // Send to Cassandra (rollback plan)
                     sendAll(queue, Collections.singleton(message), false);
-                    _log.info("Message sent to Cassandra successfully.");
                 }
         }
     }
@@ -159,15 +153,18 @@ abstract class AbstractQueueService implements BaseQueueService {
         boolean isExperiment = Boolean.parseBoolean(parameterStoreUtil.getParameter( "/"+ UNIVERSE+"/emodb/experiment/isExperiment"));
         if (!isExperiment) {
             // experiment is over now, send everything to kafka
+            _log.info("Experiment is over, sending all message to Kafka.");
             sendAll(Collections.singletonMap(queue, messages));
         } else {
             // Experiment is still running, check if the queue is allowed
             if(allowedQueues.contains(queue)){
                 //send kafka , only if its allowed queue
+                _log.info("Queue {} is allowed, sending message to Kafka.", queue);
                 sendAll(Collections.singletonMap(queue, messages));
             }
             else {
                 //send to  cassandra, (rollback plan)
+                _log.info("Queue {} is not allowed, sending message to Cassandra as a fallback.", queue);
                 sendAll(queue, messages, false);
             }
         }
@@ -175,8 +172,6 @@ abstract class AbstractQueueService implements BaseQueueService {
 
 
     private void validateMessage(Object message) {
-        _log.debug("Validating message: {}", message);
-
         // Check if the message is valid using JsonValidator
         ByteBuffer messageByteBuffer = MessageSerializer.toByteBuffer(JsonValidator.checkValid(message));
 
@@ -184,7 +179,6 @@ abstract class AbstractQueueService implements BaseQueueService {
         checkArgument(messageByteBuffer.limit() <= MAX_MESSAGE_SIZE_IN_BYTES,
                 "Message size (" + messageByteBuffer.limit() + ") is greater than the maximum allowed (" + MAX_MESSAGE_SIZE_IN_BYTES + ") message size");
 
-        _log.debug("Message size is valid. Size: {}", messageByteBuffer.limit());
     }
 
     private void validateQueue(String queue, Collection<?> messages) {
@@ -194,12 +188,11 @@ abstract class AbstractQueueService implements BaseQueueService {
         // Check if the queue name is legal
         checkLegalQueueName(queue);
 
-        _log.debug("Queue name '{}' is valid and contains {} messages", queue, messages.size());
     }
 
     @Override
     public void sendAll(Map<String, ? extends Collection<?>> messagesByQueue) {
-        _log.info("Staring sendAll to send to kafka for queue and messages: {}", messagesByQueue);
+        _log.info("Staring sendAll to send to kafka ");
         requireNonNull(messagesByQueue, "messagesByQueue");
 
         ImmutableMultimap.Builder<String, String> builder = ImmutableMultimap.builder();
@@ -332,7 +325,6 @@ abstract class AbstractQueueService implements BaseQueueService {
     public void acknowledge(String queue, Collection<String> messageIds) {
         checkLegalQueueName(queue);
         requireNonNull(messageIds, "messageIds");
-
         _eventStore.delete(queue, messageIds, true);
     }
 
@@ -477,7 +469,6 @@ abstract class AbstractQueueService implements BaseQueueService {
                 _log.warn("No allowedQueues found in Parameter Store; returning an empty list.");
                 return Collections.emptyList();  // Return an empty list if the parameter is missing or empty
             }
-            _log.info("Successfully fetched allowedQueues: {}", allowedQueuesStr);
             return Arrays.asList(allowedQueuesStr.split(","));
         } catch (Exception e) {
             // Handle the case when the parameter is not found or fetching fails

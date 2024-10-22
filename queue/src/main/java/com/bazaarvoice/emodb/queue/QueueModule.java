@@ -85,13 +85,7 @@ public class QueueModule extends PrivateModule {
         bind(new TypeLiteral<Supplier<Boolean>>() {}).annotatedWith(DedupEnabled.class).toInstance(Suppliers.ofInstance(true));
         install(new EventStoreModule("bv.emodb.queue", _metricRegistry));
 
-        // Bind Kafka services
-        String universe1 = System.getenv("UNIVERSE");
-        if (universe1 == null) {
-            universe1 = "NOTFOUND";
-        }
 
-        System.out.println(" From Queue module : Fetched environment variable UNIVERSE: " + universe1 +" Region : " + System.getenv("REGION") );
         bind (KafkaAdminService.class).asEagerSingleton();
         bind(KafkaProducerService.class).asEagerSingleton();
 
