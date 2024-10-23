@@ -5,10 +5,6 @@ import com.amazonaws.services.stepfunctions.AWSStepFunctions;
 import com.amazonaws.services.stepfunctions.AWSStepFunctionsClientBuilder;
 import com.amazonaws.services.stepfunctions.model.StartExecutionRequest;
 import com.amazonaws.services.stepfunctions.model.StartExecutionResult;
-import com.amazonaws.services.stepfunctions.model.StateMachineDoesNotExistException;
-import com.amazonaws.services.stepfunctions.model.InvalidArnException;
-import com.amazonaws.services.stepfunctions.model.InvalidExecutionInputException;
-import com.amazonaws.services.stepfunctions.model.AWSStepFunctionsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
