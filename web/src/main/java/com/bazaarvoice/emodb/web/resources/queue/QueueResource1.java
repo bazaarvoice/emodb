@@ -127,7 +127,7 @@ public class QueueResource1 {
     @Path("{queue}/sendbatch1")
     @Consumes(MediaType.APPLICATION_JSON)
     @RequiresPermissions("queue|post|{queue}")
-    @Timed(name = "bv.emodb.queue.QueueResource1.sendBatch", absolute = true)
+    @Timed(name = "bv.emodb.queue.QueueResource1.sendBatch1", absolute = true)
     @ApiOperation (value = "Send a Batch.",
             notes = "Returns a SuccessResponse..",
             response = SuccessResponse.class
