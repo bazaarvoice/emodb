@@ -55,7 +55,7 @@ public class KafkaAdminService {
     /**
      * Closes the AdminClient to release resources.
      */
-    public void claddose() {
+    public void close() {
         if (adminClient != null) {
             adminClient.close();
         }
