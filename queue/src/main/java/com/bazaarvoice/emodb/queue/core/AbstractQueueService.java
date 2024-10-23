@@ -56,8 +56,8 @@ abstract class AbstractQueueService implements BaseQueueService {
     private final KafkaProducerService producerService;
 
     // Configuration keys for Kafka topic settings
-    private static final Integer TOPIC_PARTITION_COUNT = 1;
-    private static final Short TOPIC_REPLICATION_FACTOR =2;
+    private static final Integer TOPIC_PARTITION_COUNT = 3;
+    private static final Short TOPIC_REPLICATION_FACTOR = 3;
     public static final int MAX_MESSAGE_SIZE_IN_BYTES = 30 * 1024;
     private final StepFunctionService stepFunctionService;
     private final ParameterStoreUtil parameterStoreUtil;
