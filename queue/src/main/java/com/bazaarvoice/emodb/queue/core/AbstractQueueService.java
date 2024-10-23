@@ -119,7 +119,6 @@ abstract class AbstractQueueService implements BaseQueueService {
     @Override
     public void send(String queue, Object message) {
         List<String> allowedQueues = fetchAllowedQueues();
-        _log.debug("Allowed queues fetched: {}", allowedQueues);
         boolean isExperiment = Boolean.parseBoolean(parameterStoreUtil.getParameter("/" + UNIVERSE + "/emodb/experiment/isExperiment"));
         if (!isExperiment) {
             // Experiment is over now, send everything to Kafka
@@ -165,7 +164,6 @@ abstract class AbstractQueueService implements BaseQueueService {
         checkArgument(messageByteBuffer.limit() <= MAX_MESSAGE_SIZE_IN_BYTES,
                 "Message size (" + messageByteBuffer.limit() + ") is greater than the maximum allowed (" + MAX_MESSAGE_SIZE_IN_BYTES + ") message size");
 
-        _log.debug("Message size is valid. Size: {}", messageByteBuffer.limit());
     }
 
     private void validateQueue(String queue, Collection<?> messages) {
@@ -174,8 +172,6 @@ abstract class AbstractQueueService implements BaseQueueService {
 
         // Check if the queue name is legal
         checkLegalQueueName(queue);
-
-        _log.debug("Queue name '{}' is valid and contains {} messages", queue, messages.size());
     }
 
     @Override
