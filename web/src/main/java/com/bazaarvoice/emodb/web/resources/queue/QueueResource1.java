@@ -6,6 +6,9 @@ import com.bazaarvoice.emodb.queue.api.Message;
 import com.bazaarvoice.emodb.queue.api.MoveQueueStatus;
 import com.bazaarvoice.emodb.queue.api.QueueService;
 import com.bazaarvoice.emodb.queue.client.QueueServiceAuthenticator;
+import com.bazaarvoice.emodb.queue.core.Entities.QueueExecutionAttributes;
+import com.bazaarvoice.emodb.queue.core.ssm.ParameterStoreUtil;
+import com.bazaarvoice.emodb.queue.core.stepfn.StepFunctionService;
 import com.bazaarvoice.emodb.web.auth.Permissions;
 import com.bazaarvoice.emodb.web.auth.resource.NamedResource;
 import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
@@ -22,12 +25,15 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.apache.shiro.authz.annotation.RequiresAuthentication;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -55,19 +61,20 @@ public class QueueResource1 {
     private final QueueServiceAuthenticator _queueClient;
     private final Meter _messageCount_qr1;
     private final Meter _nullPollsCount_qr1;
-
     private final Meter _sendCount_qr1;
     private final Meter _sendNullCount_qr1;
-
     private final Meter _sendBatch_qr1;
-
     private final Meter _sendBatchNull_qr1;
+    private final ParameterStoreUtil _parameterStoreUtil;
+    private final StepFunctionService _stepFunctionService;
 
     public QueueResource1(QueueService queueService, QueueServiceAuthenticator queueClient, MetricRegistry metricRegistry) {
         //this._metricRegistry = metricRegistry;
 
         _queueService = requireNonNull(queueService, "queueService");
         _queueClient = requireNonNull(queueClient, "queueClient");
+        _parameterStoreUtil = new ParameterStoreUtil();
+        _stepFunctionService = new StepFunctionService();
         _messageCount_qr1 = metricRegistry.meter(MetricRegistry.name(QueueResource1.class, "polledMessageCount_qr1"));
         _nullPollsCount_qr1 = metricRegistry.meter(MetricRegistry.name(QueueResource1.class, "nullPollsCount_qr1"));
         _sendCount_qr1= metricRegistry.meter(MetricRegistry.name(QueueResource1.class,"sendCount_qr1"));
@@ -328,6 +335,46 @@ public class QueueResource1 {
                                  @Authenticated Subject subject) {
         getService(partitioned, subject.getAuthenticationId()).purge(queue);
         return SuccessResponse.instance();
+    }
+
+    @PUT
+    @Path("/UpdateParameterStore")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @ApiOperation (value = "update param operation at aws parameter store .",
+                   notes = "Returns a SuccessResponse.", response = SuccessResponse.class)
+    public SuccessResponse updateParam(Map<String, String> keyValuePair) {
+        try {
+            String key = keyValuePair.keySet().iterator().next();
+            String value = keyValuePair.get(key);
+
+            Long update_version = _parameterStoreUtil.updateParameter(key, value);
+            return SuccessResponse.instance().with(ImmutableMap.of("status", "200 | ssm-parameter updated successfully, update_version: " + update_version));
+        } catch (Exception e) {
+            return SuccessResponse.instance().with(ImmutableMap.of("status", "500 | Failed to update ssm parameter: " + e.getMessage()));
+        }
+    }
+
+    @PUT
+    @Path("/QueueExecutionAttributes/{queue_type}/{queue_name}")
+    @RequiresPermissions("queue|poll|{queue_name}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @ApiOperation (value = "update queue execution attributes .", notes = "Returns a SuccessResponse.", response = SuccessResponse.class)
+    public SuccessResponse updateQueueExecutionAttributes(@PathParam("queue_type") String queueType, @PathParam("queue_name") String queueName, QueueExecutionAttributes newExecAttributes) {
+
+        try {
+            newExecAttributes.setQueueName(queueName);
+            newExecAttributes.setQueueType(queueType);
+            _stepFunctionService.startSFNWithAttributes(newExecAttributes);
+
+            if("DISABLED".equals(newExecAttributes.getStatus())) {
+                return SuccessResponse.instance().with(ImmutableMap.of("status", "200 | step function successfully stopped(if any execution existed) as status=DISABLED was provided"));
+            } else {
+                return SuccessResponse.instance().with(ImmutableMap.of("status", "200 | step function successfully re-started, or started with updated attributes"));
+            }
+        } catch (Exception e) {
+            return SuccessResponse.instance().with(ImmutableMap.of("status", "500 | failed to start step function with new attributes | " + e.getMessage()));
+        }
+
     }
 
     private QueueService getService(BooleanParam partitioned, String apiKey) {
