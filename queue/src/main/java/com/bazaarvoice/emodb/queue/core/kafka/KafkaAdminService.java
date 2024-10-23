@@ -31,7 +31,7 @@ public class KafkaAdminService {
                 adminClient.createTopics(Collections.singleton(newTopic)).all().get();
                 _log.info("Created topic: {} with numPartitions: {} and replication factor {} ", topic, numPartitions, replicationFactor);
             } catch (Exception e) {
-                 _log.error("Error creating topic {}: {}", topic, e.getMessage());
+                _log.error("Error creating topic {}: ", topic, e);
                 throw new RuntimeException(e);
             }
         }
@@ -46,15 +46,18 @@ public class KafkaAdminService {
     public boolean isTopicExists(String topic) {
         try {
             return adminClient.listTopics().names().get().contains(topic);
-        } catch (Exception  e) {
-            throw new RuntimeException(e);
+        } catch (Exception e) {
+            _log.error("Failed to check if topic exists: {}", topic, e);
+            throw new RuntimeException("Error checking if topic exists", e);
         }
     }
 
     /**
      * Closes the AdminClient to release resources.
      */
-    public void close() {
-        adminClient.close();
+    public void claddose() {
+        if (adminClient != null) {
+            adminClient.close();
+        }
     }
 }
