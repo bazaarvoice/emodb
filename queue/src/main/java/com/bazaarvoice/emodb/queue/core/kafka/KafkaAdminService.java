@@ -29,7 +29,7 @@ public class KafkaAdminService {
             NewTopic newTopic = new NewTopic(topic, numPartitions, replicationFactor);
             try {
                 adminClient.createTopics(Collections.singleton(newTopic)).all().get();
-                _log.info("Created topic: {} with numPartitions: {} ", topic, numPartitions, replicationFactor);
+                _log.info("Created topic: {} with numPartitions: {} and replication factor {} ", topic, numPartitions, replicationFactor);
             } catch (Exception e) {
                  _log.error("Error creating topic {}: {}", topic, e.getMessage());
                 throw new RuntimeException(e);

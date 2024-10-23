@@ -18,6 +18,7 @@ import com.bazaarvoice.emodb.queue.api.MoveQueueStatus;
 import com.bazaarvoice.emodb.queue.api.Names;
 import com.bazaarvoice.emodb.queue.api.UnknownMoveException;
 import com.bazaarvoice.emodb.queue.core.kafka.KafkaAdminService;
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaConfig;
 import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.queue.core.ssm.ParameterStoreUtil;
 import com.bazaarvoice.emodb.queue.core.stepfn.StepFunctionService;
@@ -62,6 +63,7 @@ abstract class AbstractQueueService implements BaseQueueService {
     private final StepFunctionService stepFunctionService;
     private final ParameterStoreUtil parameterStoreUtil;
 
+    private static final String UNIVERSE = KafkaConfig.getUniverseFromEnv();
     protected AbstractQueueService(BaseEventStore eventStore, JobService jobService,
                                    JobHandlerRegistry jobHandlerRegistry,
                                    JobType<MoveQueueRequest, MoveQueueResult> moveQueueJobType,
@@ -117,18 +119,18 @@ abstract class AbstractQueueService implements BaseQueueService {
     @Override
     public void send(String queue, Object message) {
         List<String> allowedQueues = fetchAllowedQueues();
-        boolean isExperiment = Boolean.parseBoolean(parameterStoreUtil.getParameter("/emodb/experiment/isExperiment"));
+        _log.debug("Allowed queues fetched: {}", allowedQueues);
+        boolean isExperiment = Boolean.parseBoolean(parameterStoreUtil.getParameter("/" + UNIVERSE + "/emodb/experiment/isExperiment"));
         if (!isExperiment) {
-            // experiment is over now, send everything to kafka
+            // Experiment is over now, send everything to Kafka
             sendAll(Collections.singletonMap(queue, Collections.singleton(message)));
         } else {
             // Experiment is still running, check if the queue is allowed
-            if(allowedQueues.contains(queue)){
-                //send kafka , only if its allowed queue
+            if (allowedQueues.contains(queue)) {
+                // Send to Kafka, only if it's an allowed queue
                 sendAll(Collections.singletonMap(queue, Collections.singleton(message)));
-            }
-            else {
-                //send to  cassandra, (rollback plan)
+            } else {
+                // Send to Cassandra (rollback plan)
                 sendAll(queue, Collections.singleton(message), false);
             }
         }
@@ -137,7 +139,7 @@ abstract class AbstractQueueService implements BaseQueueService {
     @Override
     public void sendAll(String queue, Collection<?> messages) {
         List<String> allowedQueues = fetchAllowedQueues();
-        boolean isExperiment = Boolean.parseBoolean(parameterStoreUtil.getParameter("/emodb/experiment/isExperiment"));
+        boolean isExperiment = Boolean.parseBoolean(parameterStoreUtil.getParameter( "/"+ UNIVERSE+"/emodb/experiment/isExperiment"));
         if (!isExperiment) {
             // experiment is over now, send everything to kafka
             sendAll(Collections.singletonMap(queue, messages));
@@ -156,8 +158,6 @@ abstract class AbstractQueueService implements BaseQueueService {
 
 
     private void validateMessage(Object message) {
-        _log.debug("Validating message: {}", message);
-
         // Check if the message is valid using JsonValidator
         ByteBuffer messageByteBuffer = MessageSerializer.toByteBuffer(JsonValidator.checkValid(message));
 
@@ -189,14 +189,14 @@ abstract class AbstractQueueService implements BaseQueueService {
 
             validateQueue(queue, messages);
 
-            List<Object> events = Lists.newArrayListWithCapacity(messages.size());
+            List<String> events = Lists.newArrayListWithCapacity(messages.size());
 
             // Validate each message
             for (Object message : messages) {
                 validateMessage(message);
-                events.add(message);
+                events.add(message.toString());
             }
-            builder.putAll(queue, String.valueOf(events));
+            builder.putAll(queue, events);
         }
 
         Multimap<String, String> eventsByChannel = builder.build();
@@ -204,7 +204,7 @@ abstract class AbstractQueueService implements BaseQueueService {
         String queueType = determineQueueType();
         for (Map.Entry<String, Collection<String>> topicEntry : eventsByChannel.asMap().entrySet()) {
             String queueName= topicEntry.getKey();
-            String topic = "dsq_" + (("dedup".equals(queueType)) ?  "dedup_" + queueName : queueName);
+            String topic = "dsq-" + (("dedup".equals(queueType)) ?  "dedup-" + queueName : queueName);
             // Check if the topic exists, if not create it and execute Step Function
             if (!adminService.createTopicIfNotExists(topic, TOPIC_PARTITION_COUNT, TOPIC_REPLICATION_FACTOR, queueType)) {
                 Map<String, String> parameters = fetchStepFunctionParameters();
@@ -242,6 +242,11 @@ abstract class AbstractQueueService implements BaseQueueService {
     @Override
     public long getMessageCount(String queue) {
         return getMessageCountUpTo(queue, Long.MAX_VALUE);
+    }
+
+    @Override
+    public long getUncachedSize(String queue){
+        return internalMessageCountUpTo(queue, Long.MAX_VALUE);
     }
 
     @Override
@@ -302,7 +307,6 @@ abstract class AbstractQueueService implements BaseQueueService {
     public void acknowledge(String queue, Collection<String> messageIds) {
         checkLegalQueueName(queue);
         requireNonNull(messageIds, "messageIds");
-
         _eventStore.delete(queue, messageIds, true);
     }
 
@@ -386,10 +390,10 @@ abstract class AbstractQueueService implements BaseQueueService {
      */
     private Map<String, String> fetchStepFunctionParameters() {
         List<String> parameterNames = Arrays.asList(
-                "/emodb/stepfn/stateMachineArn",
-                "/emodb/stepfn/queueThreshold",
-                "/emodb/stepfn/batchSize",
-                "/emodb/stepfn/interval"
+                "/"+ UNIVERSE+ "/emodb/stepfn/stateMachineArn",
+                "/"+ UNIVERSE+ "/emodb/stepfn/queueThreshold",
+                "/"+ UNIVERSE+ "/emodb/stepfn/batchSize",
+                "/"+ UNIVERSE+ "/emodb/stepfn/interval"
         );
 
         try {
@@ -406,10 +410,10 @@ abstract class AbstractQueueService implements BaseQueueService {
 
     private void startStepFunctionExecution(Map<String, String> parameters, String queueType, String queueName, String topic) {
         try {
-            String stateMachineArn = parameters.get("/emodb/stepfn/stateMachineArn");
-            int queueThreshold = Integer.parseInt(parameters.get("/emodb/stepfn/queueThreshold"));
-            int batchSize = Integer.parseInt(parameters.get("/emodb/stepfn/batchSize"));
-            int interval = Integer.parseInt(parameters.get("/emodb/stepfn/interval"));
+            String stateMachineArn = parameters.get( "/"+ UNIVERSE+ "/emodb/stepfn/stateMachineArn");
+            int queueThreshold = Integer.parseInt(parameters.get( "/"+ UNIVERSE+"/emodb/stepfn/queueThreshold"));
+            int batchSize = Integer.parseInt(parameters.get ("/"+ UNIVERSE+ "/emodb/stepfn/batchSize"));
+            int interval = Integer.parseInt(parameters.get( "/"+ UNIVERSE+"/emodb/stepfn/interval"));
 
             String inputPayload = createInputPayload(queueThreshold, batchSize, queueType, queueName, topic, interval);
 
@@ -442,7 +446,7 @@ abstract class AbstractQueueService implements BaseQueueService {
     private List<String> fetchAllowedQueues() {
         try {
             // Fetch the 'allowedQueues' parameter using ParameterStoreUtil
-            String allowedQueuesStr = parameterStoreUtil.getParameter("/emodb/experiment/allowedQueues");
+            String allowedQueuesStr = parameterStoreUtil.getParameter("/" + UNIVERSE + "/emodb/experiment/allowedQueues");
             return Arrays.asList(allowedQueuesStr.split(","));
         } catch (Exception e) {
             // Handle the case when the parameter is not found or fetching fails
