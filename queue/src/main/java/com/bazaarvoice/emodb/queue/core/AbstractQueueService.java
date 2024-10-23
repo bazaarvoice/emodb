@@ -200,7 +200,7 @@ abstract class AbstractQueueService implements BaseQueueService {
         String queueType = determineQueueType();
         for (Map.Entry<String, Collection<String>> topicEntry : eventsByChannel.asMap().entrySet()) {
             String queueName= topicEntry.getKey();
-            String topic = "dsq-" + (("dedup".equals(queueType)) ?  "dedup-" + queueName : queueName);
+            String topic = "dsq-" + (("dedupq".equals(queueType)) ?  "dedup-" + queueName : queueName);
             // Check if the topic exists, if not create it and execute Step Function
             if (!adminService.createTopicIfNotExists(topic, TOPIC_PARTITION_COUNT, TOPIC_REPLICATION_FACTOR, queueType)) {
                 Map<String, String> parameters = fetchStepFunctionParameters();
@@ -416,8 +416,8 @@ abstract class AbstractQueueService implements BaseQueueService {
             // Create the timestamp
             String timestamp = String.valueOf(System.currentTimeMillis()); // Current time in milliseconds
 
-            // Check if queueType is "dedup" and prepend "D" to execution name if true
-            String executionName = (queueType.equalsIgnoreCase("dedup") ? "D_" : "") + queueName + "_" + timestamp;
+            // Check if queueType is "dedupq" and prepend "D" to execution name if true
+            String executionName = (queueType.equalsIgnoreCase("dedupq") ? "D_" : "") + queueName + "_" + timestamp;
 
             // Start the Step Function execution
             stepFunctionService.startExecution(stateMachineArn, inputPayload, executionName);
@@ -434,7 +434,7 @@ abstract class AbstractQueueService implements BaseQueueService {
      */
     private String determineQueueType() {
         if (_eventStore.getClass().getName().equals("com.bazaarvoice.emodb.event.dedup.DefaultDedupEventStore")) {
-            return "dedup";
+            return "dedupq";
         }
         return "queue";
     }
