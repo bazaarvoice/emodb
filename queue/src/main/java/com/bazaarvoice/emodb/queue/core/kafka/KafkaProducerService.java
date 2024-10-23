@@ -41,13 +41,7 @@ public class KafkaProducerService {
     public void sendMessage(String topic, String message, String queueType) {
         ProducerRecord<String, String> record = new ProducerRecord<>(topic, message, message);
         try {
-            Future<RecordMetadata> future = producer.send(record, (metadata, exception) -> {
-                if (exception != null) {
-                    _log.error("Failed to send message to topic '{}'. Error: {}", topic, exception.getMessage());
-                }
-            });
-            // Optionally, you can wait for the send to complete
-            RecordMetadata metadata = future.get(); // Blocking call
+            RecordMetadata metadata = producer.send(record).get(); // Blocking call
         } catch (Exception e) {
             _log.error("Failed to send message to topic '{}'. Exception: {}", topic, e.getMessage());
             throw new RuntimeException("Error sending message to kafka"+e.getMessage());
@@ -59,8 +53,12 @@ public class KafkaProducerService {
      */
     public void close() {
         _log.info("Closing Kafka producer.");
-        producer.flush();
-        producer.close();
-        _log.info("Kafka producer closed.");
+        try {
+            producer.flush();
+            producer.close();
+        } catch (Exception e) {
+            _log.error("Error while closing Kafka producer: ", e);
+            throw e;
+        }
     }
 }
