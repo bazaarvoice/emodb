@@ -13,59 +13,57 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class KafkaConfig {
-
+    private static String bootstrapServersConfig;
+    private static String batchSizeConfig;
+    private static String retriesConfig;
+    private static String lingerMsConfig;
     private static final Logger logger = LoggerFactory.getLogger(KafkaConfig.class);
-
     // Static SSM Client and configuration using AWS SDK v1
     private static final AWSSimpleSystemsManagement ssmClient = AWSSimpleSystemsManagementClientBuilder
             .standard()
             .build();
 
-    private static final String DEFAULT_BOOTSTRAP_SERVERS =
-            "b-1.qaemodbpocmsk.q4panq.c10.kafka.us-east-1.amazonaws.com:9092," +
-                    "b-2.qaemodbpocmsk.q4panq.c10.kafka.us-east-1.amazonaws.com:9092";
-
-    private static String bootstrapServersConfig;
-    private static String batchSizeConfig;
-    private static String retriesConfig;
-    private static String lingerMsConfig;
 
     static {
         try {
+            final String UNIVERSE = getUniverseFromEnv();
+            // Load configurations from SSM during static initialization
+            String basePath = "/" + UNIVERSE + "/emodb/kafka/";
             // Load configurations from SSM during static initialization
             Map<String, String> parameterValues = getParameterValues(
-                    Arrays.asList(
-                            "/emodb/kafka/batchSize",
-                            "/emodb/kafka/retries",
-                            "/emodb/kafka/lingerMs",
-                            "/emodb/kafka/bootstrapServers"
-                    )
+                    Stream.of("batchSize", "retries", "lingerMs", "bootstrapServers")
+                            .map(param -> basePath + param)
+                            .collect(Collectors.toList())
             );
 
             // Set configurations with fallback to defaults if not present
             // Sets the batch size for Kafka producer, which controls the amount of data to batch before sending.
-            batchSizeConfig = parameterValues.getOrDefault("/emodb/kafka/batchSize", "16384");
+            batchSizeConfig = parameterValues.getOrDefault(basePath+ "batchSize", "16384");
 
             // Sets the number of retry attempts for failed Kafka message sends.
-            retriesConfig = parameterValues.getOrDefault("/emodb/kafka/retries", "3");
+            retriesConfig = parameterValues.getOrDefault(basePath+ "retries", "3");
 
             // Sets the number of milliseconds a producer is willing to wait before sending a batch out
-            lingerMsConfig = parameterValues.getOrDefault("/emodb/kafka/lingerMs", "1");
+            lingerMsConfig = parameterValues.getOrDefault(basePath+"lingerMs", "1");
 
             // Configures the Kafka broker addresses for producer connections.
-            bootstrapServersConfig = parameterValues.getOrDefault("/emodb/kafka/bootstrapServers", DEFAULT_BOOTSTRAP_SERVERS);
+            bootstrapServersConfig = parameterValues.get(basePath+"bootstrapServers");
 
-            logger.info("Kafka configurations loaded successfully from SSM.");
-        } catch (AmazonServiceException e) {
-            logger.error("Failed to load configurations from SSM. Using default values.", e);
-            throw e;
+            // Log the kafka configurations loaded from SSM
+            logger.info("Kafka configurations loaded from SSM: batchSize={}, retries={}, lingerMs={}, bootstrapServers={}",
+                    batchSizeConfig, retriesConfig, lingerMsConfig,
+                    bootstrapServersConfig != null ? bootstrapServersConfig : "Not configured (null)");
         }
         catch (Exception e) {
             logger.error("Unexpected error occurred while loading configurations from SSM. Using default values.", e);
@@ -73,6 +71,36 @@ public class KafkaConfig {
         }
     }
 
+    public static String getUniverseFromEnv() {
+        String filePath = "/etc/environment";
+        logger.info("Reading environment file: " + filePath);
+        Properties environmentProps = new Properties();
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                // Skip empty lines or comments
+                if (line.trim().isEmpty() || line.trim().startsWith("#")) {
+                    continue;
+                }
+                // Split the line into key-value pair
+                String[] parts = line.split("=", 2);
+                logger.info("parts: " + Arrays.toString(parts));
+                if (parts.length == 2) {
+                    String key = parts[0].trim();
+                    String value = parts[1].trim();
+                    // Remove any surrounding quotes from value
+                    value = value.replace("\"", "");
+                    environmentProps.put(key, value);
+                }
+            }
+            // Access the environment variables
+            return environmentProps.getProperty("UNIVERSE");
+        } catch (IOException e) {
+            logger.error("Error reading environment file: " + e.getMessage());
+            throw new RuntimeException("Error reading environment file: " + e.getMessage());
+        }
+    }
     // Fetch parameters from AWS SSM using AWS SDK v1
     private static Map<String, String> getParameterValues(List<String> parameterNames) {
         try {

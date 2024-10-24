@@ -134,7 +134,7 @@ public class QueueResource1 {
     @Path("{queue}/sendbatch1")
     @Consumes(MediaType.APPLICATION_JSON)
     @RequiresPermissions("queue|post|{queue}")
-    @Timed(name = "bv.emodb.queue.QueueResource1.sendBatch", absolute = true)
+    @Timed(name = "bv.emodb.queue.QueueResource1.sendBatch1", absolute = true)
     @ApiOperation (value = "Send a Batch.",
             notes = "Returns a SuccessResponse..",
             response = SuccessResponse.class
@@ -188,6 +188,17 @@ public class QueueResource1 {
         }
     }
 
+    @GET
+    @Path("{queue}/uncached_size")
+    @RequiresPermissions("queue|get_status|{queue}")
+    @Timed(name = "bv.emodb.queue.QueueResource1.getUncachedMessageCount", absolute = true)
+    @ApiOperation (value = "gets the uncached Message count.",
+            notes = "Returns a long.",
+            response = long.class
+    )
+    public long getUncachedMessageCount(@PathParam("queue") String queue) {
+        return _queueService.getUncachedSize(queue);
+    }
 
     @GET
     @Path("{queue}/claimcount")
