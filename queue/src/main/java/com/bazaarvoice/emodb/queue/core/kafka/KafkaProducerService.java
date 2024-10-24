@@ -6,6 +6,8 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.concurrent.Future;
 
@@ -25,11 +27,12 @@ public class KafkaProducerService {
      * @param events  The collection of messages to be sent.
      */
     public void sendMessages(String topic, Collection<String> events, String queueType) {
+        LocalDateTime startTime = LocalDateTime.now();
         _log.info("Sending {} messages to topic '{}'", events.size(), topic);
         for (String event : events) {
             sendMessage(topic, event,queueType);
         }
-        _log.info("Finished sending messages to topic '{}'", topic);
+        _log.info("Finished sending messages to topic '{}' time taken : {} milliseconds", topic, Duration.between(LocalDateTime.now(),startTime).toMillis());
     }
 
     /**
@@ -40,8 +43,10 @@ public class KafkaProducerService {
      */
     public void sendMessage(String topic, String message, String queueType) {
         ProducerRecord<String, String> record = new ProducerRecord<>(topic, message, message);
+        LocalDateTime startTime = LocalDateTime.now();
         try {
             RecordMetadata metadata = producer.send(record).get(); // Blocking call
+            _log.info("Sent One message to {} in {} milliseconds", topic, Duration.between(LocalDateTime.now(),startTime).toMillis());
         } catch (Exception e) {
             _log.error("Failed to send message to topic '{}'. Exception: {}", topic, e.getMessage());
             throw new RuntimeException("Error sending message to kafka"+e.getMessage());
