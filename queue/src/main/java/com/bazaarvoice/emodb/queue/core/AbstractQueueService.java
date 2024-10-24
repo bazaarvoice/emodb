@@ -27,6 +27,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
+import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -62,6 +63,13 @@ abstract class AbstractQueueService implements BaseQueueService {
     public static final int MAX_MESSAGE_SIZE_IN_BYTES = 30 * 1024;
     private final StepFunctionService stepFunctionService;
     private final ParameterStoreUtil parameterStoreUtil;
+
+    // Cache for the isExperiment value with a TTL of 5 minutes
+    private final Cache<String, Boolean> experimentCache = CacheBuilder.newBuilder()
+            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .build();
+
+    private static final String IS_EXPERIMENT = "isExperiment";
 
     private static final String UNIVERSE = KafkaConfig.getUniverseFromEnv();
     protected AbstractQueueService(BaseEventStore eventStore, JobService jobService,
@@ -116,10 +124,36 @@ abstract class AbstractQueueService implements BaseQueueService {
                 });
     }
 
+    /**
+     * Retrieves the value of the "isExperiment" flag from the cache if available.
+     * If the value is not present in the cache or the cache has expired, it fetches the value
+     * from AWS Parameter Store and stores it in the cache.
+     * <p>
+     * The cached value has a TTL (Time-To-Live) of 5 minutes, after which it will be refreshed
+     * from the Parameter Store on the next access.
+     * </p>
+     *
+     * @return {@code true} if the experiment is still running, otherwise {@code false}.
+     * @throws RuntimeException if there is an error fetching the value from the cache or Parameter Store.
+     */
+    private boolean getIsExperimentValue() {
+        try {
+            // Attempt to retrieve from cache
+            return experimentCache.get(IS_EXPERIMENT, () -> {
+                // If absent or expired, fetch from Parameter Store and cache the result
+                return Boolean.parseBoolean(parameterStoreUtil.getParameter("/" + UNIVERSE + "/emodb/experiment/isExperiment"));
+            });
+        } catch (Exception e) {
+            // Handle any errors that might occur while accessing the cache or Parameter Store
+            throw new RuntimeException("Error fetching experiment flag", e);
+        }
+    }
+
     @Override
     public void send(String queue, Object message) {
         List<String> allowedQueues = fetchAllowedQueues();
-        boolean isExperiment = Boolean.parseBoolean(parameterStoreUtil.getParameter("/" + UNIVERSE + "/emodb/experiment/isExperiment"));
+        //boolean isExperiment = Boolean.parseBoolean(parameterStoreUtil.getParameter("/" + UNIVERSE + "/emodb/experiment/isExperiment"));
+        boolean isExperiment = getIsExperimentValue();
         if (!isExperiment) {
             // Experiment is over now, send everything to Kafka
             sendAll(Collections.singletonMap(queue, Collections.singleton(message)));
