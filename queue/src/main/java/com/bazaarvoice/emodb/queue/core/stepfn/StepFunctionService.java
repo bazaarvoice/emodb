@@ -4,6 +4,7 @@ package com.bazaarvoice.emodb.queue.core.stepfn;
 import com.amazonaws.services.stepfunctions.AWSStepFunctions;
 import com.amazonaws.services.stepfunctions.AWSStepFunctionsClientBuilder;
 import com.amazonaws.services.stepfunctions.model.*;
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaConfig;
 import com.bazaarvoice.emodb.queue.core.Entities.QueueExecutionAttributes;
 import com.bazaarvoice.emodb.queue.core.Entities.ExecutionInputWrapper;
 import com.bazaarvoice.emodb.queue.core.ssm.ParameterStoreUtil;
@@ -23,13 +24,14 @@ public class StepFunctionService {
 
     private static final Logger logger = LoggerFactory.getLogger(StepFunctionService.class);
     private final AWSStepFunctions stepFunctionsClient;
-
+    private static String universe;
     private final ParameterStoreUtil _parameterStoreUtil;
 
     /**
      * Constructor to initialize Step Function Client with AWS region and credentials.
      */
     public StepFunctionService() {
+        universe=KafkaConfig.getUniverseFromEnv();
         this._parameterStoreUtil = new ParameterStoreUtil();
         this.stepFunctionsClient = AWSStepFunctionsClientBuilder.standard()
                 .build();
@@ -278,8 +280,7 @@ public class StepFunctionService {
 
         try {
             // TODO_SHAN: Extend this fetch part later based on queueType : queue/dedup/databus
-            // TODO_SHAN: String universe = KafkaConfig::getUniverseFromEnv()  // add universe below
-            String stateMachineArn = _parameterStoreUtil.getParameter("/emodb/stepfn/stateMachineArn");
+            String stateMachineArn = _parameterStoreUtil.getParameter("/" + universe + "/emodb/stepfn/stateMachineArn");
 
             if(stateMachineArn != null && !stateMachineArn.isEmpty()) {
                 return stateMachineArn;
