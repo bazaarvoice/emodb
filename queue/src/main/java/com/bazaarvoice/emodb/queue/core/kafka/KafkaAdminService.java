@@ -5,11 +5,25 @@ import org.apache.kafka.clients.admin.NewTopic;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+
 import java.util.Collections;
 
 public class KafkaAdminService {
     private static final Logger _log = LoggerFactory.getLogger(KafkaAdminService.class);
     private final AdminClient adminClient;
+    // Cache for the list of all topics with a TTL of 10 minutes
+    private final Cache<String, Set<String>> topicListCache = CacheBuilder.newBuilder()
+            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .build();
+
+    private static final String TOPIC_LIST_KEY = "allTopics";
+
 
     public KafkaAdminService() {
         this.adminClient = AdminClient.create(KafkaConfig.getAdminProps());
@@ -40,15 +54,44 @@ public class KafkaAdminService {
 
 
     /**
-     *  Determines if a topic already exists in AWS MSK
-     *  @param topic   The name of the topic.
+     * Checks if a Kafka topic exists by using a cache to store the list of all topics.
+     * If the cache entry has expired or the cache is empty, it queries the Kafka AdminClient for the topic list.
+     * <p>
+     * The cached list has a TTL (Time-To-Live) of 10 minutes, after which it will be refreshed
+     * from Kafka on the next access.
+     * </p>
+     *
+     * @param topic the name of the Kafka topic to check
+     * @return {@code true} if the topic exists, otherwise {@code false}.
+     * @throws RuntimeException if there is an error fetching the topic list or checking if the topic exists.
      */
     public boolean isTopicExists(String topic) {
         try {
-            return adminClient.listTopics().names().get().contains(topic);
-        } catch (Exception e) {
+            // Retrieve the list of topics from the cache
+            Set<String> topics = topicListCache.get(TOPIC_LIST_KEY, this::fetchTopicListFromKafka);
+
+            // Check if the given topic is in the cached list
+            return topics.contains(topic);
+        } catch (ExecutionException e) {
             _log.error("Failed to check if topic exists: {}", topic, e);
             throw new RuntimeException("Error checking if topic exists", e);
+        }
+    }
+
+    /**
+     * Fetches the list of all topic names from Kafka AdminClient.
+     * This method is called only when the cache is expired or empty.
+     *
+     * @return a Set containing all topic names.
+     * @throws ExecutionException if there is an error fetching the topic list from Kafka.
+     */
+    private Set<String> fetchTopicListFromKafka() throws ExecutionException {
+        try {
+            _log.info("Fetching topic list from Kafka");
+            return adminClient.listTopics().names().get();
+        } catch (Exception e) {
+            _log.error("Error fetching topic list from Kafka", e);
+            throw new ExecutionException(e);
         }
     }
 
