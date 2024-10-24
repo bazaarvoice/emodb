@@ -71,6 +71,11 @@ abstract class AbstractQueueService implements BaseQueueService {
 
     private static final String IS_EXPERIMENT = "isExperiment";
 
+    private final Cache<String, Set<String>> allowedQueuesCache = CacheBuilder.newBuilder()
+            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .build();
+    private static final String ALLOWED_QUEUES = "allowedQueues";
+
     private static final String UNIVERSE = KafkaConfig.getUniverseFromEnv();
     protected AbstractQueueService(BaseEventStore eventStore, JobService jobService,
                                    JobHandlerRegistry jobHandlerRegistry,
@@ -140,6 +145,7 @@ abstract class AbstractQueueService implements BaseQueueService {
         try {
             // Attempt to retrieve from cache
             return experimentCache.get(IS_EXPERIMENT, () -> {
+                _log.info("IS_EXPERIMENT is refreshed");
                 // If absent or expired, fetch from Parameter Store and cache the result
                 return Boolean.parseBoolean(parameterStoreUtil.getParameter("/" + UNIVERSE + "/emodb/experiment/isExperiment"));
             });
@@ -151,13 +157,13 @@ abstract class AbstractQueueService implements BaseQueueService {
 
     @Override
     public void send(String queue, Object message) {
-        List<String> allowedQueues = fetchAllowedQueues();
         //boolean isExperiment = Boolean.parseBoolean(parameterStoreUtil.getParameter("/" + UNIVERSE + "/emodb/experiment/isExperiment"));
         boolean isExperiment = getIsExperimentValue();
         if (!isExperiment) {
             // Experiment is over now, send everything to Kafka
             sendAll(Collections.singletonMap(queue, Collections.singleton(message)));
         } else {
+            List<String> allowedQueues = fetchAllowedQueues();
             // Experiment is still running, check if the queue is allowed
             if (allowedQueues.contains(queue)) {
                 // Send to Kafka, only if it's an allowed queue
@@ -475,13 +481,25 @@ abstract class AbstractQueueService implements BaseQueueService {
 
     private List<String> fetchAllowedQueues() {
         try {
+            return new ArrayList<>(allowedQueuesCache.get(ALLOWED_QUEUES, this::fetchAllowedQueuesFromParamStore));
+        } catch (Exception e) {
+            // Handle the case when the parameter is not found or fetching fails
+            _log.error("Error fetching allowedQueues in fetchAllowedQueues: " + e.getMessage());
+            return Collections.singletonList("");  // Default to an empty list if the parameter is missing
+        }
+
+    }
+
+    private Set<String> fetchAllowedQueuesFromParamStore() {
+        try {
             // Fetch the 'allowedQueues' parameter using ParameterStoreUtil
             String allowedQueuesStr = parameterStoreUtil.getParameter("/" + UNIVERSE + "/emodb/experiment/allowedQueues");
-            return Arrays.asList(allowedQueuesStr.split(","));
+            _log.info("ALLOWED_QUEUES is refreshed");
+            return new HashSet<>(Arrays.asList(allowedQueuesStr.split(",")));
         } catch (Exception e) {
             // Handle the case when the parameter is not found or fetching fails
             _log.error("Error fetching allowedQueues: " + e.getMessage());
-            return Collections.singletonList("");  // Default to an empty list if the parameter is missing
+            return new HashSet<>(Collections.singletonList(""));  // Default to an empty list if the parameter is missing
         }
     }
 
