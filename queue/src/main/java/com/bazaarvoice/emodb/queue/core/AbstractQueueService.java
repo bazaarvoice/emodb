@@ -44,6 +44,7 @@ import java.util.concurrent.TimeUnit;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import com.timgroup.statsd.StatsDClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,12 +63,13 @@ abstract class AbstractQueueService implements BaseQueueService {
     public static final int MAX_MESSAGE_SIZE_IN_BYTES = 30 * 1024;
     private final StepFunctionService stepFunctionService;
     private final ParameterStoreUtil parameterStoreUtil;
+    private final StatsDClient _statsDClient;
 
     private static final String UNIVERSE = KafkaConfig.getUniverseFromEnv();
     protected AbstractQueueService(BaseEventStore eventStore, JobService jobService,
                                    JobHandlerRegistry jobHandlerRegistry,
                                    JobType<MoveQueueRequest, MoveQueueResult> moveQueueJobType,
-                                   Clock clock, KafkaAdminService adminService, KafkaProducerService producerService, StepFunctionService stepFunctionService) {
+                                   Clock clock, KafkaAdminService adminService, KafkaProducerService producerService, StepFunctionService stepFunctionService, StatsDClient statsDClient) {
         _eventStore = eventStore;
         _jobService = jobService;
         _moveQueueJobType = moveQueueJobType;
@@ -75,6 +77,7 @@ abstract class AbstractQueueService implements BaseQueueService {
         this.producerService = producerService;
         this.stepFunctionService = stepFunctionService;
         this.parameterStoreUtil = new ParameterStoreUtil();
+        _statsDClient = statsDClient;
 
 
         registerMoveQueueJobHandler(jobHandlerRegistry);
@@ -192,6 +195,7 @@ abstract class AbstractQueueService implements BaseQueueService {
                 validateMessage(message);
                 events.add(message.toString());
             }
+            _statsDClient.recordGaugeValue("queue.messages.size", events.size(), "queue:" + queue);
             builder.putAll(queue, events);
         }
 
@@ -229,6 +233,7 @@ abstract class AbstractQueueService implements BaseQueueService {
                     "Message size (" + messageByteBuffer.limit() + ") is greater than the maximum allowed (" + MAX_MESSAGE_SIZE_IN_BYTES + ") message size");
             events.add(messageByteBuffer);
         }
+        _statsDClient.recordGaugeValue("queue.messages.size", events.size(), "queue:" + queue);
         builder.putAll(queue, events);
         Multimap<String, ByteBuffer> eventsByChannel = builder.build();
 
