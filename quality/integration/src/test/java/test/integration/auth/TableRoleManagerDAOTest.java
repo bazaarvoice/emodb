@@ -9,6 +9,7 @@ import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
 import com.bazaarvoice.emodb.auth.role.RoleModification;
 import com.bazaarvoice.emodb.auth.role.RoleNotFoundException;
 import com.bazaarvoice.emodb.auth.role.TableRoleManagerDAO;
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
@@ -63,7 +64,7 @@ public class TableRoleManagerDAOTest {
     @BeforeMethod
     public void setUp() {
         // DataStore and PermissionManager are fairly heavy to fully mock.  Use spies on in-memory implementations instead
-        _backendDataStore = new InMemoryDataStore(new MetricRegistry());
+        _backendDataStore = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
         _dataStore = spy(_backendDataStore);
         _permissionResolver = new EmoPermissionResolver(null, null);
         _backendPermissionManager = new InMemoryPermissionManager(_permissionResolver);

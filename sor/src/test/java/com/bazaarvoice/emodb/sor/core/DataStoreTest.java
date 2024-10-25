@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.sor.core;
 
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.Change;
@@ -47,7 +48,7 @@ public class DataStoreTest {
 
     @Test
     public void testDeltas() throws Exception {
-        DataStore store = new InMemoryDataStore(new MetricRegistry());
+        DataStore store = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         assertFalse(store.getTableExists(TABLE));
@@ -167,7 +168,7 @@ public class DataStoreTest {
 
     @Test
     public void testRecordTimestamps() throws Exception {
-        DataStore store = new InMemoryDataStore(new MetricRegistry());
+        DataStore store = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         assertFalse(store.getTableExists(TABLE));
@@ -262,7 +263,7 @@ public class DataStoreTest {
 
     @Test
     public void testRecordTimestampsWithEventTags() throws Exception {
-        DataStore store = new InMemoryDataStore(new MetricRegistry());
+        DataStore store = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         assertFalse(store.getTableExists(TABLE));

@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.sor.core;
 
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
@@ -34,7 +35,7 @@ public class SorUpdateTest {
     public void SetupTest() {
         final InMemoryDataReaderDAO dataDAO = new InMemoryDataReaderDAO();
         _eventWriterRegistry = new DatabusEventWriterRegistry();
-        _dataStore = new InMemoryDataStore(_eventWriterRegistry, dataDAO, new MetricRegistry());
+        _dataStore = new InMemoryDataStore(_eventWriterRegistry, dataDAO, new MetricRegistry(), new KafkaProducerService());
 
 
         // Create a table for our test
