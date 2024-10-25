@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -43,6 +44,7 @@ public class KafkaAdminService {
             NewTopic newTopic = new NewTopic(topic, numPartitions, replicationFactor);
             try {
                 adminClient.createTopics(Collections.singleton(newTopic)).all().get();
+                addToCache(topic);
                 _log.info("Created topic: {} with numPartitions: {} and replication factor {} ", topic, numPartitions, replicationFactor);
             } catch (Exception e) {
                 _log.error("Error creating topic {}: ", topic, e);
@@ -50,6 +52,15 @@ public class KafkaAdminService {
             }
         }
         return isExisting;
+    }
+    public void addToCache(String topic){
+        Set<String> topics = topicListCache.getIfPresent(TOPIC_LIST_KEY);
+        if (topics == null) {
+            topics = new HashSet<>();
+        }
+        topics.add(topic);
+        topicListCache.put(TOPIC_LIST_KEY, topics);
+        _log.info("Added newly created topic to cache: {}", topic);
     }
 
 
