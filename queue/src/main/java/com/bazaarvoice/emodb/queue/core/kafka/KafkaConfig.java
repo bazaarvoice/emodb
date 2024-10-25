@@ -39,26 +39,27 @@ public class KafkaConfig {
         try {
             final String UNIVERSE = getUniverseFromEnv();
             // Load configurations from SSM during static initialization
-            String basePath = "/" + UNIVERSE + "/emodb/kafka/";
-            // Load configurations from SSM during static initialization
             Map<String, String> parameterValues = getParameterValues(
-                    Stream.of("batchSize", "retries", "lingerMs", "bootstrapServers")
-                            .map(param -> basePath + param)
-                            .collect(Collectors.toList())
+                    Arrays.asList(
+                            "/" + UNIVERSE + "/emodb/kafka/batchSize",
+                            "/" + UNIVERSE + "/emodb/kafka/retries",
+                            "/" + UNIVERSE + "/emodb/kafka/lingerMs",
+                            "/" + UNIVERSE + "/emodb/kafka/bootstrapServers"
+                    )
             );
 
             // Set configurations with fallback to defaults if not present
             // Sets the batch size for Kafka producer, which controls the amount of data to batch before sending.
-            batchSizeConfig = parameterValues.getOrDefault(basePath+ "batchSize", "16384");
+            batchSizeConfig = parameterValues.getOrDefault("/" + UNIVERSE + "/emodb/kafka/batchSize", "16384");
 
             // Sets the number of retry attempts for failed Kafka message sends.
-            retriesConfig = parameterValues.getOrDefault(basePath+ "retries", "3");
+            retriesConfig = parameterValues.getOrDefault("/" + UNIVERSE + "/emodb/kafka/retries", "3");
 
             // Sets the number of milliseconds a producer is willing to wait before sending a batch out
-            lingerMsConfig = parameterValues.getOrDefault(basePath+"lingerMs", "1");
+            lingerMsConfig = parameterValues.getOrDefault("/" + UNIVERSE + "/emodb/kafka/lingerMs", "1");
 
             // Configures the Kafka broker addresses for producer connections.
-            bootstrapServersConfig = parameterValues.get(basePath+"bootstrapServers");
+            bootstrapServersConfig = parameterValues.get("/" + UNIVERSE + "/emodb/kafka/bootstrapServers");
 
             // Log the kafka configurations loaded from SSM
             logger.info("Kafka configurations loaded from SSM: batchSize={}, retries={}, lingerMs={}, bootstrapServers={}",
