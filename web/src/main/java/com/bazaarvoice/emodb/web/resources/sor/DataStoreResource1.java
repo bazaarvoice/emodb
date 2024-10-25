@@ -776,6 +776,25 @@ public class DataStoreResource1 {
         return SuccessResponse.instance();
     }
 
+    @POST
+    @Path("_updateRef")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Timed(name = "bv.emodb.sor.DataStoreResource1.updateRef", absolute = true)
+    @ApiOperation(value = "Updates a reference",
+            notes = "Updates a reference",
+            response = SuccessResponse.class
+    )
+    public SuccessResponse updateRefToDatabus(InputStream in,
+                                              @QueryParam("consistency") @DefaultValue("STRONG") WriteConsistencyParam consistency,
+                                              @QueryParam("tag") List<String> tags,
+                                              @Authenticated Subject subject) {
+        Set<String> tagsSet = (tags == null) ? ImmutableSet.of() : Sets.newHashSet(tags);
+        Iterable<Update> updates = asSubjectSafeUpdateIterable(new JsonStreamingArrayParser<>(in, Update.class), subject, true);
+        // Perform the update by writing to Databus
+        _dataStore.updateRefInDatabus(updates, tagsSet, false);
+        return SuccessResponse.instance();
+    }
+
     /**
      * Imports an arbitrary size stream of deltas and/or JSON objects.  Two formats are supported: array syntax
      * ('[' object ',' object ',' ... ']') and whitespace-separated objects (object whitespace object whitespace ...)

@@ -5,6 +5,7 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.json.deferred.LazyJsonMap;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.AuditsUnavailableException;
@@ -104,6 +105,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     private static final int NUM_COMPACTION_THREADS = 2;
     private static final int MAX_COMPACTION_QUEUE_LENGTH = 100;
+    public static final String UPDATE_AUDIT_TOPIC = "master_bus";
 
     private final Logger _log = LoggerFactory.getLogger(DefaultDataStore.class);
 
@@ -126,6 +128,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     private final CompactionControlSource _compactionControlSource;
     private final MapStore<DataStoreMinSplitSize> _minSplitSizeMap;
     private final Clock _clock;
+    private final KafkaProducerService _kafkaProducerService;
 
     private StashTableDAO _stashTableDao;
 
@@ -134,10 +137,10 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                             DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao, SlowQueryLog slowQueryLog, HistoryStore historyStore,
                             @StashRoot Optional<URI> stashRootDirectory, @LocalCompactionControl CompactionControlSource compactionControlSource,
                             @StashBlackListTableCondition Condition stashBlackListTableCondition, AuditWriter auditWriter,
-                            @MinSplitSizeMap MapStore<DataStoreMinSplitSize> minSplitSizeMap, Clock clock) {
+                            @MinSplitSizeMap MapStore<DataStoreMinSplitSize> minSplitSizeMap, Clock clock, KafkaProducerService kafkaProducerService) {
         this(eventWriterRegistry, tableDao, dataReaderDao, dataWriterDao, slowQueryLog, defaultCompactionExecutor(lifeCycle),
                 historyStore, stashRootDirectory, compactionControlSource, stashBlackListTableCondition, auditWriter,
-                minSplitSizeMap, metricRegistry, clock);
+                minSplitSizeMap, metricRegistry, clock, kafkaProducerService);
     }
 
     @VisibleForTesting
@@ -146,7 +149,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                             SlowQueryLog slowQueryLog, ExecutorService compactionExecutor, HistoryStore historyStore,
                             Optional<URI> stashRootDirectory, CompactionControlSource compactionControlSource,
                             Condition stashBlackListTableCondition, AuditWriter auditWriter,
-                            MapStore<DataStoreMinSplitSize> minSplitSizeMap, MetricRegistry metricRegistry, Clock clock) {
+                            MapStore<DataStoreMinSplitSize> minSplitSizeMap, MetricRegistry metricRegistry, Clock clock, KafkaProducerService kafkaProducerService) {
         _eventWriterRegistry = requireNonNull(eventWriterRegistry, "eventWriterRegistry");
         _tableDao = requireNonNull(tableDao, "tableDao");
         _dataReaderDao = requireNonNull(dataReaderDao, "dataReaderDao");
@@ -166,6 +169,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         _compactionControlSource = requireNonNull(compactionControlSource, "compactionControlSource");
         _minSplitSizeMap = requireNonNull(minSplitSizeMap, "minSplitSizeMap");
         _clock = requireNonNull(clock, "clock");
+        _kafkaProducerService = requireNonNull(kafkaProducerService, "kafkaProducerService");
     }
 
     /**
@@ -689,40 +693,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
             return;
         }
 
-        _dataWriterDao.updateAll(Iterators.transform(updatesIter, new Function<Update, RecordUpdate>() {
-            @Override
-            public RecordUpdate apply(Update update) {
-                requireNonNull(update, "update");
-                String tableName = update.getTable();
-                String key = update.getKey();
-                UUID changeId = update.getChangeId();
-                Delta delta = update.getDelta();
-                Audit audit = update.getAudit();
-
-                // Strip intrinsics and "~tags".  Verify the Delta results in a top-level object.
-                delta = SanitizeDeltaVisitor.sanitize(delta);
-
-                Table table = _tableDao.get(tableName);
-
-                if (isFacade && !table.isFacade()) {
-                    // Someone is trying to update a facade, but is inadvertently going to update the primary table in this dc
-                    throw new SecurityException("Access denied. Update intended for a facade, but the table would be updated.");
-                }
-
-                if (table.isFacade() && !isFacade) {
-                    throw new SecurityException("Access denied. Unauthorized attempt to update a facade.");
-                }
-
-                // We'll likely fail to resolve write conflicts if deltas are written into the far past after
-                // compaction may have occurred.
-                if (TimeUUIDs.getTimeMillis(changeId) <= _dataWriterDao.getFullConsistencyTimestamp(table)) {
-                    throw new IllegalArgumentException(
-                            "The 'changeId' UUID is from too far in the past: " + TimeUUIDs.getDate(changeId));
-                }
-
-                return new RecordUpdate(table, key, changeId, delta, audit, tags, update.getConsistency());
-            }
-        }), new DataWriterDAO.UpdateListener() {
+        _dataWriterDao.updateAll(transformUpdates(updatesIter, isFacade, tags), new DataWriterDAO.UpdateListener() {
             @Override
             public void beforeWrite(Collection<RecordUpdate> updateBatch) {
                 // Tell the databus we're about to write.
@@ -744,7 +715,8 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                     }
                 }
                 if (!updateRefs.isEmpty()) {
-                    _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefs);
+//                    _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefs);
+                    _kafkaProducerService.sendMessages(UPDATE_AUDIT_TOPIC, updateRefs, "update");
                 }
             }
 
@@ -1024,5 +996,62 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     private String getMetricName(String name) {
         return MetricRegistry.name("bv.emodb.sor", "DefaultDataStore", name);
+    }
+
+    private Iterator<RecordUpdate> transformUpdates(Iterator<Update> updatesIter, boolean isFacade, final Set<String> tags) {
+        return Iterators.transform(updatesIter, new Function<Update, RecordUpdate>() {
+            @Override
+            public RecordUpdate apply(Update update) {
+                requireNonNull(update, "update");
+                String tableName = update.getTable();
+                String key = update.getKey();
+                UUID changeId = update.getChangeId();
+                Delta delta = update.getDelta();
+                Audit audit = update.getAudit();
+
+                // Strip intrinsics and "~tags".  Verify the Delta results in a top-level object.
+                delta = SanitizeDeltaVisitor.sanitize(delta);
+
+                Table table = _tableDao.get(tableName);
+
+                if (isFacade && !table.isFacade()) {
+                    // Someone is trying to update a facade, but is inadvertently going to update the primary table in this dc
+                    throw new SecurityException("Access denied. Update intended for a facade, but the table would be updated.");
+                }
+
+                if (table.isFacade() && !isFacade) {
+                    throw new SecurityException("Access denied. Unauthorized attempt to update a facade.");
+                }
+
+                // We'll likely fail to resolve write conflicts if deltas are written into the far past after
+                // compaction may have occurred.
+                if (TimeUUIDs.getTimeMillis(changeId) <= _dataWriterDao.getFullConsistencyTimestamp(table)) {
+                    throw new IllegalArgumentException(
+                            "The 'changeId' UUID is from too far in the past: " + TimeUUIDs.getDate(changeId));
+                }
+
+                return new RecordUpdate(table, key, changeId, delta, audit, tags, update.getConsistency());
+            }
+        });
+    }
+
+    @Override
+    public void updateRefInDatabus(Iterable<Update> updates, Set<String> tags, boolean isFacade) {
+        Iterator<Update> updatesIter = updates.iterator();
+        if (!updatesIter.hasNext()) {
+            return;
+        }
+        Iterator<RecordUpdate> recordUpdates = transformUpdates(updatesIter, isFacade, tags);
+
+        while (recordUpdates.hasNext()) {
+            RecordUpdate update = recordUpdates.next();
+            List<UpdateRef> updateRefs = Lists.newArrayListWithCapacity(Collections.singleton(update).size());
+            if (!update.getTable().isInternal()) {
+                updateRefs.add(new UpdateRef(update.getTable().getName(), update.getKey(), update.getChangeId(), tags));
+            }
+            if (!updateRefs.isEmpty()) {
+                _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefs);
+            }
+        }
     }
 }
