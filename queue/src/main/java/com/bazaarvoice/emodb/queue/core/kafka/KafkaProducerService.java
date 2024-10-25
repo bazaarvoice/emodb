@@ -32,7 +32,7 @@ public class KafkaProducerService {
         for (String event : events) {
             sendMessage(topic, event,queueType);
         }
-        _log.info("Finished sending messages to topic '{}' time taken : {} milliseconds", topic, Duration.between(LocalDateTime.now(),startTime).toMillis());
+        _log.info("Finished sending messages to topic '{}' time taken : {} milliseconds", topic, Duration.between(startTime,LocalDateTime.now()).toMillis());
     }
 
     /**
