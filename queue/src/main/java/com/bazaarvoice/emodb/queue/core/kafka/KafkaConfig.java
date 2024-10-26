@@ -33,10 +33,6 @@ public class KafkaConfig {
             .standard()
             .build();
 
-    private static final String DEFAULT_BOOTSTRAP_SERVERS =
-            "b-1.qaemodbpocmsk.q4panq.c10.kafka.us-east-1.amazonaws.com:9092," +
-                    "b-2.qaemodbpocmsk.q4panq.c10.kafka.us-east-1.amazonaws.com:9092";
-
 
     static {
         try {
@@ -62,7 +58,7 @@ public class KafkaConfig {
             lingerMsConfig = parameterValues.getOrDefault("/" + UNIVERSE + "/emodb/kafka/lingerMs", "1");
 
             // Configures the Kafka broker addresses for producer connections.
-            bootstrapServersConfig = parameterValues.getOrDefault("/" + UNIVERSE + "/emodb/kafka/bootstrapServers", DEFAULT_BOOTSTRAP_SERVERS);
+            bootstrapServersConfig = parameterValues.get("/" + UNIVERSE + "/emodb/kafka/bootstrapServers");
 
             logger.info("Kafka configurations loaded successfully from SSM.");
         } catch (AmazonServiceException e) {
