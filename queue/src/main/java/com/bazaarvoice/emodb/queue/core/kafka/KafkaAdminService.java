@@ -64,7 +64,7 @@ public class KafkaAdminService {
     }
 
 
-    /**
+ /**
      * Checks if a Kafka topic exists by using a cache to store the list of all topics.
      * If the cache entry has expired or the cache is empty, it queries the Kafka AdminClient for the topic list.
      * <p>

@@ -7,6 +7,7 @@ import com.bazaarvoice.emodb.job.api.JobType;
 import com.bazaarvoice.emodb.queue.core.kafka.KafkaAdminService;
 import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.queue.core.stepfn.StepFunctionService;
+import com.timgroup.statsd.StatsDClient;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.testng.annotations.Test;
 
@@ -41,7 +42,7 @@ public class SizeQueueCacheTest {
 
         BaseEventStore mockEventStore = mock(BaseEventStore.class);
         AbstractQueueService queueService = new AbstractQueueService(mockEventStore, mock(JobService.class),
-                mock(JobHandlerRegistry.class), mock(JobType.class), clock, mock(KafkaAdminService.class), mock(KafkaProducerService.class), mock(StepFunctionService.class)){};
+                mock(JobHandlerRegistry.class), mock(JobType.class), clock, mock(KafkaAdminService.class), mock(KafkaProducerService.class), mock(StepFunctionService.class), mock(StatsDClient.class)){};
 
         // At limit=500, size estimate should be at 4800
         // At limit=50, size estimate should be at 5000
