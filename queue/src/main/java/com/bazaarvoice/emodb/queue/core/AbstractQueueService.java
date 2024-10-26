@@ -145,9 +145,11 @@ abstract class AbstractQueueService implements BaseQueueService {
         try {
             // Attempt to retrieve from cache
             return experimentCache.get(IS_EXPERIMENT, () -> {
-                _log.info("IS_EXPERIMENT is refreshed");
+
+                Boolean checkExperiment = Boolean.parseBoolean(parameterStoreUtil.getParameter("/" + UNIVERSE + "/emodb/experiment/isExperiment"));
+                _log.info("IS_EXPERIMENT is refreshed {}", checkExperiment);
                 // If absent or expired, fetch from Parameter Store and cache the result
-                return Boolean.parseBoolean(parameterStoreUtil.getParameter("/" + UNIVERSE + "/emodb/experiment/isExperiment"));
+                return checkExperiment;
             });
         } catch (Exception e) {
             // Handle any errors that might occur while accessing the cache or Parameter Store

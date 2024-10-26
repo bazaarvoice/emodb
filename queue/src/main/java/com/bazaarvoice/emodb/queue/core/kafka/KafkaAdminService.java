@@ -57,6 +57,9 @@ public class KafkaAdminService {
         Set<String> topics = topicListCache.getIfPresent(TOPIC_LIST_KEY);
         if (topics == null) {
             topics = new HashSet<>();
+        } else {
+            // Create a new mutable Set if the existing one is unmodifiable
+            topics = new HashSet<>(topics);
         }
         topics.add(topic);
         topicListCache.put(TOPIC_LIST_KEY, topics);
