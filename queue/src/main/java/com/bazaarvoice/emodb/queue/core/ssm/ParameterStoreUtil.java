@@ -46,12 +46,9 @@ public class ParameterStoreUtil {
         }
 
         try {
-            //logger.info("Fetching parameter from AWS Parameter Store: {}", parameterName);
 
             GetParameterRequest request = new GetParameterRequest().withName(parameterName);
             GetParameterResult result = ssmClient.getParameter(request);
-
-            //logger.info("Successfully retrieved parameter: {}", parameterName);
             return result.getParameter().getValue();
 
         } catch (ParameterNotFoundException e) {
@@ -82,7 +79,6 @@ public class ParameterStoreUtil {
         }
 
         try {
-            logger.info("Fetching parameters from AWS Parameter Store: {}", parameterNames);
 
             GetParametersRequest request = new GetParametersRequest().withNames(parameterNames);
             GetParametersResult result = ssmClient.getParameters(request);
@@ -96,7 +92,6 @@ public class ParameterStoreUtil {
                 logger.warn("The following parameters were not found: {}", result.getInvalidParameters());
             }
 
-            logger.info("Successfully retrieved {} parameters", parameters.size());
             return parameters;
 
         } catch (AWSSimpleSystemsManagementException e) {

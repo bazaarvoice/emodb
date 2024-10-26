@@ -66,13 +66,13 @@ abstract class AbstractQueueService implements BaseQueueService {
 
     // Cache for the isExperiment value with a TTL of 5 minutes
     private final Cache<String, Boolean> experimentCache = CacheBuilder.newBuilder()
-            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .expireAfterWrite(1, TimeUnit.MINUTES)
             .build();
 
     private static final String IS_EXPERIMENT = "isExperiment";
 
     private final Cache<String, Set<String>> allowedQueuesCache = CacheBuilder.newBuilder()
-            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .expireAfterWrite(1, TimeUnit.MINUTES)
             .build();
     private static final String ALLOWED_QUEUES = "allowedQueues";
 
@@ -178,7 +178,7 @@ abstract class AbstractQueueService implements BaseQueueService {
     @Override
     public void sendAll(String queue, Collection<?> messages) {
         List<String> allowedQueues = fetchAllowedQueues();
-        boolean isExperiment = Boolean.parseBoolean(parameterStoreUtil.getParameter( "/"+ UNIVERSE+"/emodb/experiment/isExperiment"));
+        boolean isExperiment = getIsExperimentValue();
         if (!isExperiment) {
             // experiment is over now, send everything to kafka
             sendAll(Collections.singletonMap(queue, messages));
@@ -250,7 +250,6 @@ abstract class AbstractQueueService implements BaseQueueService {
             producerService.sendMessages(topic, topicEntry.getValue(), queueType);
             _log.info("Messages sent to topic: {}", topic);
         }
-        _log.info("All messages have been sent to their respective queues.");
     }
 
     @Override

@@ -20,7 +20,7 @@ public class KafkaAdminService {
     private final AdminClient adminClient;
     // Cache for the list of all topics with a TTL of 10 minutes
     private final Cache<String, Set<String>> topicListCache = CacheBuilder.newBuilder()
-            .expireAfterWrite(5, TimeUnit.MINUTES)
+            .expireAfterWrite(1, TimeUnit.MINUTES)
             .build();
 
     private static final String TOPIC_LIST_KEY = "allTopics";
