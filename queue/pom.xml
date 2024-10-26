@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.bazaarvoice.emodb</groupId>
         <artifactId>emodb-parent</artifactId>
-        <version>6.5.199-SNAPSHOT</version>
+        <version>6.5.194-SNAPSHOT</version>
         <relativePath>../parent/pom.xml</relativePath>
     </parent>
 
@@ -134,11 +134,6 @@
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-ssm</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.datadoghq</groupId>
-            <artifactId>java-dogstatsd-client</artifactId>
-            <version>2.3</version>
         </dependency>
     </dependencies>
 </project>
