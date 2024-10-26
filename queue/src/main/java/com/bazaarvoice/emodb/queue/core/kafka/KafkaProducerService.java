@@ -49,23 +49,6 @@ public class KafkaProducerService {
         _log.info("Finished sending messages to topic '{}' time taken : {} milliseconds", topic, Duration.between(startTime,LocalDateTime.now()).toMillis());
     }
 
-    /**
-     * Sends a single message to the specified Kafka topic.
-     *
-     * @param topic   The Kafka topic.
-     * @param message The message to be sent.
-     */
-//    public void sendMessage(String topic, String message, String queueType) {
-//        ProducerRecord<String, String> record = new ProducerRecord<>(topic, message, message);
-//        LocalDateTime startTime = LocalDateTime.now();
-//        try {
-//            RecordMetadata metadata = producer.send(record).get(); // Blocking call
-//            _log.info("Sent One message to {} in {} milliseconds", topic, Duration.between(LocalDateTime.now(),startTime).toMillis());
-//        } catch (Exception e) {
-//            _log.error("Failed to send message to topic '{}'. Exception: {}", topic, e.getMessage());
-//            throw new RuntimeException("Error sending message to kafka"+e.getMessage());
-//        }
-//    }
 
     /**
      * Closes the producer to release resources.
