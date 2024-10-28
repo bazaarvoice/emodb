@@ -135,8 +135,6 @@ public class StepFunctionServiceTest {
         // Act
         String sanitized = stepFunctionService.sanitizeExecutionName(validExecutionName);
 
-        // Print the output
-        System.out.println("Sanitized Execution Name: " + sanitized);
 
         // Assert
         assertEquals(sanitized, validExecutionName); // Should return the same name
@@ -150,8 +148,6 @@ public class StepFunctionServiceTest {
         // Act
         String sanitized = stepFunctionService.sanitizeExecutionName(executionName);
 
-        // Print the output
-        System.out.println("Sanitized Execution Name: " + sanitized);
 
         // Assert
         assertEquals(sanitized, "executionName"); // Should trim spaces
@@ -175,8 +171,6 @@ public class StepFunctionServiceTest {
         // Act
         String sanitized = stepFunctionService.sanitizeExecutionName(maxLengthExecutionName);
 
-        // Print the output
-        System.out.println("Sanitized Execution Name: " + sanitized);
 
         // Assert
         assertEquals(sanitized.length(), 69); // Should be exactly 69 characters
@@ -190,8 +184,6 @@ public class StepFunctionServiceTest {
         // Act
         String sanitized = stepFunctionService.sanitizeExecutionName(executionName);
 
-        // Print the output
-        System.out.println("Sanitized Execution Name: " + sanitized);
 
         // Assert
         assertEquals(sanitized, "test___invalid__name_with_multiple_invalid_characters"); // Should replace all invalid characters
