@@ -7,6 +7,7 @@ import com.amazonaws.services.stepfunctions.model.StartExecutionRequest;
 import com.amazonaws.services.stepfunctions.model.StartExecutionResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.time.Instant;
 
 /**
  * Service to interact with AWS Step Functions using AWS SDK v1.
@@ -42,6 +43,10 @@ public class StepFunctionService {
             logger.warn("Input payload is null; using empty JSON object");
             inputPayload = "{}"; // Default to empty payload if null
         }
+        // Create the timestamp
+        String timestamp = String.valueOf(Instant.now().getEpochSecond());
+        // Append the timestamp to the initial execution name
+        executionName = sanitizeExecutionName(executionName) + "_" + timestamp;
 
         try {
             StartExecutionRequest startExecutionRequest = new StartExecutionRequest()
@@ -58,5 +63,34 @@ public class StepFunctionService {
             logger.error("Unexpected error occurred during Step Function execution: {}", e.getMessage(), e);
             throw e;
         }
+    }
+
+    /**
+     * Sanitizes the execution name by replacing invalid characters with underscores
+     * and truncating if needed.
+     */
+    public String sanitizeExecutionName(String executionName) {
+        if (executionName == null || executionName.isEmpty()) {
+            throw new IllegalArgumentException("Execution name cannot be null or empty");
+        }
+        executionName = executionName.trim();
+        // Replace invalid characters with underscores
+        String sanitized = executionName.replaceAll("[^a-zA-Z0-9\\-_]", "_");
+
+        // Check if the sanitized name is empty or consists only of underscores
+        if (sanitized.isEmpty() || sanitized.replaceAll("_", "").isEmpty()) {
+            throw new IllegalArgumentException("Execution name cannot contain only invalid characters");
+        }
+
+        // Truncate from the beginning if length exceeds 69 characters
+        if (sanitized.length() > 69) {
+            sanitized = sanitized.substring(sanitized.length() - 69);
+        }
+
+        // Log the updated execution name if it has changed
+        if (!sanitized.equals(executionName)) {
+          logger.info("Updated execution name: {}", sanitized);
+        }
+        return sanitized;
     }
 }
