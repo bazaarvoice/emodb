@@ -110,6 +110,20 @@ public class DedupQueueResource1 {
         _queueService.sendAll(queue, messages);
         return SuccessResponse.instance();
     }
+    @POST
+    @Path("{queue}/sendbatch1")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @RequiresPermissions("queue|post|{queue}")
+    @Timed(name = "bv.emodb.dedupq.DedupQueueResource1.sendBatch", absolute = true)
+    @ApiOperation (value = "Send a Batch.",
+            notes = "Returns a SuccessResponse",
+            response = SuccessResponse.class
+    )
+    public SuccessResponse sendBatch1(@PathParam("queue") String queue, Collection<Object> messages) {
+        // Not partitioned--any server can write messages to Cassandra.
+        _queueService.sendAll(queue, messages,true);
+        return SuccessResponse.instance();
+    }
 
     @POST
     @Path("_sendbatch")
@@ -152,6 +166,18 @@ public class DedupQueueResource1 {
         } else {
             return getService(partitioned, subject.getAuthenticationId()).getMessageCountUpTo(queue, limit.get());
         }
+    }
+
+    @GET
+    @Path("{queue}/uncached_size")
+    @RequiresPermissions("queue|get_status|{queue}")
+    @Timed(name = "bv.emodb.dedupq.DedupQueueResource1.getUncachedMessageCount", absolute = true)
+    @ApiOperation (value = "gets the uncached Message count.",
+            notes = "Returns a long.",
+            response = long.class
+    )
+    public long getUncachedMessageCount(@PathParam("queue") String queue) {
+        return _queueService.getUncachedSize(queue);
     }
 
 

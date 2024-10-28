@@ -35,6 +35,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -120,6 +121,24 @@ public class QueueResource1 {
         return SuccessResponse.instance();
     }
 
+
+// endpoint to write to cassandra after throttled messages come from kafka
+    @POST
+    @Path("{queue}/sendbatch1")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @RequiresPermissions("queue|post|{queue}")
+    @Timed(name = "bv.emodb.queue.QueueResource1.sendBatch1", absolute = true)
+    @ApiOperation (value = "Send a Batch.",
+            notes = "Returns a SuccessResponse..",
+            response = SuccessResponse.class
+    )
+    public SuccessResponse sendBatch1(@PathParam("queue") String queue, Collection<Object> events) {
+        //TODO change query param name / type
+        // Not partitioned--any server can write messages to Cassandra.
+        _queueService.sendAll(queue, events, true);
+        return SuccessResponse.instance();
+    }
+
     @POST
     @Path("_sendbatch")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -162,6 +181,17 @@ public class QueueResource1 {
         }
     }
 
+    @GET
+    @Path("{queue}/uncached_size")
+    @RequiresPermissions("queue|get_status|{queue}")
+    @Timed(name = "bv.emodb.queue.QueueResource1.getUncachedMessageCount", absolute = true)
+    @ApiOperation (value = "gets the uncached Message count.",
+            notes = "Returns a long.",
+            response = long.class
+    )
+    public long getUncachedMessageCount(@PathParam("queue") String queue) {
+        return _queueService.getUncachedSize(queue);
+    }
 
     @GET
     @Path("{queue}/claimcount")

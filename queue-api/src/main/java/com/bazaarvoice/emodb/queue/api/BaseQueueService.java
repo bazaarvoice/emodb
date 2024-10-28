@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.queue.api;
 
+import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
@@ -15,6 +16,8 @@ public interface BaseQueueService {
 
     void sendAll(Map<String, ? extends Collection<?>> messagesByQueue);
 
+    void sendAll(String queue, Collection<?> messages, boolean isFlush);
+
     /**
      * Counts pending messages for the specified queue.  The count will include messages that are currently claimed
      * and not returned by the {@link #poll} method.
@@ -23,6 +26,10 @@ public interface BaseQueueService {
      * {@link #getMessageCountUpTo(String, long)} with a reasonable limit.
      */
     long getMessageCount(String queue);
+
+    default long getUncachedSize(String queue){
+        return 0;
+    }
 
     /**
      * Counts the total number of messages for the specified queue, accurate up to the specified limit.  Beyond the
