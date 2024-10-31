@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.web.purge;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
+import com.bazaarvoice.emodb.event.api.BaseEventStore;
 import com.bazaarvoice.emodb.job.api.JobIdentifier;
 import com.bazaarvoice.emodb.job.api.JobRequest;
 import com.bazaarvoice.emodb.job.api.JobStatus;
@@ -85,7 +86,7 @@ public class PurgeTest {
                 lifeCycleRegistry, _queueService, "testqueue", _jobHandlerRegistry, _jobStatusDAO, _curator,
                 1, Duration.ZERO, 100, Duration.ofHours(1));
 
-        _store = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
+        _store = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService(), mock(BaseEventStore.class));
         _dataStoreResource = new DataStoreResource1(_store, new DefaultDataStoreAsync(_store, _service, _jobHandlerRegistry),
                 mock(CompactionControlSource.class), new UnlimitedDataStoreUpdateThrottler());
 

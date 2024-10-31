@@ -3,6 +3,7 @@ package com.bazaarvoice.emodb.web.settings;
 import com.bazaarvoice.emodb.cachemgr.api.CacheHandle;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.cachemgr.api.InvalidationScope;
+import com.bazaarvoice.emodb.event.api.BaseEventStore;
 import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
@@ -33,7 +34,7 @@ public class SettingsManagerTest {
 
     @BeforeMethod
     public void setUp() {
-        _dataStore = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
+        _dataStore = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService(), mock(BaseEventStore.class));
         _cacheRegistry = mock(CacheRegistry.class);
         _cacheHandle = mock(CacheHandle.class);
         when(_cacheRegistry.register(eq("settings"), any(Cache.class), eq(true))).thenReturn(_cacheHandle);

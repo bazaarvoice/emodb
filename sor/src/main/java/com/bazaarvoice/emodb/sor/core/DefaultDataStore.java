@@ -5,30 +5,11 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.json.deferred.LazyJsonMap;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
+import com.bazaarvoice.emodb.event.api.BaseEventStore;
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaConfig;
 import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
-import com.bazaarvoice.emodb.sor.api.Audit;
-import com.bazaarvoice.emodb.sor.api.AuditBuilder;
-import com.bazaarvoice.emodb.sor.api.AuditsUnavailableException;
-import com.bazaarvoice.emodb.sor.api.Change;
-import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
-import com.bazaarvoice.emodb.sor.api.Coordinate;
-import com.bazaarvoice.emodb.sor.api.DataStore;
-import com.bazaarvoice.emodb.sor.api.DefaultTable;
-import com.bazaarvoice.emodb.sor.api.FacadeOptions;
-import com.bazaarvoice.emodb.sor.api.History;
-import com.bazaarvoice.emodb.sor.api.Intrinsic;
-import com.bazaarvoice.emodb.sor.api.Names;
-import com.bazaarvoice.emodb.sor.api.ReadConsistency;
-import com.bazaarvoice.emodb.sor.api.StashNotAvailableException;
-import com.bazaarvoice.emodb.sor.api.StashRunTimeInfo;
-import com.bazaarvoice.emodb.sor.api.StashTimeKey;
-import com.bazaarvoice.emodb.sor.api.TableOptions;
-import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
-import com.bazaarvoice.emodb.sor.api.UnknownTableException;
-import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
-import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEventType;
-import com.bazaarvoice.emodb.sor.api.Update;
-import com.bazaarvoice.emodb.sor.api.WriteConsistency;
+import com.bazaarvoice.emodb.queue.core.ssm.ParameterStoreUtil;
+import com.bazaarvoice.emodb.sor.api.*;
 import com.bazaarvoice.emodb.sor.audit.AuditWriter;
 import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.bazaarvoice.emodb.sor.condition.Condition;
@@ -60,6 +41,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
@@ -80,15 +63,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
@@ -105,7 +80,10 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     private static final int NUM_COMPACTION_THREADS = 2;
     private static final int MAX_COMPACTION_QUEUE_LENGTH = 100;
-    public static final String UPDATE_AUDIT_TOPIC = "master_bus";
+    private static final String SYSTEM_PREFIX = "__system_bus:";
+    private static final String MASTER_FANOUT = SYSTEM_PREFIX + "master";
+    private static final String UNIVERSE = KafkaConfig.getUniverseFromEnv();
+    private static final String DATA_THROTTLER = "databusThrottler";
 
     private final Logger _log = LoggerFactory.getLogger(DefaultDataStore.class);
 
@@ -129,6 +107,11 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     private final MapStore<DataStoreMinSplitSize> _minSplitSizeMap;
     private final Clock _clock;
     private final KafkaProducerService _kafkaProducerService;
+    private ParameterStoreUtil parameterStoreUtil;
+    private final BaseEventStore _eventStore;
+    private final Cache<String, Boolean> dataThrottlerCache = CacheBuilder.newBuilder()
+            .expireAfterWrite(1, TimeUnit.MINUTES)
+            .build();
 
     private StashTableDAO _stashTableDao;
 
@@ -137,10 +120,10 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                             DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao, SlowQueryLog slowQueryLog, HistoryStore historyStore,
                             @StashRoot Optional<URI> stashRootDirectory, @LocalCompactionControl CompactionControlSource compactionControlSource,
                             @StashBlackListTableCondition Condition stashBlackListTableCondition, AuditWriter auditWriter,
-                            @MinSplitSizeMap MapStore<DataStoreMinSplitSize> minSplitSizeMap, Clock clock, KafkaProducerService kafkaProducerService) {
+                            @MinSplitSizeMap MapStore<DataStoreMinSplitSize> minSplitSizeMap, Clock clock, KafkaProducerService kafkaProducerService, BaseEventStore eventStore) {
         this(eventWriterRegistry, tableDao, dataReaderDao, dataWriterDao, slowQueryLog, defaultCompactionExecutor(lifeCycle),
                 historyStore, stashRootDirectory, compactionControlSource, stashBlackListTableCondition, auditWriter,
-                minSplitSizeMap, metricRegistry, clock, kafkaProducerService);
+                minSplitSizeMap, metricRegistry, clock, kafkaProducerService, eventStore);
     }
 
     @VisibleForTesting
@@ -149,7 +132,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                             SlowQueryLog slowQueryLog, ExecutorService compactionExecutor, HistoryStore historyStore,
                             Optional<URI> stashRootDirectory, CompactionControlSource compactionControlSource,
                             Condition stashBlackListTableCondition, AuditWriter auditWriter,
-                            MapStore<DataStoreMinSplitSize> minSplitSizeMap, MetricRegistry metricRegistry, Clock clock, KafkaProducerService kafkaProducerService) {
+                            MapStore<DataStoreMinSplitSize> minSplitSizeMap, MetricRegistry metricRegistry, Clock clock, KafkaProducerService kafkaProducerService, BaseEventStore eventStore) {
         _eventWriterRegistry = requireNonNull(eventWriterRegistry, "eventWriterRegistry");
         _tableDao = requireNonNull(tableDao, "tableDao");
         _dataReaderDao = requireNonNull(dataReaderDao, "dataReaderDao");
@@ -170,6 +153,8 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         _minSplitSizeMap = requireNonNull(minSplitSizeMap, "minSplitSizeMap");
         _clock = requireNonNull(clock, "clock");
         _kafkaProducerService = requireNonNull(kafkaProducerService, "kafkaProducerService");
+        this.parameterStoreUtil = new ParameterStoreUtil();
+        _eventStore = eventStore;
     }
 
     /**
@@ -378,6 +363,34 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                 });
             }
         };
+    }
+
+    /**
+     * Retrieves the value of the "DataThrottler" flag from the cache if available.
+     * If the value is not present in the cache or the cache has expired, it fetches the value
+     * from AWS Parameter Store and stores it in the cache.
+     * <p>
+     * The cached value has a TTL (Time-To-Live) of 5 minutes, after which it will be refreshed
+     * from the Parameter Store on the next access.
+     * </p>
+     *
+     * @return {@code true} if the experiment is still running, otherwise {@code false}.
+     * @throws RuntimeException if there is an error fetching the value from the cache or Parameter Store.
+     */
+    private boolean getDataThrottlerValue() {
+        try {
+            // Attempt to retrieve from cache
+            return dataThrottlerCache.get(DATA_THROTTLER, () -> {
+
+                Boolean checkDataThrottler = Boolean.parseBoolean(parameterStoreUtil.getParameter("/" + UNIVERSE + "/emodb/" + DATA_THROTTLER));
+                _log.info("DATA_THROTTLER is refreshed {}", checkDataThrottler);
+                // If absent or expired, fetch from Parameter Store and cache the result
+                return checkDataThrottler;
+            });
+        } catch (Exception e) {
+            _log.error("Error fetching databusThrottler valie{}", e.getMessage());
+            return false;
+        }
     }
 
     /**
@@ -692,8 +705,40 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         if (!updatesIter.hasNext()) {
             return;
         }
+        _dataWriterDao.updateAll(Iterators.transform(updatesIter, new Function<Update, RecordUpdate>() {
+            @Override
+            public RecordUpdate apply(Update update) {
+                requireNonNull(update, "update");
+                String tableName = update.getTable();
+                String key = update.getKey();
+                UUID changeId = update.getChangeId();
+                Delta delta = update.getDelta();
+                Audit audit = update.getAudit();
 
-        _dataWriterDao.updateAll(transformUpdates(updatesIter, isFacade, tags), new DataWriterDAO.UpdateListener() {
+                // Strip intrinsics and "~tags".  Verify the Delta results in a top-level object.
+                delta = SanitizeDeltaVisitor.sanitize(delta);
+
+                Table table = _tableDao.get(tableName);
+
+                if (isFacade && !table.isFacade()) {
+                    // Someone is trying to update a facade, but is inadvertently going to update the primary table in this dc
+                    throw new SecurityException("Access denied. Update intended for a facade, but the table would be updated.");
+                }
+
+                if (table.isFacade() && !isFacade) {
+                    throw new SecurityException("Access denied. Unauthorized attempt to update a facade.");
+                }
+
+                // We'll likely fail to resolve write conflicts if deltas are written into the far past after
+                // compaction may have occurred.
+                if (TimeUUIDs.getTimeMillis(changeId) <= _dataWriterDao.getFullConsistencyTimestamp(table)) {
+                    throw new IllegalArgumentException(
+                            "The 'changeId' UUID is from too far in the past: " + TimeUUIDs.getDate(changeId));
+                }
+
+                return new RecordUpdate(table, key, changeId, delta, audit, tags, update.getConsistency());
+            }
+        }), new DataWriterDAO.UpdateListener() {
             @Override
             public void beforeWrite(Collection<RecordUpdate> updateBatch) {
                 // Tell the databus we're about to write.
@@ -715,8 +760,10 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                     }
                 }
                 if (!updateRefs.isEmpty()) {
-//                    _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefs);
-                    _kafkaProducerService.sendMessages(UPDATE_AUDIT_TOPIC, updateRefs, "update");
+                    if(getDataThrottlerValue())
+                        _kafkaProducerService.sendMessages(MASTER_FANOUT, updateRefs, "update");
+                    else
+                        _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefs);
                 }
             }
 
@@ -998,60 +1045,29 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         return MetricRegistry.name("bv.emodb.sor", "DefaultDataStore", name);
     }
 
-    private Iterator<RecordUpdate> transformUpdates(Iterator<Update> updatesIter, boolean isFacade, final Set<String> tags) {
-        return Iterators.transform(updatesIter, new Function<Update, RecordUpdate>() {
-            @Override
-            public RecordUpdate apply(Update update) {
-                requireNonNull(update, "update");
-                String tableName = update.getTable();
-                String key = update.getKey();
-                UUID changeId = update.getChangeId();
-                Delta delta = update.getDelta();
-                Audit audit = update.getAudit();
-
-                // Strip intrinsics and "~tags".  Verify the Delta results in a top-level object.
-                delta = SanitizeDeltaVisitor.sanitize(delta);
-
-                Table table = _tableDao.get(tableName);
-
-                if (isFacade && !table.isFacade()) {
-                    // Someone is trying to update a facade, but is inadvertently going to update the primary table in this dc
-                    throw new SecurityException("Access denied. Update intended for a facade, but the table would be updated.");
-                }
-
-                if (table.isFacade() && !isFacade) {
-                    throw new SecurityException("Access denied. Unauthorized attempt to update a facade.");
-                }
-
-                // We'll likely fail to resolve write conflicts if deltas are written into the far past after
-                // compaction may have occurred.
-                if (TimeUUIDs.getTimeMillis(changeId) <= _dataWriterDao.getFullConsistencyTimestamp(table)) {
-                    throw new IllegalArgumentException(
-                            "The 'changeId' UUID is from too far in the past: " + TimeUUIDs.getDate(changeId));
-                }
-
-                return new RecordUpdate(table, key, changeId, delta, audit, tags, update.getConsistency());
-            }
-        });
+    private Iterable<UpdateRef> convertToUpdateRef(Iterable<UpdateRefModel> apiUpdateRefs) {
+        List<com.bazaarvoice.emodb.sor.core.UpdateRef> coreUpdateRefs = new ArrayList<>();
+        for (UpdateRefModel apiUpdateRefModel : apiUpdateRefs) {
+            String tableName = apiUpdateRefModel.getTable();
+            String key = apiUpdateRefModel.getKey();
+            UUID changeId = apiUpdateRefModel.getChangeId();
+            Set<String> tags = apiUpdateRefModel.getTags();
+            coreUpdateRefs.add(new com.bazaarvoice.emodb.sor.core.UpdateRef(tableName, key, changeId, tags));
+        }
+        return coreUpdateRefs;
     }
 
     @Override
-    public void updateRefInDatabus(Iterable<Update> updates, Set<String> tags, boolean isFacade) {
-        Iterator<Update> updatesIter = updates.iterator();
-        if (!updatesIter.hasNext()) {
+    public void updateRefInDatabus(Iterable<UpdateRefModel> updateRefs, Set<String> tags, boolean isFacade) {
+        Iterator<UpdateRef> updateRefsIter = convertToUpdateRef(updateRefs).iterator();
+        if (!updateRefsIter.hasNext()) {
             return;
         }
-        Iterator<RecordUpdate> recordUpdates = transformUpdates(updatesIter, isFacade, tags);
-
-        while (recordUpdates.hasNext()) {
-            RecordUpdate update = recordUpdates.next();
-            List<UpdateRef> updateRefs = Lists.newArrayListWithCapacity(Collections.singleton(update).size());
-            if (!update.getTable().isInternal()) {
-                updateRefs.add(new UpdateRef(update.getTable().getName(), update.getKey(), update.getChangeId(), tags));
-            }
-            if (!updateRefs.isEmpty()) {
-                _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefs);
-            }
+        while (updateRefsIter.hasNext()) {
+            UpdateRef updateRef = updateRefsIter.next();
+                List<UpdateRef> updateRefList = Lists.newArrayListWithCapacity(1);
+                updateRefList.add(updateRef);
+                _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefList);
         }
     }
 }
