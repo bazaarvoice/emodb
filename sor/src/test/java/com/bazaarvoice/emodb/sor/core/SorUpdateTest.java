@@ -1,6 +1,8 @@
 package com.bazaarvoice.emodb.sor.core;
 
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
+import com.bazaarvoice.emodb.event.api.BaseEventStore;
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
@@ -19,6 +21,7 @@ import org.testng.collections.Lists;
 
 import java.util.UUID;
 
+import static org.mockito.Mockito.mock;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.fail;
 
@@ -34,7 +37,7 @@ public class SorUpdateTest {
     public void SetupTest() {
         final InMemoryDataReaderDAO dataDAO = new InMemoryDataReaderDAO();
         _eventWriterRegistry = new DatabusEventWriterRegistry();
-        _dataStore = new InMemoryDataStore(_eventWriterRegistry, dataDAO, new MetricRegistry());
+        _dataStore = new InMemoryDataStore(_eventWriterRegistry, dataDAO, new MetricRegistry(), new KafkaProducerService(), mock(BaseEventStore.class));
 
 
         // Create a table for our test

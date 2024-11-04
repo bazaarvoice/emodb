@@ -1,5 +1,7 @@
 package com.bazaarvoice.emodb.sor.core;
 
+import com.bazaarvoice.emodb.event.api.BaseEventStore;
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
@@ -43,7 +45,7 @@ public class MinSplitSizeTest {
             }
         };
 
-        DataStore dataStore = new InMemoryDataStore(dataDao, new MetricRegistry());
+        DataStore dataStore = new InMemoryDataStore(dataDao, new MetricRegistry(), new KafkaProducerService(), mock(BaseEventStore.class));
 
         dataStore.createTable("table", new TableOptionsBuilder().setPlacement("default").build(),
                 Collections.emptyMap(), new AuditBuilder().build());
