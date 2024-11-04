@@ -28,13 +28,13 @@ public class KafkaProducerService {
      * @param topic   The Kafka topic.
      * @param events  The collection of messages to be sent.
      */
-    public void sendMessages(String topic, Collection<String> events, String queueType) {
+    public <T> void sendMessages(String topic, Collection<T> events, String queueType) {
         LocalDateTime startTime = LocalDateTime.now();
         _log.info("Sending {} messages to topic '{}'", events.size(), topic);
         List<Future<RecordMetadata>> futures = new ArrayList<>();
         // Use async sendMessage and collect futures
-        for (String event : events) {
-            futures.add(producer.send(new ProducerRecord<>(topic, event)));
+        for (T event : events) {
+            futures.add(producer.send(new ProducerRecord<>(topic, event.toString())));
         }
 
         // Wait for all futures to complete
@@ -46,7 +46,7 @@ public class KafkaProducerService {
                 throw new RuntimeException("Error sending messages to Kafka", e);
             }
         }
-        _log.info("Finished sending messages to topic '{}' time taken : {} milliseconds", topic, Duration.between(startTime,LocalDateTime.now()).toMillis());
+        _log.info("Finished sending messages to topic '{}' time taken : {} milliseconds", topic, Duration.between(startTime, LocalDateTime.now()).toMillis());
     }
 
 

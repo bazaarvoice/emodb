@@ -1,5 +1,7 @@
 package com.bazaarvoice.emodb.sor.core.test;
 
+import com.bazaarvoice.emodb.event.api.BaseEventStore;
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.audit.DiscardingAuditWriter;
 import com.bazaarvoice.emodb.sor.compactioncontrol.InMemoryCompactionControlSource;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
@@ -19,18 +21,19 @@ import java.util.Optional;
  */
 public class InMemoryDataStore extends DefaultDataStore {
 
-    public InMemoryDataStore(MetricRegistry metricRegistry) {
-        this(new InMemoryDataReaderDAO(), metricRegistry);
+    public InMemoryDataStore(MetricRegistry metricRegistry, KafkaProducerService kafkaProducerService, BaseEventStore eventStore) {
+        this(new InMemoryDataReaderDAO(), metricRegistry, kafkaProducerService, eventStore);
     }
 
-    public InMemoryDataStore(InMemoryDataReaderDAO dataDao, MetricRegistry metricRegistry) {
-        this(new DatabusEventWriterRegistry(), dataDao, metricRegistry);
+
+    public InMemoryDataStore(InMemoryDataReaderDAO dataDao, MetricRegistry metricRegistry, KafkaProducerService kafkaProducerService, BaseEventStore eventStore) {
+        this(new DatabusEventWriterRegistry(), dataDao, metricRegistry, kafkaProducerService, eventStore);
     }
 
-    public InMemoryDataStore(DatabusEventWriterRegistry eventWriterRegistry, InMemoryDataReaderDAO dataDao, MetricRegistry metricRegistry) {
+    public InMemoryDataStore(DatabusEventWriterRegistry eventWriterRegistry, InMemoryDataReaderDAO dataDao, MetricRegistry metricRegistry, KafkaProducerService kafkaProducerService, BaseEventStore eventStore) {
         super(eventWriterRegistry, new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), MoreExecutors.newDirectExecutorService(), new InMemoryHistoryStore(),
                 Optional.empty(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
-                new DiscardingAuditWriter(), new InMemoryMapStore<>(), metricRegistry, Clock.systemUTC());
+                new DiscardingAuditWriter(), new InMemoryMapStore<>(), metricRegistry, Clock.systemUTC(), kafkaProducerService, eventStore);
     }
 }

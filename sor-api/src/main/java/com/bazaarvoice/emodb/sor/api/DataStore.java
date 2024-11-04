@@ -261,4 +261,10 @@ public interface DataStore {
      */
     URI getStashRoot()
             throws StashNotAvailableException;
+
+    default void updateRefInDatabus(Iterable<UpdateRefModel> updateRefs, Set<String> tags, boolean isFacade) {
+        /*
+         * This method is a no-op in the default implementation. It is used by the Databus to update the reference
+         */
+    }
 }
