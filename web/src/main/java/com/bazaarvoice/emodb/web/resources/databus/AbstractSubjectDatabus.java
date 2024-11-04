@@ -62,6 +62,11 @@ public abstract class AbstractSubjectDatabus implements SubjectDatabus {
     }
 
     @Override
+    public long getMasterCount(Subject subject){
+        return databus(subject).getMasterCount();
+    }
+
+    @Override
     public long getClaimCount(Subject subject, @PartitionKey String subscription) {
         return databus(subject).getClaimCount(subscription);
     }

@@ -412,6 +412,18 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
     }
 
     @Override
+    public long getMasterEventCountUncached(String ownerId) {
+        _log.info("Inside getMasterEventCountUncached with _masterFanoutChannels length {}", _masterFanoutChannels.size());
+        long size = 0;
+        for(String channel : _masterFanoutChannels) {
+            size += _eventStore.getSizeEstimate(channel, Long.MAX_VALUE);
+            _log.info("From channel size {} {}:", channel, size);
+        }
+        return size;
+    }
+
+
+    @Override
     public long getEventCountUpTo(String ownerId, String subscription, long limit) {
         checkSubscriptionOwner(ownerId, subscription);
 

@@ -174,6 +174,18 @@ public class DatabusResource1 {
     }
 
     @GET
+    @Path ("/master_size")
+    @Timed (name = "bv.emodb.databus.DatabusResource1.getMasterEventCount", absolute = true)
+    @ApiOperation (value = "Gets the master event count.",
+            notes = "Returns a long.",
+            response = long.class
+    )
+    public long getEventCountInMaster(@QueryParam ("partitioned") BooleanParam partitioned,
+                              @Authenticated Subject subject) {
+        return getClient(partitioned).getMasterCount(subject);
+    }
+
+    @GET
     @Path ("{subscription}/claimcount")
     @RequiresPermissions ("databus|get_status|{subscription}")
     @Timed (name = "bv.emodb.databus.DatabusResource1.getClaimCount", absolute = true)
