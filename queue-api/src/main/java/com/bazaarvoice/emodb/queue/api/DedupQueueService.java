@@ -15,6 +15,7 @@ public interface DedupQueueService extends BaseQueueService {
 
     void sendAll(Map<String, ? extends Collection<?>> messagesByQueue);
 
+    //Overloaded sendAll method to send to cassandra
     void sendAll(String queue, Collection<?>messages, boolean isFlush);
 
     /**
@@ -25,6 +26,10 @@ public interface DedupQueueService extends BaseQueueService {
      * {@link #getMessageCountUpTo(String, long)} with a reasonable limit.
      */
     long getMessageCount(String queue);
+
+    default long getUncachedSize(String queue){
+        return 0;
+    }
 
     /**
      * Counts the total number of messages for the specified queue, accurate up to the specified limit.  Beyond the
