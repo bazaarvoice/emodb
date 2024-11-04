@@ -30,7 +30,7 @@ public class KafkaProducerService {
             _log.debug("Sending message: {}", event);
             sendMessage(topic, event.toString(),queueType);
         }
-        _log.info("Finished sending messages to topic '{}'", topic);
+        _log.info("Finished sending {} messages to topic '{}'", events.size(), topic);
     }
 
     /**
