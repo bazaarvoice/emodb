@@ -4,6 +4,8 @@ import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagement
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagementClientBuilder;
 import com.amazonaws.services.simplesystemsmanagement.model.GetParameterRequest;
 import com.amazonaws.services.simplesystemsmanagement.model.GetParameterResult;
+import com.amazonaws.services.simplesystemsmanagement.model.PutParameterRequest;
+import com.amazonaws.services.simplesystemsmanagement.model.PutParameterResult;
 import com.amazonaws.services.simplesystemsmanagement.model.GetParametersRequest;
 import com.amazonaws.services.simplesystemsmanagement.model.GetParametersResult;
 import com.amazonaws.services.simplesystemsmanagement.model.ParameterNotFoundException;
@@ -101,6 +103,24 @@ public class ParameterStoreUtil {
         } catch (Exception e) {
             logger.error("Unexpected error while fetching parameters: {}", parameterNames, e);
             throw new RuntimeException("Unexpected error fetching parameters: " + parameterNames, e);
+        }
+    }
+
+    public Long updateParameter(String key, String value) {
+        try {
+            if (key == null || key.trim().isEmpty()) {
+                logger.error("parameter name cannot be null or blank");
+                throw new IllegalArgumentException("parameter name cannot be null or blank");
+            }
+
+            PutParameterRequest request = new PutParameterRequest().withName(key).withValue(value).withOverwrite(true);
+
+            PutParameterResult response = ssmClient.putParameter(request);
+            logger.info("Successfully updated parameter: " + key + " with value: " + value + ", Update Version: " + response.getVersion());
+            return response.getVersion();
+        } catch (Exception e) {
+            logger.error("Failed to update parameter: " + key + " with value: " + value, e);
+            throw new RuntimeException("Unexpected error updating parameter: " + key + " with value: " + value, e);
         }
     }
 
