@@ -6,11 +6,15 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.Future;
 
 public class KafkaProducerService {
@@ -61,6 +65,34 @@ public class KafkaProducerService {
         } catch (Exception e) {
             _log.error("Error while closing Kafka producer: ", e);
             throw e;
+        }
+    }
+
+    public static String getUniverseFromEnv() {
+        String filePath = "/etc/environment";
+        Properties environmentProps = new Properties();
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                // Skip empty lines or comments
+                if (line.trim().isEmpty() || line.trim().startsWith("#")) {
+                    continue;
+                }
+                // Split the line into key-value pair
+                String[] parts = line.split("=", 2);
+                if (parts.length == 2) {
+                    String key = parts[0].trim();
+                    String value = parts[1].trim();
+                    // Remove any surrounding quotes from value
+                    value = value.replace("\"", "");
+                    environmentProps.put(key, value);
+                }
+            }
+            // Access the environment variables
+            return environmentProps.getProperty("UNIVERSE");
+        } catch (IOException e) {
+            throw new RuntimeException("Error reading environment file: " + e.getMessage());
         }
     }
 }

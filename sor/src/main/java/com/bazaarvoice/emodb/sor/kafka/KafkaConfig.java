@@ -134,15 +134,6 @@ public class KafkaConfig {
         return producerProps;
     }
 
-    // Kafka Admin properties
-    public static Properties getAdminProps() {
-        Properties adminProps = new Properties();
-
-        adminProps.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServersConfig);
-        logger.info("Kafka Admin properties initialized.");
-        return adminProps;
-    }
-
     // Ensure the SSM client is closed when the application shuts down
     public static void shutdown() {
         if (ssmClient != null) {

@@ -56,6 +56,8 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Clock;
@@ -81,7 +83,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     private static final int MAX_COMPACTION_QUEUE_LENGTH = 100;
     private static final String SYSTEM_PREFIX = "__system_bus:";
     private static final String MASTER_FANOUT = SYSTEM_PREFIX + "master";
-    private static final String UNIVERSE = KafkaConfig.getUniverseFromEnv();
+    private static final String UNIVERSE = KafkaProducerService.getUniverseFromEnv();
     private static final String DATA_THROTTLER = "databusThrottler";
 
     private final Logger _log = LoggerFactory.getLogger(DefaultDataStore.class);
