@@ -79,8 +79,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     private static final int NUM_COMPACTION_THREADS = 2;
     private static final int MAX_COMPACTION_QUEUE_LENGTH = 100;
-    private static final String SYSTEM_PREFIX = "__system_bus:";
-    private static final String MASTER_FANOUT = SYSTEM_PREFIX + "master";
+    private static final String MASTER_FANOUT_TOPIC = "system_bus_master";
     private static final String UNIVERSE = KafkaConfig.getUniverseFromEnv();
     private static final String DATA_THROTTLER = "databusThrottler";
 
@@ -760,7 +759,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                 if (!updateRefs.isEmpty()) {
                     _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefs);
                     if(getDataThrottlerValue())
-                        _kafkaProducerService.sendMessages(MASTER_FANOUT, updateRefs, "update");
+                        _kafkaProducerService.sendMessages(MASTER_FANOUT_TOPIC, updateRefs, "update");
                     else
                         _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefs);
                 }

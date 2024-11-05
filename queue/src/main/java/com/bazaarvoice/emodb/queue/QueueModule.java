@@ -34,7 +34,6 @@ import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
-import com.timgroup.statsd.StatsDClient;
 import org.apache.curator.framework.CuratorFramework;
 
 import java.time.Clock;
@@ -77,7 +76,6 @@ public class QueueModule extends PrivateModule {
     @Override
     protected void configure() {
         bind(CassandraFactory.class).asEagerSingleton();
-        bind(StatsDClient.class).asEagerSingleton();
 
         // Event Store
         bind(ChannelConfiguration.class).to(QueueChannelConfiguration.class).asEagerSingleton();

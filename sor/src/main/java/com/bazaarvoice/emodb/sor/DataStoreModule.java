@@ -196,7 +196,7 @@ public class DataStoreModule extends PrivateModule {
         bind(SlowQueryLog.class).toProvider(LogbackSlowQueryLogProvider.class);
         bind(HintsConsistencyTimeProvider.class).asEagerSingleton();
         bind(MinLagConsistencyTimeProvider.class).asEagerSingleton();
-        bind(KafkaProducerService.class);
+        bind(KafkaProducerService.class).asEagerSingleton();
 
         // The web servers are responsible for updating the ZooKeeper full consistency data.  CLI tools don't need to.
         // Enable updating the ZooKeeper full consistency data if specified

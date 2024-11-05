@@ -174,7 +174,7 @@ public class DatabusResource1 {
     }
 
     @GET
-    @Path ("/master_size")
+    @Path ("master_size/all")
     @Timed (name = "bv.emodb.databus.DatabusResource1.getMasterEventCount", absolute = true)
     @ApiOperation (value = "Gets the master event count.",
             notes = "Returns a long.",
