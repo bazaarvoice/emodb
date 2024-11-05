@@ -15,6 +15,8 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+
+import java.util.List;
 import java.util.MissingResourceException;
 
 /**
@@ -61,7 +63,7 @@ public class StepFunctionService {
 
         // Log the updated execution name if it has changed
         if (!sanitized.equals(executionName)) {
-          logger.info("Updated execution name: {}", sanitized);
+            logger.info("Updated execution name: {}", sanitized);
         }
         return sanitized;
     }
@@ -149,7 +151,7 @@ public class StepFunctionService {
         String payload = constructPayload(queueName, queueType, executionAttributes);
 
         try {
-            String stateMachineArn = getStateMachineARN(queueType, queueName);
+            String stateMachineArn = getStateMachineARN();
             String executionName = (queueType.equalsIgnoreCase("dedup") ? "D_" : "") + queueName + "_" + System.currentTimeMillis();
             StartExecutionRequest startExecutionRequest = new StartExecutionRequest().withStateMachineArn(stateMachineArn)
                     .withInput(payload)
@@ -237,24 +239,27 @@ public class StepFunctionService {
      * @throws JsonProcessingException If execution input attributes fails in getting converted to a valid execution payload json
      */
     public QueueExecutionAttributes getExistingSFNAttributes(String queueType, String queueName) throws JsonProcessingException {
-        String executionARN;
         try {
-            executionARN = getActiveExecutionArn(queueType, queueName);
+            List<ExecutionListItem> executionItemList = getAllActiveExecutionArns();
 
-            if(executionARN != null) {
-                logger.info("Fetching details for execution: " + executionARN);
+            for(ExecutionListItem executionItem : executionItemList) {
+                String executionARN = executionItem.getExecutionArn();
+
                 DescribeExecutionRequest describeExecutionRequest = new DescribeExecutionRequest().withExecutionArn(executionARN);
                 DescribeExecutionResult describeExecutionResult = stepFunctionsClient.describeExecution(describeExecutionRequest);
 
                 String existingInputPayload = describeExecutionResult.getInput();
-                logger.info("Fetched attributes for executionArn: " + executionARN + " => " + existingInputPayload);
+                QueueExecutionAttributes queueExecutionAttributes = new ObjectMapper().readValue(existingInputPayload, ExecutionInputWrapper.class).getExecutionInput();
 
-                ExecutionInputWrapper executionInputWrapper = new ObjectMapper().readValue(existingInputPayload, ExecutionInputWrapper.class);
-                return executionInputWrapper.getExecutionInput();
-            } else {
-                logger.info("No active executions found for queue_type: " + queueType + ", queue_name: " + queueName + " stateMachineARN: ");
-                return null;
+                if(queueExecutionAttributes.getQueueType() != null && queueExecutionAttributes.getQueueType().equals(queueType)
+                        && queueExecutionAttributes.getQueueName() != null && queueExecutionAttributes.getQueueName().equals(queueName)) {
+                    logger.info("Fetched attributes for executionArn: " + executionARN + " => " + queueExecutionAttributes);
+                    return queueExecutionAttributes;
+                }
             }
+
+            logger.info("No active executions found for queue_type: " + queueType + ", queue_name: " + queueName + " stateMachineARN: ");
+            return null;
 
         } catch (Exception e) {
             logger.error("Unexpected error in fetching sfn attributes for queue_type: " + queueType + ", queue_name: " + queueName);
@@ -271,23 +276,36 @@ public class StepFunctionService {
      *
      * @throws Exception: If some glitch happens in stopping.
      */
-    public void stopActiveExecutions(String queueType, String queueName) {
+    public void stopActiveExecutions(String queueType, String queueName) throws JsonProcessingException {
 
         try {
-            String activeExecutionARN = getActiveExecutionArn(queueType, queueName);
-            if(activeExecutionARN == null) {
-                logger.info("No active execution arn exists for queue_type:" + queueType + ", queue_name:" + queueName);
-                return;
+            List<ExecutionListItem> executionItemList = getAllActiveExecutionArns();
+
+            for(ExecutionListItem executionItem : executionItemList) {
+                String executionARN = executionItem.getExecutionArn();
+
+                DescribeExecutionRequest describeExecutionRequest = new DescribeExecutionRequest().withExecutionArn(executionARN);
+                DescribeExecutionResult describeExecutionResult = stepFunctionsClient.describeExecution(describeExecutionRequest);
+
+                String existingInputPayload = describeExecutionResult.getInput();
+                QueueExecutionAttributes queueExecutionAttributes = new ObjectMapper().readValue(existingInputPayload, ExecutionInputWrapper.class).getExecutionInput();
+
+                if(queueExecutionAttributes.getQueueType() != null && queueExecutionAttributes.getQueueType().equals(queueType)
+                        && queueExecutionAttributes.getQueueName() != null && queueExecutionAttributes.getQueueName().equals(queueName)) {
+                    logger.info("Stopping active execution: " + executionARN);
+
+                    StopExecutionRequest stopRequest =  new StopExecutionRequest().withExecutionArn(executionARN);
+                    stepFunctionsClient.stopExecution(stopRequest);
+
+                    logger.info("Stopped execution: " + executionARN);
+                    return;
+                }
             }
 
-            System.out.println("Stopping active execution: " + activeExecutionARN);
+            logger.info("No active execution arn exists for queue_type:" + queueType + ", queue_name:" + queueName);
 
-            StopExecutionRequest stopRequest =  new StopExecutionRequest().withExecutionArn(activeExecutionARN);
-            stepFunctionsClient.stopExecution(stopRequest);
-
-            System.out.println("Stopped execution: " + activeExecutionARN);
         } catch (Exception e) {
-            logger.error("Failure in stopping execution: {}", e.getMessage(), e);
+            logger.error("Failure in stopping active execution: {}", e.getMessage(), e);
             throw e;
         }
     }
@@ -296,31 +314,21 @@ public class StepFunctionService {
     /**
      * Gets execution ARN of an active/running step-function associated with (queueType, queueName).
      *
-     * @param queueType queueType
-     * @param queueName queueName
-     *
      * @return String : if any active execution exists, else NULL.
      */
-    public String getActiveExecutionArn(String queueType, String queueName) {
+    public List<ExecutionListItem> getAllActiveExecutionArns() {
 
         try {
-            String stateMachineArn = getStateMachineARN(queueType, queueName);
+            String stateMachineArn = getStateMachineARN();
 
             ListExecutionsRequest listExecutionRequest = new ListExecutionsRequest().withStateMachineArn(stateMachineArn)
                     .withStatusFilter(ExecutionStatus.RUNNING);
 
             ListExecutionsResult listExecutionResults = stepFunctionsClient.listExecutions(listExecutionRequest);
+            return listExecutionResults.getExecutions();
 
-            if (!listExecutionResults.getExecutions().isEmpty()) {
-                String executionARN = listExecutionResults.getExecutions().get(0).getExecutionArn();
-                logger.info("Fetched executionARN: " + executionARN + " for stateMachineArn: " + stateMachineArn);
-                return executionARN;
-            } else {
-                logger.info("No active executions found for queue_type: " + queueType + ", queue_name: " + queueName + " stateMachineARN: " + stateMachineArn);
-                return null;
-            }
         } catch (Exception e) {
-            logger.error("Unexpected error: {" + e.getMessage() + "} occurred while fetching active execution arn for queue_type: "+ queueType + ", queue_name: " + queueName + " ", e);
+            logger.error("Unexpected error: {" + e.getMessage() + "} occurred while fetching all active execution ARNs", e);
             throw e;
         }
 
@@ -328,17 +336,14 @@ public class StepFunctionService {
 
 
     /**
-     * Gets stateMachine ARN of a step-function associated with (queueType, queueName) from aws parameter-store.
-     *
-     * @param queueType queueType
-     * @param queueName queueName
+     * Gets stateMachine ARN of a step-function from aws parameter-store.
      *
      * @return String: stateMachineArn
      *
      * @throws AWSStepFunctionsException: If some glitch happens at aws end
      * @throws MissingResourceException: If state machine arn is not found/set in aws parameter store
      */
-    public String getStateMachineARN(String queueType, String queueName) {
+    public String getStateMachineARN() {
 
         try {
             // TODO_SHAN: Extend this fetch part later based on queueType : queue/dedup/databus
@@ -348,10 +353,10 @@ public class StepFunctionService {
                 return stateMachineArn;
             }
         } catch (Exception e) {
-            throw new AWSStepFunctionsException("Problem fetching state machine arn for queueType :" + queueType + ", queueName: " + queueName);
+            throw new AWSStepFunctionsException("Problem fetching state machine arn");
         }
 
-        throw new MissingResourceException("state machine arn not found for queueType:" + queueType + ", queueName:" + queueName, "", "");
+        throw new MissingResourceException("state machine arn not found in param-store", "", "");
     }
 
 

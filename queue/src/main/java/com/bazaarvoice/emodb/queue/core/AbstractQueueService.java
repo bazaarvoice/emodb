@@ -459,7 +459,7 @@ abstract class AbstractQueueService implements BaseQueueService {
 
             String inputPayload = createInputPayload(queueThreshold, batchSize, queueType, queueName, topic, interval);
 
-
+            queueName = stepFunctionService.sanitizeExecutionName(queueName);
             // Check if queueType is "dedupq" and prepend "D" to execution name if true
             String executionName = (queueType.equalsIgnoreCase("dedupq") ? "D_" : "") + queueName ;
             // Start the Step Function execution

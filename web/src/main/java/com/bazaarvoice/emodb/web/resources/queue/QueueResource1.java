@@ -357,15 +357,11 @@ public class QueueResource1 {
     @ApiOperation (value = "update param operation at aws parameter store .",
             notes = "Returns a SuccessResponse.", response = SuccessResponse.class)
     public SuccessResponse updateParam(Map<String, String> keyValuePair) {
-        try {
-            String key = keyValuePair.keySet().iterator().next();
-            String value = keyValuePair.get(key);
+        String key = keyValuePair.keySet().iterator().next();
+        String value = keyValuePair.get(key);
 
-            Long update_version = _parameterStoreUtil.updateParameter(key, value);
-            return SuccessResponse.instance().with(ImmutableMap.of("status", "200 | ssm-parameter updated successfully, update_version: " + update_version));
-        } catch (Exception e) {
-            return SuccessResponse.instance().with(ImmutableMap.of("status", "500 | Failed to update ssm parameter: " + e.getMessage()));
-        }
+        Long update_version = _parameterStoreUtil.updateParameter(key, value);
+        return SuccessResponse.instance().with(ImmutableMap.of("status", "200 | ssm-parameter updated successfully, update_version: " + update_version));
     }
 
     @PUT
@@ -374,21 +370,15 @@ public class QueueResource1 {
     @Consumes(MediaType.APPLICATION_JSON)
     @ApiOperation (value = "update queue execution attributes .", notes = "Returns a SuccessResponse.", response = SuccessResponse.class)
     public SuccessResponse updateQueueExecutionAttributes(@PathParam("queue_type") String queueType, @PathParam("queue_name") String queueName, QueueExecutionAttributes newExecAttributes) {
+        newExecAttributes.setQueueName(queueName);
+        newExecAttributes.setQueueType(queueType);
+        _stepFunctionService.startSFNWithAttributes(newExecAttributes);
 
-        try {
-            newExecAttributes.setQueueName(queueName);
-            newExecAttributes.setQueueType(queueType);
-            _stepFunctionService.startSFNWithAttributes(newExecAttributes);
-
-            if("DISABLED".equals(newExecAttributes.getStatus())) {
-                return SuccessResponse.instance().with(ImmutableMap.of("status", "200 | step function successfully stopped(if any execution existed) as status=DISABLED was provided"));
-            } else {
-                return SuccessResponse.instance().with(ImmutableMap.of("status", "200 | step function successfully re-started, or started with updated attributes"));
-            }
-        } catch (Exception e) {
-            return SuccessResponse.instance().with(ImmutableMap.of("status", "500 | failed to start step function with new attributes | " + e.getMessage()));
+        if("DISABLED".equals(newExecAttributes.getStatus())) {
+            return SuccessResponse.instance().with(ImmutableMap.of("status", "200 | step function successfully stopped(if any execution existed) as status=DISABLED was provided"));
+        } else {
+            return SuccessResponse.instance().with(ImmutableMap.of("status", "200 | step function successfully re-started, or started with updated attributes"));
         }
-
     }
 
     private QueueService getService(BooleanParam partitioned, String apiKey) {
