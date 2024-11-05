@@ -60,6 +60,7 @@ import com.bazaarvoice.emodb.sor.db.astyanax.DeltaPlacementFactory;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
 import com.bazaarvoice.emodb.sor.db.cql.SorCqlSettingsTask;
+import com.bazaarvoice.emodb.sor.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.log.LogbackSlowQueryLogProvider;
 import com.bazaarvoice.emodb.sor.log.SlowQueryLog;
 import com.bazaarvoice.emodb.sor.log.SlowQueryLogConfiguration;
@@ -195,6 +196,7 @@ public class DataStoreModule extends PrivateModule {
         bind(SlowQueryLog.class).toProvider(LogbackSlowQueryLogProvider.class);
         bind(HintsConsistencyTimeProvider.class).asEagerSingleton();
         bind(MinLagConsistencyTimeProvider.class).asEagerSingleton();
+        bind(KafkaProducerService.class);
 
         // The web servers are responsible for updating the ZooKeeper full consistency data.  CLI tools don't need to.
         // Enable updating the ZooKeeper full consistency data if specified
