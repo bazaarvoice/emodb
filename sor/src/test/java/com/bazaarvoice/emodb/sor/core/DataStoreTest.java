@@ -1,7 +1,5 @@
 package com.bazaarvoice.emodb.sor.core;
 
-import com.bazaarvoice.emodb.event.api.BaseEventStore;
-import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.Change;
@@ -16,6 +14,7 @@ import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.bazaarvoice.emodb.sor.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.test.SystemClock;
 import com.bazaarvoice.emodb.sor.uuid.TimeUUIDs;
 import com.codahale.metrics.MetricRegistry;
@@ -50,7 +49,7 @@ public class DataStoreTest {
 
     @Test
     public void testDeltas() throws Exception {
-        DataStore store = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService(),mock(BaseEventStore.class));
+        DataStore store = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         assertFalse(store.getTableExists(TABLE));
@@ -170,7 +169,7 @@ public class DataStoreTest {
 
     @Test
     public void testRecordTimestamps() throws Exception {
-        DataStore store = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService(),mock(BaseEventStore.class));
+        DataStore store = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         assertFalse(store.getTableExists(TABLE));
@@ -265,7 +264,7 @@ public class DataStoreTest {
 
     @Test
     public void testRecordTimestampsWithEventTags() throws Exception {
-        DataStore store = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService(),mock(BaseEventStore.class));
+        DataStore store = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         assertFalse(store.getTableExists(TABLE));

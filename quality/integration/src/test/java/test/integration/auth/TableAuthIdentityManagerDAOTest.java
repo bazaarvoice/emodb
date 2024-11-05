@@ -3,13 +3,12 @@ package test.integration.auth;
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyModification;
 import com.bazaarvoice.emodb.auth.identity.TableAuthIdentityManagerDAO;
-import com.bazaarvoice.emodb.event.api.BaseEventStore;
-import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.bazaarvoice.emodb.sor.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.uuid.TimeUUIDs;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableList;
@@ -41,7 +40,7 @@ public class TableAuthIdentityManagerDAOTest {
      */
     @Test
     public void testRebuildIdIndex() {
-        DataStore dataStore = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService(), mock(BaseEventStore.class));
+        DataStore dataStore = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
         Supplier<String> idSupplier = () -> "id0";
         TableAuthIdentityManagerDAO<ApiKey> tableAuthIdentityManagerDAO = new TableAuthIdentityManagerDAO<>(
                 ApiKey.class, dataStore, "__auth:keys", "__auth:internal_ids", "app_global:sys",
@@ -79,7 +78,7 @@ public class TableAuthIdentityManagerDAOTest {
 
     @Test
     public void testGrandfatheredInId() {
-        DataStore dataStore = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService(), mock(BaseEventStore.class));
+        DataStore dataStore = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
         Supplier<String> idSupplier = () -> "id0";
         TableAuthIdentityManagerDAO<ApiKey> tableAuthIdentityManagerDAO = new TableAuthIdentityManagerDAO<>(
                 ApiKey.class, dataStore, "__auth:keys", "__auth:internal_ids", "app_global:sys",
@@ -131,7 +130,7 @@ public class TableAuthIdentityManagerDAOTest {
 
     @Test
     public void testIdAttributeCompatibility() {
-        DataStore dataStore = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService(), mock(BaseEventStore.class));
+        DataStore dataStore = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
         Supplier<String> idSupplier = () -> "id0";
         TableAuthIdentityManagerDAO<ApiKey> tableAuthIdentityManagerDAO = new TableAuthIdentityManagerDAO<>(
                 ApiKey.class, dataStore, "__auth:keys", "__auth:internal_ids", "app_global:sys",
