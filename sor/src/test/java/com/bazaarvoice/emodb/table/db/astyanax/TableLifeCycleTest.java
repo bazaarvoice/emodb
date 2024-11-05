@@ -11,8 +11,6 @@ import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.common.zookeeper.store.ValueStore;
 import com.bazaarvoice.emodb.datacenter.api.DataCenter;
 import com.bazaarvoice.emodb.datacenter.core.DefaultDataCenter;
-import com.bazaarvoice.emodb.event.api.BaseEventStore;
-import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.FacadeExistsException;
@@ -29,6 +27,7 @@ import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.delta.MapDeltaBuilder;
+import com.bazaarvoice.emodb.sor.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.table.db.MoveType;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
@@ -1983,7 +1982,7 @@ public class TableLifeCycleTest {
     }
 
     private InMemoryDataStore newBackingStore(MetricRegistry metricRegistry) {
-        InMemoryDataStore store = new InMemoryDataStore(metricRegistry, new KafkaProducerService(), mock(BaseEventStore.class));
+        InMemoryDataStore store = new InMemoryDataStore(metricRegistry, new KafkaProducerService());
         store.createTable("__system:table", newOptions(PL_GLOBAL), ImmutableMap.of(), newAudit());
         store.createTable("__system:table_uuid", newOptions(PL_GLOBAL), ImmutableMap.of(), newAudit());
         store.createTable("__system:table_unpublished_databus_events", newOptions(PL_GLOBAL), ImmutableMap.of(), newAudit());

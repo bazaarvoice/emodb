@@ -349,10 +349,12 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.bazaarvoice.emodb</groupId>
-            <artifactId>emodb-queue</artifactId>
-            <version>6.5.205-SNAPSHOT</version>
-            <scope>compile</scope>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-ssm</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
         </dependency>
     </dependencies>
 </project>

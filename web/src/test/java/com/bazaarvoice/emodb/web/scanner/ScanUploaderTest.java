@@ -12,11 +12,9 @@ import com.bazaarvoice.emodb.common.json.ISO8601DateFormat;
 import com.bazaarvoice.emodb.common.json.JsonHelper;
 import com.bazaarvoice.emodb.datacenter.api.DataCenter;
 import com.bazaarvoice.emodb.datacenter.api.DataCenters;
-import com.bazaarvoice.emodb.event.api.BaseEventStore;
 import com.bazaarvoice.emodb.plugin.stash.StashMetadata;
 import com.bazaarvoice.emodb.plugin.stash.StashStateListener;
 import com.bazaarvoice.emodb.queue.core.ByteBufferInputStream;
-import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
@@ -29,6 +27,7 @@ import com.bazaarvoice.emodb.sor.db.MultiTableScanResult;
 import com.bazaarvoice.emodb.sor.db.Record;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
+import com.bazaarvoice.emodb.sor.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxStorage;
 import com.bazaarvoice.emodb.web.scanner.control.DistributedScanRangeMonitor;
@@ -424,7 +423,7 @@ public class ScanUploaderTest {
         MetricRegistry metricRegistry = new MetricRegistry();
         KafkaProducerService kafkaProducerService = new KafkaProducerService();
         // Use an in-memory data store but override the default splits operation to return 4 splits for the test placement
-        InMemoryDataStore dataStore = spy(new InMemoryDataStore(metricRegistry, kafkaProducerService, mock(BaseEventStore.class)));
+        InMemoryDataStore dataStore = spy(new InMemoryDataStore(metricRegistry, kafkaProducerService));
         when(dataStore.getScanRangeSplits("app_global:default", 1000000, Optional.empty()))
                 .thenReturn(new ScanRangeSplits(ImmutableList.of(
                         createSimpleSplitGroup("00", "40"),
@@ -624,7 +623,7 @@ public class ScanUploaderTest {
                 Lists.newArrayList(), Lists.newArrayList());
 
         InMemoryScanWorkflow scanWorkflow = new InMemoryScanWorkflow();
-        ScanStatusDAO scanStatusDAO = new DataStoreScanStatusDAO(new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService(), mock(BaseEventStore.class)), "scan_table", "app_global:sys");
+        ScanStatusDAO scanStatusDAO = new DataStoreScanStatusDAO(new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService()), "scan_table", "app_global:sys");
         LocalScanUploadMonitor monitor = new LocalScanUploadMonitor(scanWorkflow, scanStatusDAO,
                 mock(ScanWriterGenerator.class), mock(StashStateListener.class), mock(ScanCountListener.class),
                 mock(DataTools.class), new InMemoryCompactionControlSource(), mock(DataCenters.class));

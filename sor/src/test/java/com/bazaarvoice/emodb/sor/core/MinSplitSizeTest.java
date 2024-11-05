@@ -1,7 +1,5 @@
 package com.bazaarvoice.emodb.sor.core;
 
-import com.bazaarvoice.emodb.event.api.BaseEventStore;
-import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
@@ -12,6 +10,7 @@ import com.bazaarvoice.emodb.sor.db.astyanax.AstyanaxBlockedDataReaderDAO;
 import com.bazaarvoice.emodb.sor.db.astyanax.ChangeEncoder;
 import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.bazaarvoice.emodb.sor.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.astyanax.PlacementCache;
@@ -45,7 +44,7 @@ public class MinSplitSizeTest {
             }
         };
 
-        DataStore dataStore = new InMemoryDataStore(dataDao, new MetricRegistry(), new KafkaProducerService(), mock(BaseEventStore.class));
+        DataStore dataStore = new InMemoryDataStore(dataDao, new MetricRegistry(), new KafkaProducerService());
 
         dataStore.createTable("table", new TableOptionsBuilder().setPlacement("default").build(),
                 Collections.emptyMap(), new AuditBuilder().build());

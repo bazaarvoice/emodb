@@ -10,8 +10,6 @@ import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.common.zookeeper.store.ValueStore;
 import com.bazaarvoice.emodb.datacenter.api.DataCenter;
 import com.bazaarvoice.emodb.datacenter.api.DataCenters;
-import com.bazaarvoice.emodb.event.api.BaseEventStore;
-import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
@@ -19,6 +17,7 @@ import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.db.astyanax.DeltaPlacementFactory;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.bazaarvoice.emodb.sor.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxTableDAO;
 import com.bazaarvoice.emodb.table.db.astyanax.CQLStashTableDAO;
@@ -99,7 +98,7 @@ public class CasStashTableTest  {
         _astyanaxTableDAO.setCQLStashTableDAO(cqlStashTableDAO);
         // Don't store table definitions in the actual backing store so as not to interrupt other tests.  Use a
         // private in-memory implementation.
-        _tableBackingStore = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService(), mock(BaseEventStore.class));
+        _tableBackingStore = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
         _astyanaxTableDAO.setBackingStore(_tableBackingStore);
 
         _lifeCycleRegistry.start();

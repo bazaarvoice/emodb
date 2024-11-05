@@ -1,8 +1,6 @@
 package com.bazaarvoice.emodb.sor.core;
 
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
-import com.bazaarvoice.emodb.event.api.BaseEventStore;
-import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
@@ -10,6 +8,7 @@ import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.bazaarvoice.emodb.sor.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.test.SystemClock;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableMap;
@@ -37,7 +36,7 @@ public class SorUpdateTest {
     public void SetupTest() {
         final InMemoryDataReaderDAO dataDAO = new InMemoryDataReaderDAO();
         _eventWriterRegistry = new DatabusEventWriterRegistry();
-        _dataStore = new InMemoryDataStore(_eventWriterRegistry, dataDAO, new MetricRegistry(), new KafkaProducerService(), mock(BaseEventStore.class));
+        _dataStore = new InMemoryDataStore(_eventWriterRegistry, dataDAO, new MetricRegistry(), new KafkaProducerService());
 
 
         // Create a table for our test

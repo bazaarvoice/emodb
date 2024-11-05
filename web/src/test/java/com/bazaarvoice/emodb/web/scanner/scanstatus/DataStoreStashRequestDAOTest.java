@@ -1,9 +1,8 @@
 package com.bazaarvoice.emodb.web.scanner.scanstatus;
 
-import com.bazaarvoice.emodb.event.api.BaseEventStore;
-import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
+import com.bazaarvoice.emodb.sor.kafka.KafkaProducerService;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableSet;
 import org.testng.annotations.BeforeMethod;
@@ -22,7 +21,7 @@ public class DataStoreStashRequestDAOTest {
 
     @BeforeMethod
     public void setUp() {
-        _dataStore = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService(), mock(BaseEventStore.class));
+        _dataStore = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
         _dao = new DataStoreStashRequestDAO(_dataStore, "request_table", "app_global:sys");
     }
 

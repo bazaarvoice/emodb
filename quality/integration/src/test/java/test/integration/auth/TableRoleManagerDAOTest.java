@@ -9,8 +9,6 @@ import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
 import com.bazaarvoice.emodb.auth.role.RoleModification;
 import com.bazaarvoice.emodb.auth.role.RoleNotFoundException;
 import com.bazaarvoice.emodb.auth.role.TableRoleManagerDAO;
-import com.bazaarvoice.emodb.event.api.BaseEventStore;
-import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
@@ -20,6 +18,7 @@ import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.bazaarvoice.emodb.sor.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.web.auth.EmoPermissionResolver;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableList;
@@ -62,7 +61,7 @@ public class TableRoleManagerDAOTest {
     @BeforeMethod
     public void setUp() {
         // DataStore and PermissionManager are fairly heavy to fully mock.  Use spies on in-memory implementations instead
-        _backendDataStore = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService(), mock(BaseEventStore.class));
+        _backendDataStore = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
         _dataStore = spy(_backendDataStore);
         _permissionResolver = new EmoPermissionResolver(null, null);
         _backendPermissionManager = new InMemoryPermissionManager(_permissionResolver);

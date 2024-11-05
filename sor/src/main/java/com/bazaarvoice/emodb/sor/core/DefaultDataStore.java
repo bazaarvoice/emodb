@@ -5,10 +5,6 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.json.deferred.LazyJsonMap;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
-import com.bazaarvoice.emodb.event.api.BaseEventStore;
-import com.bazaarvoice.emodb.queue.core.kafka.KafkaConfig;
-import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
-import com.bazaarvoice.emodb.queue.core.ssm.ParameterStoreUtil;
 import com.bazaarvoice.emodb.sor.api.*;
 import com.bazaarvoice.emodb.sor.audit.AuditWriter;
 import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
@@ -24,7 +20,10 @@ import com.bazaarvoice.emodb.sor.db.RecordUpdate;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
 import com.bazaarvoice.emodb.sor.delta.Delta;
+import com.bazaarvoice.emodb.sor.kafka.KafkaConfig;
+import com.bazaarvoice.emodb.sor.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.log.SlowQueryLog;
+import com.bazaarvoice.emodb.sor.ssm.ParameterStoreUtil;
 import com.bazaarvoice.emodb.table.db.DroppedTableException;
 import com.bazaarvoice.emodb.table.db.StashBlackListTableCondition;
 import com.bazaarvoice.emodb.table.db.StashTableDAO;
@@ -108,7 +107,6 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     private final Clock _clock;
     private final KafkaProducerService _kafkaProducerService;
     private ParameterStoreUtil parameterStoreUtil;
-    private final BaseEventStore _eventStore;
     private final Cache<String, Boolean> dataThrottlerCache = CacheBuilder.newBuilder()
             .expireAfterWrite(1, TimeUnit.MINUTES)
             .build();
@@ -120,10 +118,10 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                             DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao, SlowQueryLog slowQueryLog, HistoryStore historyStore,
                             @StashRoot Optional<URI> stashRootDirectory, @LocalCompactionControl CompactionControlSource compactionControlSource,
                             @StashBlackListTableCondition Condition stashBlackListTableCondition, AuditWriter auditWriter,
-                            @MinSplitSizeMap MapStore<DataStoreMinSplitSize> minSplitSizeMap, Clock clock, KafkaProducerService kafkaProducerService, BaseEventStore eventStore) {
+                            @MinSplitSizeMap MapStore<DataStoreMinSplitSize> minSplitSizeMap, Clock clock, KafkaProducerService kafkaProducerService) {
         this(eventWriterRegistry, tableDao, dataReaderDao, dataWriterDao, slowQueryLog, defaultCompactionExecutor(lifeCycle),
                 historyStore, stashRootDirectory, compactionControlSource, stashBlackListTableCondition, auditWriter,
-                minSplitSizeMap, metricRegistry, clock, kafkaProducerService, eventStore);
+                minSplitSizeMap, metricRegistry, clock, kafkaProducerService);
     }
 
     @VisibleForTesting
@@ -132,7 +130,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                             SlowQueryLog slowQueryLog, ExecutorService compactionExecutor, HistoryStore historyStore,
                             Optional<URI> stashRootDirectory, CompactionControlSource compactionControlSource,
                             Condition stashBlackListTableCondition, AuditWriter auditWriter,
-                            MapStore<DataStoreMinSplitSize> minSplitSizeMap, MetricRegistry metricRegistry, Clock clock, KafkaProducerService kafkaProducerService, BaseEventStore eventStore) {
+                            MapStore<DataStoreMinSplitSize> minSplitSizeMap, MetricRegistry metricRegistry, Clock clock, KafkaProducerService kafkaProducerService) {
         _eventWriterRegistry = requireNonNull(eventWriterRegistry, "eventWriterRegistry");
         _tableDao = requireNonNull(tableDao, "tableDao");
         _dataReaderDao = requireNonNull(dataReaderDao, "dataReaderDao");
@@ -154,7 +152,6 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         _clock = requireNonNull(clock, "clock");
         _kafkaProducerService = requireNonNull(kafkaProducerService, "kafkaProducerService");
         this.parameterStoreUtil = new ParameterStoreUtil();
-        _eventStore = eventStore;
     }
 
     /**

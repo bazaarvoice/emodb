@@ -1,13 +1,12 @@
 package com.bazaarvoice.emodb.web.scanner.scanstatus;
 
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
-import com.bazaarvoice.emodb.event.api.BaseEventStore;
-import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.bazaarvoice.emodb.sor.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.web.scanner.ScanDestination;
 import com.bazaarvoice.emodb.web.scanner.ScanOptions;
 import com.codahale.metrics.MetricRegistry;
@@ -36,7 +35,7 @@ public class DataStoreScanStatusDAOTest {
 
     @BeforeMethod
     public void setUp() {
-        _dataStore = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService(), mock(BaseEventStore.class));
+        _dataStore = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
         _dao = new DataStoreScanStatusDAO(_dataStore, "scan_table", "app_global:sys");
     }
 
