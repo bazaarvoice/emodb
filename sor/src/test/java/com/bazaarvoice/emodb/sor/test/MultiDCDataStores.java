@@ -1,6 +1,8 @@
 package com.bazaarvoice.emodb.sor.test;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.SimpleLifeCycleRegistry;
+import com.bazaarvoice.emodb.event.api.BaseEventStore;
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.audit.DiscardingAuditWriter;
 import com.bazaarvoice.emodb.sor.compactioncontrol.InMemoryCompactionControlSource;

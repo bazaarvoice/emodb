@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.web.purge;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
+import com.bazaarvoice.emodb.event.api.BaseEventStore;
 import com.bazaarvoice.emodb.job.api.JobIdentifier;
 import com.bazaarvoice.emodb.job.api.JobRequest;
 import com.bazaarvoice.emodb.job.api.JobStatus;
@@ -11,6 +12,7 @@ import com.bazaarvoice.emodb.job.dao.JobStatusDAO;
 import com.bazaarvoice.emodb.job.handler.DefaultJobHandlerRegistry;
 import com.bazaarvoice.emodb.job.service.DefaultJobService;
 import com.bazaarvoice.emodb.queue.api.QueueService;
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
