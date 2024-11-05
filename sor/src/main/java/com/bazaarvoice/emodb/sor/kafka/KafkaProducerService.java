@@ -67,32 +67,4 @@ public class KafkaProducerService {
             throw e;
         }
     }
-
-    public static String getUniverseFromEnv() {
-        String filePath = "/etc/environment";
-        Properties environmentProps = new Properties();
-
-        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                // Skip empty lines or comments
-                if (line.trim().isEmpty() || line.trim().startsWith("#")) {
-                    continue;
-                }
-                // Split the line into key-value pair
-                String[] parts = line.split("=", 2);
-                if (parts.length == 2) {
-                    String key = parts[0].trim();
-                    String value = parts[1].trim();
-                    // Remove any surrounding quotes from value
-                    value = value.replace("\"", "");
-                    environmentProps.put(key, value);
-                }
-            }
-            // Access the environment variables
-            return environmentProps.getProperty("UNIVERSE");
-        } catch (IOException e) {
-            throw new RuntimeException("Error reading environment file: " + e.getMessage());
-        }
-    }
 }

@@ -83,7 +83,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     private static final int MAX_COMPACTION_QUEUE_LENGTH = 100;
     private static final String SYSTEM_PREFIX = "__system_bus:";
     private static final String MASTER_FANOUT = SYSTEM_PREFIX + "master";
-    private static final String UNIVERSE = KafkaProducerService.getUniverseFromEnv();
+    private static final String UNIVERSE = KafkaConfig.getUniverseFromEnv();
     private static final String DATA_THROTTLER = "databusThrottler";
 
     private final Logger _log = LoggerFactory.getLogger(DefaultDataStore.class);
