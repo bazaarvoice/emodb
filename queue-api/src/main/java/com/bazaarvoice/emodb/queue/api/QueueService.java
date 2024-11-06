@@ -27,6 +27,11 @@ public interface QueueService extends BaseQueueService {
      */
     long getMessageCount(String queue);
 
+    /**
+     * Get the queue size without caching
+     * <p/>
+     * returns long
+     */
     default long getUncachedSize(String queue){
         return 0;
     }

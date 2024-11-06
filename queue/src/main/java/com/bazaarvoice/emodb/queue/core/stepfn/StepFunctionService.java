@@ -56,9 +56,9 @@ public class StepFunctionService {
             throw new IllegalArgumentException("Execution name cannot contain only invalid characters");
         }
 
-        // Truncate from the beginning if length exceeds 69 characters
-        if (sanitized.length() > 69) {
-            sanitized = sanitized.substring(sanitized.length() - 69);
+        // Truncate from the beginning if length exceeds 66 characters
+        if (sanitized.length() > 66) {
+            sanitized = sanitized.substring(sanitized.length() - 66);
         }
 
         // Log the updated execution name if it has changed

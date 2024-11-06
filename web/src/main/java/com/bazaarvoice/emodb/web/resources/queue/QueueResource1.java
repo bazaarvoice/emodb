@@ -365,7 +365,7 @@ public class QueueResource1 {
     }
 
     @PUT
-    @Path("/QueueExecutionAttributes/{queue_type}/{queue_name}")
+    @Path("/{queue_type}/{queue_name}/QueueExecutionAttributes")
     @RequiresPermissions("queue|poll|{queue_name}")
     @Consumes(MediaType.APPLICATION_JSON)
     @ApiOperation (value = "update queue execution attributes .", notes = "Returns a SuccessResponse.", response = SuccessResponse.class)
