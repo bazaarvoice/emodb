@@ -757,7 +757,6 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                     }
                 }
                 if (!updateRefs.isEmpty()) {
-                    _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefs);
                     if(getDataThrottlerValue())
                         _kafkaProducerService.sendMessages(MASTER_FANOUT_TOPIC, updateRefs, "update");
                     else

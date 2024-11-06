@@ -85,13 +85,6 @@ public class QueueModule extends PrivateModule {
         bind(new TypeLiteral<Supplier<Boolean>>() {}).annotatedWith(DedupEnabled.class).toInstance(Suppliers.ofInstance(true));
         install(new EventStoreModule("bv.emodb.queue", _metricRegistry));
 
-        // Bind Kafka services
-        bind (KafkaAdminService.class).asEagerSingleton();
-        bind(KafkaProducerService.class).asEagerSingleton();
-
-        // Bind Step Function Service
-        bind(StepFunctionService.class).asEagerSingleton();
-
 
         // Bind the Queue instance that the rest of the application will consume
         bind(QueueService.class).to(DefaultQueueService.class).asEagerSingleton();
