@@ -59,11 +59,6 @@ public class QueueModuleTest {
                 bind(HostDiscovery.class).annotatedWith(DedupQueueHostDiscovery.class).toInstance(mock(HostDiscovery.class));
                 bind(JobHandlerRegistry.class).toInstance(mock(JobHandlerRegistry.class));
                 bind(JobService.class).toInstance(mock(JobService.class));
-                bind (KafkaAdminService.class).asEagerSingleton();
-                bind(KafkaProducerService.class).asEagerSingleton();
-
-                // Bind Step Function Service
-                bind(StepFunctionService.class).asEagerSingleton();
 
                 MetricRegistry metricRegistry = new MetricRegistry();
                 bind(MetricRegistry.class).toInstance(metricRegistry);
