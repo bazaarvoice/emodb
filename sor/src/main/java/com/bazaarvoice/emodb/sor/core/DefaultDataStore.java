@@ -1061,11 +1061,11 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         if (!updateRefsIter.hasNext()) {
             return;
         }
+        List<UpdateRef> updateRefList = new ArrayList<>();
         while (updateRefsIter.hasNext()) {
             UpdateRef updateRef = updateRefsIter.next();
-            List<UpdateRef> updateRefList = Lists.newArrayListWithCapacity(1);
             updateRefList.add(updateRef);
-            _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefList);
         }
+        _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefList);
     }
 }
