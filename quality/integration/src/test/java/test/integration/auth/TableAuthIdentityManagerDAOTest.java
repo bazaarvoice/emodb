@@ -40,7 +40,7 @@ public class TableAuthIdentityManagerDAOTest {
      */
     @Test
     public void testRebuildIdIndex() {
-        DataStore dataStore = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
+        DataStore dataStore = new InMemoryDataStore(new MetricRegistry(), mock(KafkaProducerService.class));
         Supplier<String> idSupplier = () -> "id0";
         TableAuthIdentityManagerDAO<ApiKey> tableAuthIdentityManagerDAO = new TableAuthIdentityManagerDAO<>(
                 ApiKey.class, dataStore, "__auth:keys", "__auth:internal_ids", "app_global:sys",
@@ -78,7 +78,7 @@ public class TableAuthIdentityManagerDAOTest {
 
     @Test
     public void testGrandfatheredInId() {
-        DataStore dataStore = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
+        DataStore dataStore = new InMemoryDataStore(new MetricRegistry(), mock(KafkaProducerService.class));
         Supplier<String> idSupplier = () -> "id0";
         TableAuthIdentityManagerDAO<ApiKey> tableAuthIdentityManagerDAO = new TableAuthIdentityManagerDAO<>(
                 ApiKey.class, dataStore, "__auth:keys", "__auth:internal_ids", "app_global:sys",
@@ -130,7 +130,7 @@ public class TableAuthIdentityManagerDAOTest {
 
     @Test
     public void testIdAttributeCompatibility() {
-        DataStore dataStore = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
+        DataStore dataStore = new InMemoryDataStore(new MetricRegistry(), mock(KafkaProducerService.class));
         Supplier<String> idSupplier = () -> "id0";
         TableAuthIdentityManagerDAO<ApiKey> tableAuthIdentityManagerDAO = new TableAuthIdentityManagerDAO<>(
                 ApiKey.class, dataStore, "__auth:keys", "__auth:internal_ids", "app_global:sys",

@@ -61,7 +61,7 @@ public class TableRoleManagerDAOTest {
     @BeforeMethod
     public void setUp() {
         // DataStore and PermissionManager are fairly heavy to fully mock.  Use spies on in-memory implementations instead
-        _backendDataStore = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
+        _backendDataStore = new InMemoryDataStore(new MetricRegistry(), mock(KafkaProducerService.class));
         _dataStore = spy(_backendDataStore);
         _permissionResolver = new EmoPermissionResolver(null, null);
         _backendPermissionManager = new InMemoryPermissionManager(_permissionResolver);

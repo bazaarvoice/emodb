@@ -44,7 +44,7 @@ public class MinSplitSizeTest {
             }
         };
 
-        DataStore dataStore = new InMemoryDataStore(dataDao, new MetricRegistry(), new KafkaProducerService());
+        DataStore dataStore = new InMemoryDataStore(dataDao, new MetricRegistry(), mock(KafkaProducerService.class));
 
         dataStore.createTable("table", new TableOptionsBuilder().setPlacement("default").build(),
                 Collections.emptyMap(), new AuditBuilder().build());

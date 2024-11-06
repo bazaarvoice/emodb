@@ -421,7 +421,7 @@ public class ScanUploaderTest {
     @Test
     public void testScanUploadFromExistingScan() throws Exception {
         MetricRegistry metricRegistry = new MetricRegistry();
-        KafkaProducerService kafkaProducerService = new KafkaProducerService();
+        KafkaProducerService kafkaProducerService = mock(KafkaProducerService.class);
         // Use an in-memory data store but override the default splits operation to return 4 splits for the test placement
         InMemoryDataStore dataStore = spy(new InMemoryDataStore(metricRegistry, kafkaProducerService));
         when(dataStore.getScanRangeSplits("app_global:default", 1000000, Optional.empty()))
@@ -623,7 +623,7 @@ public class ScanUploaderTest {
                 Lists.newArrayList(), Lists.newArrayList());
 
         InMemoryScanWorkflow scanWorkflow = new InMemoryScanWorkflow();
-        ScanStatusDAO scanStatusDAO = new DataStoreScanStatusDAO(new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService()), "scan_table", "app_global:sys");
+        ScanStatusDAO scanStatusDAO = new DataStoreScanStatusDAO(new InMemoryDataStore(new MetricRegistry(), mock(KafkaProducerService.class)), "scan_table", "app_global:sys");
         LocalScanUploadMonitor monitor = new LocalScanUploadMonitor(scanWorkflow, scanStatusDAO,
                 mock(ScanWriterGenerator.class), mock(StashStateListener.class), mock(ScanCountListener.class),
                 mock(DataTools.class), new InMemoryCompactionControlSource(), mock(DataCenters.class));

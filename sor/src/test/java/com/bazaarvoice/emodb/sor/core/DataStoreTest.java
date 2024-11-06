@@ -49,7 +49,7 @@ public class DataStoreTest {
 
     @Test
     public void testDeltas() throws Exception {
-        DataStore store = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
+        DataStore store = new InMemoryDataStore(new MetricRegistry(), mock(KafkaProducerService.class));
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         assertFalse(store.getTableExists(TABLE));
@@ -169,7 +169,7 @@ public class DataStoreTest {
 
     @Test
     public void testRecordTimestamps() throws Exception {
-        DataStore store = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
+        DataStore store = new InMemoryDataStore(new MetricRegistry(), mock(KafkaProducerService.class));
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         assertFalse(store.getTableExists(TABLE));
@@ -264,7 +264,7 @@ public class DataStoreTest {
 
     @Test
     public void testRecordTimestampsWithEventTags() throws Exception {
-        DataStore store = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
+        DataStore store = new InMemoryDataStore(new MetricRegistry(), mock(KafkaProducerService.class));
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         assertFalse(store.getTableExists(TABLE));

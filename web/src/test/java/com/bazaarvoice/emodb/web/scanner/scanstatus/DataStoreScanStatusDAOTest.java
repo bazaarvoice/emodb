@@ -35,7 +35,7 @@ public class DataStoreScanStatusDAOTest {
 
     @BeforeMethod
     public void setUp() {
-        _dataStore = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
+        _dataStore = new InMemoryDataStore(new MetricRegistry(), mock(KafkaProducerService.class));
         _dao = new DataStoreScanStatusDAO(_dataStore, "scan_table", "app_global:sys");
     }
 

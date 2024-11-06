@@ -66,7 +66,7 @@ public class RedundantDeltaTest {
         DefaultDataStore store = new DefaultDataStore(new DatabusEventWriterRegistry(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
                 Optional.empty(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
-                new DiscardingAuditWriter(), new InMemoryMapStore<>(), new MetricRegistry(), Clock.systemUTC(), new KafkaProducerService());
+                new DiscardingAuditWriter(), new InMemoryMapStore<>(), new MetricRegistry(), Clock.systemUTC(), mock(KafkaProducerService.class));
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         store.createTable(TABLE, options, Collections.emptyMap(), newAudit("create table"));
@@ -123,7 +123,7 @@ public class RedundantDeltaTest {
         DefaultDataStore store = new DefaultDataStore(new DatabusEventWriterRegistry(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
                 Optional.empty(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
-                new DiscardingAuditWriter(), new InMemoryMapStore<>(), new MetricRegistry(), Clock.systemUTC(), new KafkaProducerService());
+                new DiscardingAuditWriter(), new InMemoryMapStore<>(), new MetricRegistry(), Clock.systemUTC(), mock(KafkaProducerService.class));
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         store.createTable(TABLE, options, Collections.emptyMap(), newAudit("create table"));
@@ -160,7 +160,7 @@ public class RedundantDeltaTest {
         DefaultDataStore store = new DefaultDataStore(new DatabusEventWriterRegistry(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
                 Optional.empty(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
-                new DiscardingAuditWriter(), new InMemoryMapStore<>(), new MetricRegistry(), Clock.systemUTC(), new KafkaProducerService());
+                new DiscardingAuditWriter(), new InMemoryMapStore<>(), new MetricRegistry(), Clock.systemUTC(), mock(KafkaProducerService.class));
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         store.createTable(TABLE, options, Collections.emptyMap(), newAudit("create table"));
@@ -241,7 +241,7 @@ public class RedundantDeltaTest {
         DefaultDataStore store = new DefaultDataStore(new DatabusEventWriterRegistry(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
                 Optional.empty(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
-                new DiscardingAuditWriter(), new InMemoryMapStore<>(), new MetricRegistry(), Clock.systemUTC(), new KafkaProducerService());
+                new DiscardingAuditWriter(), new InMemoryMapStore<>(), new MetricRegistry(), Clock.systemUTC(), mock(KafkaProducerService.class));
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         store.createTable(TABLE, options, Collections.emptyMap(), newAudit("create table"));
@@ -261,7 +261,7 @@ public class RedundantDeltaTest {
         DefaultDataStore store = new DefaultDataStore(new DatabusEventWriterRegistry(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
                 Optional.empty(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
-                new DiscardingAuditWriter(), new InMemoryMapStore<>(), new MetricRegistry(), Clock.systemUTC(), new KafkaProducerService());
+                new DiscardingAuditWriter(), new InMemoryMapStore<>(), new MetricRegistry(), Clock.systemUTC(), mock(KafkaProducerService.class));
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         store.createTable(TABLE, options, Collections.emptyMap(), newAudit("create table"));
@@ -338,7 +338,7 @@ public class RedundantDeltaTest {
         DefaultDataStore store = new DefaultDataStore(new DatabusEventWriterRegistry(), tableDao, dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
                 Optional.empty(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
-                new DiscardingAuditWriter(), new InMemoryMapStore<>(), new MetricRegistry(), Clock.systemUTC(), new KafkaProducerService());
+                new DiscardingAuditWriter(), new InMemoryMapStore<>(), new MetricRegistry(), Clock.systemUTC(), mock(KafkaProducerService.class));
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         store.createTable(TABLE, options, Collections.emptyMap(), newAudit("create table"));
@@ -410,7 +410,7 @@ public class RedundantDeltaTest {
         DefaultDataStore store = new DefaultDataStore(new DatabusEventWriterRegistry(), tableDao, dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
                 Optional.empty(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
-                new DiscardingAuditWriter(), new InMemoryMapStore<>(), new MetricRegistry(), Clock.systemUTC(), new KafkaProducerService());
+                new DiscardingAuditWriter(), new InMemoryMapStore<>(), new MetricRegistry(), Clock.systemUTC(), mock(KafkaProducerService.class));
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         store.createTable(TABLE, options, Collections.emptyMap(), newAudit("create table"));

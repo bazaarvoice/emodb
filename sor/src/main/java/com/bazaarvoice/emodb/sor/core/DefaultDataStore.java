@@ -80,7 +80,6 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     private static final int NUM_COMPACTION_THREADS = 2;
     private static final int MAX_COMPACTION_QUEUE_LENGTH = 100;
     private static final String MASTER_FANOUT_TOPIC = "system_bus_master";
-    private static final String UNIVERSE = KafkaConfig.getUniverseFromEnv();
     private static final String DATA_THROTTLER = "databusThrottler";
 
     private final Logger _log = LoggerFactory.getLogger(DefaultDataStore.class);
@@ -375,6 +374,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
      */
     private boolean getDataThrottlerValue() {
         try {
+            String UNIVERSE = KafkaConfig.getUniverseFromEnv();
             // Attempt to retrieve from cache
             return dataThrottlerCache.get(DATA_THROTTLER, () -> {
 

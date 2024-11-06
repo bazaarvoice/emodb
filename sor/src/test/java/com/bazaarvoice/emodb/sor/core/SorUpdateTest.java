@@ -36,7 +36,7 @@ public class SorUpdateTest {
     public void SetupTest() {
         final InMemoryDataReaderDAO dataDAO = new InMemoryDataReaderDAO();
         _eventWriterRegistry = new DatabusEventWriterRegistry();
-        _dataStore = new InMemoryDataStore(_eventWriterRegistry, dataDAO, new MetricRegistry(), new KafkaProducerService());
+        _dataStore = new InMemoryDataStore(_eventWriterRegistry, dataDAO, new MetricRegistry(), mock(KafkaProducerService.class));
 
 
         // Create a table for our test

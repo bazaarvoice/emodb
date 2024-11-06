@@ -98,7 +98,7 @@ public class CasStashTableTest  {
         _astyanaxTableDAO.setCQLStashTableDAO(cqlStashTableDAO);
         // Don't store table definitions in the actual backing store so as not to interrupt other tests.  Use a
         // private in-memory implementation.
-        _tableBackingStore = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
+        _tableBackingStore = new InMemoryDataStore(new MetricRegistry(), mock(KafkaProducerService.class));
         _astyanaxTableDAO.setBackingStore(_tableBackingStore);
 
         _lifeCycleRegistry.start();

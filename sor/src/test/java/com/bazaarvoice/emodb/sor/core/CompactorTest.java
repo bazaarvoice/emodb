@@ -486,7 +486,7 @@ public class CompactorTest {
             }
         };
 
-        final DataStore dataStore = new InMemoryDataStore(dataDAO, new MetricRegistry(), new KafkaProducerService());
+        final DataStore dataStore = new InMemoryDataStore(dataDAO, new MetricRegistry(), mock(KafkaProducerService.class));
 
         // Create a table for our test
         dataStore.createTable(tableName,
@@ -572,7 +572,7 @@ public class CompactorTest {
         // Configure the data DAO to read 10 columns initially, causing other column reads to be read lazily
         dataDAO.setColumnBatchSize(10);
 
-        final DataStore dataStore = new InMemoryDataStore(dataDAO, new MetricRegistry(), new KafkaProducerService());
+        final DataStore dataStore = new InMemoryDataStore(dataDAO, new MetricRegistry(), mock(KafkaProducerService.class));
 
         // Create a table for our test
         dataStore.createTable(tableName,

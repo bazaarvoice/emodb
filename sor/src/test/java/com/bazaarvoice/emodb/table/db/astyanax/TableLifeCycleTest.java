@@ -1982,7 +1982,7 @@ public class TableLifeCycleTest {
     }
 
     private InMemoryDataStore newBackingStore(MetricRegistry metricRegistry) {
-        InMemoryDataStore store = new InMemoryDataStore(metricRegistry, new KafkaProducerService());
+        InMemoryDataStore store = new InMemoryDataStore(metricRegistry, mock(KafkaProducerService.class));
         store.createTable("__system:table", newOptions(PL_GLOBAL), ImmutableMap.of(), newAudit());
         store.createTable("__system:table_uuid", newOptions(PL_GLOBAL), ImmutableMap.of(), newAudit());
         store.createTable("__system:table_unpublished_databus_events", newOptions(PL_GLOBAL), ImmutableMap.of(), newAudit());

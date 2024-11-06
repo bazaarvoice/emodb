@@ -21,7 +21,7 @@ public class DataStoreStashRequestDAOTest {
 
     @BeforeMethod
     public void setUp() {
-        _dataStore = new InMemoryDataStore(new MetricRegistry(), new KafkaProducerService());
+        _dataStore = new InMemoryDataStore(new MetricRegistry(), mock(KafkaProducerService.class));
         _dao = new DataStoreStashRequestDAO(_dataStore, "request_table", "app_global:sys");
     }
 
