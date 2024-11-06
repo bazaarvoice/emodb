@@ -13,6 +13,7 @@ import com.bazaarvoice.emodb.job.api.JobHandlerRegistry;
 import com.bazaarvoice.emodb.job.api.JobService;
 import com.bazaarvoice.emodb.queue.api.DedupQueueService;
 import com.bazaarvoice.emodb.queue.api.QueueService;
+import com.bazaarvoice.emodb.queue.core.kafka.KafkaProducerService;
 import com.bazaarvoice.ostrich.HostDiscovery;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableMap;
@@ -56,6 +57,7 @@ public class QueueModuleTest {
                 bind(HostDiscovery.class).annotatedWith(DedupQueueHostDiscovery.class).toInstance(mock(HostDiscovery.class));
                 bind(JobHandlerRegistry.class).toInstance(mock(JobHandlerRegistry.class));
                 bind(JobService.class).toInstance(mock(JobService.class));
+                bind(KafkaProducerService.class).asEagerSingleton();
 
                 MetricRegistry metricRegistry = new MetricRegistry();
                 bind(MetricRegistry.class).toInstance(metricRegistry);
