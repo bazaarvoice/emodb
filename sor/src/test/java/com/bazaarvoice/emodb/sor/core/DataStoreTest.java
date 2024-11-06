@@ -14,6 +14,7 @@ import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.bazaarvoice.emodb.sor.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.test.SystemClock;
 import com.bazaarvoice.emodb.sor.uuid.TimeUUIDs;
 import com.codahale.metrics.MetricRegistry;
@@ -33,6 +34,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.mockito.Mockito.mock;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
@@ -47,7 +49,7 @@ public class DataStoreTest {
 
     @Test
     public void testDeltas() throws Exception {
-        DataStore store = new InMemoryDataStore(new MetricRegistry());
+        DataStore store = new InMemoryDataStore(new MetricRegistry(), mock(KafkaProducerService.class));
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         assertFalse(store.getTableExists(TABLE));
@@ -167,7 +169,7 @@ public class DataStoreTest {
 
     @Test
     public void testRecordTimestamps() throws Exception {
-        DataStore store = new InMemoryDataStore(new MetricRegistry());
+        DataStore store = new InMemoryDataStore(new MetricRegistry(), mock(KafkaProducerService.class));
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         assertFalse(store.getTableExists(TABLE));
@@ -262,7 +264,7 @@ public class DataStoreTest {
 
     @Test
     public void testRecordTimestampsWithEventTags() throws Exception {
-        DataStore store = new InMemoryDataStore(new MetricRegistry());
+        DataStore store = new InMemoryDataStore(new MetricRegistry(), mock(KafkaProducerService.class));
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         assertFalse(store.getTableExists(TABLE));

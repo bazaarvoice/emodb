@@ -58,7 +58,7 @@ public class KafkaConfig {
             lingerMsConfig = parameterValues.getOrDefault("/" + UNIVERSE + "/emodb/kafka/lingerMs", "1");
 
             // Configures the Kafka broker addresses for producer connections.
-            bootstrapServersConfig = parameterValues.get("/" + UNIVERSE + "/emodb/kafka/bootstrapServers");
+            bootstrapServersConfig = parameterValues.getOrDefault("/" + UNIVERSE + "/emodb/kafka/bootstrapServers", "localhost:9092");
 
             logger.info("Kafka configurations loaded successfully from SSM.");
         } catch (AmazonServiceException e) {

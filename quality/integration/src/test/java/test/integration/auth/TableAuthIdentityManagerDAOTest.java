@@ -8,6 +8,7 @@ import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.bazaarvoice.emodb.sor.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.uuid.TimeUUIDs;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableList;
@@ -22,6 +23,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import static org.mockito.Mockito.mock;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
@@ -38,7 +40,7 @@ public class TableAuthIdentityManagerDAOTest {
      */
     @Test
     public void testRebuildIdIndex() {
-        DataStore dataStore = new InMemoryDataStore(new MetricRegistry());
+        DataStore dataStore = new InMemoryDataStore(new MetricRegistry(), mock(KafkaProducerService.class));
         Supplier<String> idSupplier = () -> "id0";
         TableAuthIdentityManagerDAO<ApiKey> tableAuthIdentityManagerDAO = new TableAuthIdentityManagerDAO<>(
                 ApiKey.class, dataStore, "__auth:keys", "__auth:internal_ids", "app_global:sys",
@@ -76,7 +78,7 @@ public class TableAuthIdentityManagerDAOTest {
 
     @Test
     public void testGrandfatheredInId() {
-        DataStore dataStore = new InMemoryDataStore(new MetricRegistry());
+        DataStore dataStore = new InMemoryDataStore(new MetricRegistry(), mock(KafkaProducerService.class));
         Supplier<String> idSupplier = () -> "id0";
         TableAuthIdentityManagerDAO<ApiKey> tableAuthIdentityManagerDAO = new TableAuthIdentityManagerDAO<>(
                 ApiKey.class, dataStore, "__auth:keys", "__auth:internal_ids", "app_global:sys",
@@ -128,7 +130,7 @@ public class TableAuthIdentityManagerDAOTest {
 
     @Test
     public void testIdAttributeCompatibility() {
-        DataStore dataStore = new InMemoryDataStore(new MetricRegistry());
+        DataStore dataStore = new InMemoryDataStore(new MetricRegistry(), mock(KafkaProducerService.class));
         Supplier<String> idSupplier = () -> "id0";
         TableAuthIdentityManagerDAO<ApiKey> tableAuthIdentityManagerDAO = new TableAuthIdentityManagerDAO<>(
                 ApiKey.class, dataStore, "__auth:keys", "__auth:internal_ids", "app_global:sys",

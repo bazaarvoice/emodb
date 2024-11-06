@@ -52,6 +52,10 @@ public interface Databus {
      */
     long getEventCountUpTo(String subscription, long limit);
 
+    default long getMasterCount(){
+        return 0;
+    };
+
     /** Counts the number of events with outstanding claims that cause the events to be skipped by {@link #poll}. */
     long getClaimCount(String subscription);
 

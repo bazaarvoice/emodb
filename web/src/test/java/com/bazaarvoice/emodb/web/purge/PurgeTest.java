@@ -24,6 +24,7 @@ import com.bazaarvoice.emodb.sor.core.PurgeRequest;
 import com.bazaarvoice.emodb.sor.core.PurgeResult;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.bazaarvoice.emodb.sor.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.web.resources.sor.AuditParam;
 import com.bazaarvoice.emodb.web.resources.sor.DataStoreResource1;
 import com.bazaarvoice.emodb.web.throttling.UnlimitedDataStoreUpdateThrottler;
@@ -84,7 +85,7 @@ public class PurgeTest {
                 lifeCycleRegistry, _queueService, "testqueue", _jobHandlerRegistry, _jobStatusDAO, _curator,
                 1, Duration.ZERO, 100, Duration.ofHours(1));
 
-        _store = new InMemoryDataStore(new MetricRegistry());
+        _store = new InMemoryDataStore(new MetricRegistry(), mock(KafkaProducerService.class));
         _dataStoreResource = new DataStoreResource1(_store, new DefaultDataStoreAsync(_store, _service, _jobHandlerRegistry),
                 mock(CompactionControlSource.class), new UnlimitedDataStoreUpdateThrottler());
 

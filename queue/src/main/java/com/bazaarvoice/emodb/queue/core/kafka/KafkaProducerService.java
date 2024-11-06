@@ -46,7 +46,7 @@ public class KafkaProducerService {
                 throw new RuntimeException("Error sending messages to Kafka", e);
             }
         }
-        _log.info("Finished sending messages to topic '{}' time taken : {} milliseconds", topic, Duration.between(startTime,LocalDateTime.now()).toMillis());
+        _log.info("Finished sending messages to topic '{}' time taken : {} milliseconds", topic, Duration.between(startTime, LocalDateTime.now()).toMillis());
     }
 
 

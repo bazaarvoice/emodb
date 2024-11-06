@@ -27,6 +27,7 @@ import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.delta.MapDeltaBuilder;
+import com.bazaarvoice.emodb.sor.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.table.db.MoveType;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
@@ -1981,7 +1982,7 @@ public class TableLifeCycleTest {
     }
 
     private InMemoryDataStore newBackingStore(MetricRegistry metricRegistry) {
-        InMemoryDataStore store = new InMemoryDataStore(metricRegistry);
+        InMemoryDataStore store = new InMemoryDataStore(metricRegistry, mock(KafkaProducerService.class));
         store.createTable("__system:table", newOptions(PL_GLOBAL), ImmutableMap.of(), newAudit());
         store.createTable("__system:table_uuid", newOptions(PL_GLOBAL), ImmutableMap.of(), newAudit());
         store.createTable("__system:table_unpublished_databus_events", newOptions(PL_GLOBAL), ImmutableMap.of(), newAudit());

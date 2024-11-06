@@ -13,7 +13,6 @@ public interface QueueService extends BaseQueueService {
 
     void sendAll(String queue, Collection<?> messages);
 
-
     void sendAll(Map<String, ? extends Collection<?>> messagesByQueue);
 
     //Overloaded sendAll method to send to cassandra
@@ -27,6 +26,15 @@ public interface QueueService extends BaseQueueService {
      * {@link #getMessageCountUpTo(String, long)} with a reasonable limit.
      */
     long getMessageCount(String queue);
+
+    /**
+     * Get the queue size without caching
+     * <p/>
+     * returns long
+     */
+    default long getUncachedSize(String queue){
+        return 0;
+    }
 
     /**
      * Counts the total number of messages for the specified queue, accurate up to the specified limit.  Beyond the

@@ -5,29 +5,7 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.json.deferred.LazyJsonMap;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
-import com.bazaarvoice.emodb.sor.api.Audit;
-import com.bazaarvoice.emodb.sor.api.AuditBuilder;
-import com.bazaarvoice.emodb.sor.api.AuditsUnavailableException;
-import com.bazaarvoice.emodb.sor.api.Change;
-import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
-import com.bazaarvoice.emodb.sor.api.Coordinate;
-import com.bazaarvoice.emodb.sor.api.DataStore;
-import com.bazaarvoice.emodb.sor.api.DefaultTable;
-import com.bazaarvoice.emodb.sor.api.FacadeOptions;
-import com.bazaarvoice.emodb.sor.api.History;
-import com.bazaarvoice.emodb.sor.api.Intrinsic;
-import com.bazaarvoice.emodb.sor.api.Names;
-import com.bazaarvoice.emodb.sor.api.ReadConsistency;
-import com.bazaarvoice.emodb.sor.api.StashNotAvailableException;
-import com.bazaarvoice.emodb.sor.api.StashRunTimeInfo;
-import com.bazaarvoice.emodb.sor.api.StashTimeKey;
-import com.bazaarvoice.emodb.sor.api.TableOptions;
-import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
-import com.bazaarvoice.emodb.sor.api.UnknownTableException;
-import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
-import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEventType;
-import com.bazaarvoice.emodb.sor.api.Update;
-import com.bazaarvoice.emodb.sor.api.WriteConsistency;
+import com.bazaarvoice.emodb.sor.api.*;
 import com.bazaarvoice.emodb.sor.audit.AuditWriter;
 import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.bazaarvoice.emodb.sor.condition.Condition;
@@ -42,7 +20,10 @@ import com.bazaarvoice.emodb.sor.db.RecordUpdate;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
 import com.bazaarvoice.emodb.sor.delta.Delta;
+import com.bazaarvoice.emodb.sor.kafka.KafkaConfig;
+import com.bazaarvoice.emodb.sor.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.log.SlowQueryLog;
+import com.bazaarvoice.emodb.sor.ssm.ParameterStoreUtil;
 import com.bazaarvoice.emodb.table.db.DroppedTableException;
 import com.bazaarvoice.emodb.table.db.StashBlackListTableCondition;
 import com.bazaarvoice.emodb.table.db.StashTableDAO;
@@ -59,6 +40,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
@@ -79,15 +62,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
@@ -104,6 +79,8 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     private static final int NUM_COMPACTION_THREADS = 2;
     private static final int MAX_COMPACTION_QUEUE_LENGTH = 100;
+    private static final String MASTER_FANOUT_TOPIC = "system_bus_master";
+    private static final String DATA_THROTTLER = "databusThrottler";
 
     private final Logger _log = LoggerFactory.getLogger(DefaultDataStore.class);
 
@@ -126,6 +103,11 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     private final CompactionControlSource _compactionControlSource;
     private final MapStore<DataStoreMinSplitSize> _minSplitSizeMap;
     private final Clock _clock;
+    private final KafkaProducerService _kafkaProducerService;
+    private ParameterStoreUtil parameterStoreUtil;
+    private final Cache<String, Boolean> dataThrottlerCache = CacheBuilder.newBuilder()
+            .expireAfterWrite(1, TimeUnit.MINUTES)
+            .build();
 
     private StashTableDAO _stashTableDao;
 
@@ -134,10 +116,10 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                             DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao, SlowQueryLog slowQueryLog, HistoryStore historyStore,
                             @StashRoot Optional<URI> stashRootDirectory, @LocalCompactionControl CompactionControlSource compactionControlSource,
                             @StashBlackListTableCondition Condition stashBlackListTableCondition, AuditWriter auditWriter,
-                            @MinSplitSizeMap MapStore<DataStoreMinSplitSize> minSplitSizeMap, Clock clock) {
+                            @MinSplitSizeMap MapStore<DataStoreMinSplitSize> minSplitSizeMap, Clock clock, KafkaProducerService kafkaProducerService) {
         this(eventWriterRegistry, tableDao, dataReaderDao, dataWriterDao, slowQueryLog, defaultCompactionExecutor(lifeCycle),
                 historyStore, stashRootDirectory, compactionControlSource, stashBlackListTableCondition, auditWriter,
-                minSplitSizeMap, metricRegistry, clock);
+                minSplitSizeMap, metricRegistry, clock, kafkaProducerService);
     }
 
     @VisibleForTesting
@@ -146,7 +128,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                             SlowQueryLog slowQueryLog, ExecutorService compactionExecutor, HistoryStore historyStore,
                             Optional<URI> stashRootDirectory, CompactionControlSource compactionControlSource,
                             Condition stashBlackListTableCondition, AuditWriter auditWriter,
-                            MapStore<DataStoreMinSplitSize> minSplitSizeMap, MetricRegistry metricRegistry, Clock clock) {
+                            MapStore<DataStoreMinSplitSize> minSplitSizeMap, MetricRegistry metricRegistry, Clock clock, KafkaProducerService kafkaProducerService) {
         _eventWriterRegistry = requireNonNull(eventWriterRegistry, "eventWriterRegistry");
         _tableDao = requireNonNull(tableDao, "tableDao");
         _dataReaderDao = requireNonNull(dataReaderDao, "dataReaderDao");
@@ -166,6 +148,8 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         _compactionControlSource = requireNonNull(compactionControlSource, "compactionControlSource");
         _minSplitSizeMap = requireNonNull(minSplitSizeMap, "minSplitSizeMap");
         _clock = requireNonNull(clock, "clock");
+        _kafkaProducerService = requireNonNull(kafkaProducerService, "kafkaProducerService");
+        this.parameterStoreUtil = new ParameterStoreUtil();
     }
 
     /**
@@ -374,6 +358,35 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                 });
             }
         };
+    }
+
+    /**
+     * Retrieves the value of the "DataThrottler" flag from the cache if available.
+     * If the value is not present in the cache or the cache has expired, it fetches the value
+     * from AWS Parameter Store and stores it in the cache.
+     * <p>
+     * The cached value has a TTL (Time-To-Live) of 5 minutes, after which it will be refreshed
+     * from the Parameter Store on the next access.
+     * </p>
+     *
+     * @return {@code true} if the experiment is still running, otherwise {@code false}.
+     * @throws RuntimeException if there is an error fetching the value from the cache or Parameter Store.
+     */
+    private boolean getDataThrottlerValue() {
+        try {
+            String UNIVERSE = KafkaConfig.getUniverseFromEnv();
+            // Attempt to retrieve from cache
+            return dataThrottlerCache.get(DATA_THROTTLER, () -> {
+
+                Boolean checkDataThrottler = Boolean.parseBoolean(parameterStoreUtil.getParameter("/" + UNIVERSE + "/emodb/" + DATA_THROTTLER));
+                _log.info("DATA_THROTTLER is refreshed {}", checkDataThrottler);
+                // If absent or expired, fetch from Parameter Store and cache the result
+                return checkDataThrottler;
+            });
+        } catch (Exception e) {
+            _log.error("Error fetching databusThrottler valie{}", e.getMessage());
+            return false;
+        }
     }
 
     /**
@@ -744,7 +757,10 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                     }
                 }
                 if (!updateRefs.isEmpty()) {
-                    _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefs);
+                    if(getDataThrottlerValue())
+                        _kafkaProducerService.sendMessages(MASTER_FANOUT_TOPIC, updateRefs, "update");
+                    else
+                        _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefs);
                 }
             }
 
@@ -1024,5 +1040,31 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     private String getMetricName(String name) {
         return MetricRegistry.name("bv.emodb.sor", "DefaultDataStore", name);
+    }
+
+    private Iterable<UpdateRef> convertToUpdateRef(Iterable<UpdateRefModel> apiUpdateRefs) {
+        List<com.bazaarvoice.emodb.sor.core.UpdateRef> coreUpdateRefs = new ArrayList<>();
+        for (UpdateRefModel apiUpdateRefModel : apiUpdateRefs) {
+            String tableName = apiUpdateRefModel.getTable();
+            String key = apiUpdateRefModel.getKey();
+            UUID changeId = apiUpdateRefModel.getChangeId();
+            Set<String> tags = apiUpdateRefModel.getTags();
+            coreUpdateRefs.add(new com.bazaarvoice.emodb.sor.core.UpdateRef(tableName, key, changeId, tags));
+        }
+        return coreUpdateRefs;
+    }
+
+    @Override
+    public void updateRefInDatabus(Iterable<UpdateRefModel> updateRefs, Set<String> tags, boolean isFacade) {
+        Iterator<UpdateRef> updateRefsIter = convertToUpdateRef(updateRefs).iterator();
+        if (!updateRefsIter.hasNext()) {
+            return;
+        }
+        List<UpdateRef> updateRefList = new ArrayList<>();
+        while (updateRefsIter.hasNext()) {
+            UpdateRef updateRef = updateRefsIter.next();
+            updateRefList.add(updateRef);
+        }
+        _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefList);
     }
 }

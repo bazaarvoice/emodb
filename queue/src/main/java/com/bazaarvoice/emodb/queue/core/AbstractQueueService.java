@@ -454,12 +454,11 @@ abstract class AbstractQueueService implements BaseQueueService {
 
             String inputPayload = createInputPayload(queueThreshold, batchSize, queueType, queueName, topic, interval);
 
-            // Create the timestamp
-            String timestamp = String.valueOf(System.currentTimeMillis()); // Current time in milliseconds
-
+            // Current time in milliseconds
+            String timestamp = String.valueOf(System.currentTimeMillis());
+            queueName = stepFunctionService.sanitizeExecutionName(queueName);
             // Check if queueType is "dedupq" and prepend "D" to execution name if true
             String executionName = (queueType.equalsIgnoreCase("dedupq") ? "D_" : "") + queueName + "_" + timestamp;
-
             // Start the Step Function execution
             stepFunctionService.startExecution(stateMachineArn, inputPayload, executionName);
 

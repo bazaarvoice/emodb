@@ -18,6 +18,7 @@ import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.bazaarvoice.emodb.sor.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.web.auth.EmoPermissionResolver;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableList;
@@ -36,10 +37,7 @@ import java.util.stream.Collectors;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
@@ -63,7 +61,7 @@ public class TableRoleManagerDAOTest {
     @BeforeMethod
     public void setUp() {
         // DataStore and PermissionManager are fairly heavy to fully mock.  Use spies on in-memory implementations instead
-        _backendDataStore = new InMemoryDataStore(new MetricRegistry());
+        _backendDataStore = new InMemoryDataStore(new MetricRegistry(), mock(KafkaProducerService.class));
         _dataStore = spy(_backendDataStore);
         _permissionResolver = new EmoPermissionResolver(null, null);
         _backendPermissionManager = new InMemoryPermissionManager(_permissionResolver);

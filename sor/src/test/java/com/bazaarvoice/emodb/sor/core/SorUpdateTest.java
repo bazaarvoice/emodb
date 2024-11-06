@@ -8,6 +8,7 @@ import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.bazaarvoice.emodb.sor.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.test.SystemClock;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableMap;
@@ -19,6 +20,7 @@ import org.testng.collections.Lists;
 
 import java.util.UUID;
 
+import static org.mockito.Mockito.mock;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.fail;
 
@@ -34,7 +36,7 @@ public class SorUpdateTest {
     public void SetupTest() {
         final InMemoryDataReaderDAO dataDAO = new InMemoryDataReaderDAO();
         _eventWriterRegistry = new DatabusEventWriterRegistry();
-        _dataStore = new InMemoryDataStore(_eventWriterRegistry, dataDAO, new MetricRegistry());
+        _dataStore = new InMemoryDataStore(_eventWriterRegistry, dataDAO, new MetricRegistry(), mock(KafkaProducerService.class));
 
 
         // Create a table for our test
