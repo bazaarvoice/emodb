@@ -42,7 +42,7 @@ public interface OwnerAwareDatabus {
         throws UnauthorizedSubscriptionException;
 
     public long getMasterEventCountUncached(String ownerId)
-            throws UnauthorizedSubscriptionException;;
+            throws UnauthorizedSubscriptionException;
 
     long getEventCountUpTo(String ownerId, String subscription, long limit)
         throws UnauthorizedSubscriptionException;
