@@ -1047,18 +1047,17 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     @Override
     public void updateRefInDatabus(List<String> updateRefsModel) {
-        _log.info("Inside DefaultDataStore.updateRefInDatabus method {} ", updateRefsModel);
         try {
             List<UpdateRef> updateRefModelList = updateRefsModel.stream()
                     .map(string -> {
                         try {
                             return new ObjectMapper().readValue(string, UpdateRef.class);
                         } catch (JsonProcessingException e) {
+                            _log.error("Error In Parsing The Message: " , e);
                             throw new RuntimeException(e);
                         }
                     })
                     .collect(Collectors.toList());
-            _log.info("Writing updateRef to databus {}", updateRefModelList);
             if(!updateRefsModel.isEmpty()){
                 _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefModelList);
                 _log.info("Successfully wrote {} number of msgs to databus", updateRefModelList.size());
@@ -1066,6 +1065,5 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         } catch (Exception e) {
             _log.info("Error in writing updateRef to databus {}", e.getMessage());
         }
-        _log.info("Finished DefaultDataStore.updateRefInDatabus method {} ", updateRefsModel);
     }
 }
