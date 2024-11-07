@@ -297,4 +297,9 @@ public class WriteCloseableDataStore implements DataStore, TableBackingStore, Da
     public URI getStashRoot() throws StashNotAvailableException {
         return _delegate.getStashRoot();
     }
+
+    @Override
+    public void updateRefInDatabus(List<String> updateRefsModel) {
+        _delegate.updateRefInDatabus(updateRefsModel);
+    }
 }

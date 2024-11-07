@@ -11,6 +11,7 @@ import com.bazaarvoice.emodb.sor.core.HistoryStore;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryHistoryStore;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryMapStore;
 import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
+import com.bazaarvoice.emodb.sor.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.log.NullSlowQueryLog;
 import com.bazaarvoice.emodb.table.db.TableDAO;
 import com.bazaarvoice.emodb.table.db.test.InMemoryTableDAO;
@@ -19,6 +20,8 @@ import com.google.common.util.concurrent.MoreExecutors;
 
 import java.time.Clock;
 import java.util.Optional;
+
+import static org.mockito.Mockito.mock;
 
 /**
  * Wrapper around a set of {@link DataStore} instances that replicate to each other,
@@ -63,12 +66,12 @@ public class MultiDCDataStores {
             if (asyncCompacter) {
                 _stores[i] = new DefaultDataStore(new SimpleLifeCycleRegistry(), metricRegistry, new DatabusEventWriterRegistry(), _tableDao,
                         _inMemoryDaos[i].setHistoryStore(_historyStores[i]), _replDaos[i], new NullSlowQueryLog(), _historyStores[i],
-                        Optional.empty(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(), new DiscardingAuditWriter(), new InMemoryMapStore<>(), Clock.systemUTC());
+                        Optional.empty(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(), new DiscardingAuditWriter(), new InMemoryMapStore<>(), Clock.systemUTC(), mock(KafkaProducerService.class));
             } else {
                 _stores[i] = new DefaultDataStore(new DatabusEventWriterRegistry(), _tableDao, _inMemoryDaos[i].setHistoryStore(_historyStores[i]),
                         _replDaos[i], new NullSlowQueryLog(), MoreExecutors.newDirectExecutorService(), _historyStores[i],
                         Optional.empty(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
-                        new DiscardingAuditWriter(), new InMemoryMapStore<>(), metricRegistry, Clock.systemUTC());
+                        new DiscardingAuditWriter(), new InMemoryMapStore<>(), metricRegistry, Clock.systemUTC(), mock(KafkaProducerService.class));
             }
         }
     }

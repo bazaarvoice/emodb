@@ -6,10 +6,15 @@ import com.bazaarvoice.emodb.queue.api.Message;
 import com.bazaarvoice.emodb.queue.api.MoveQueueStatus;
 import com.bazaarvoice.emodb.queue.api.QueueService;
 import com.bazaarvoice.emodb.queue.client.QueueServiceAuthenticator;
+import com.bazaarvoice.emodb.queue.core.Entities.QueueExecutionAttributes;
+import com.bazaarvoice.emodb.queue.core.ssm.ParameterStoreUtil;
+import com.bazaarvoice.emodb.queue.core.stepfn.StepFunctionService;
 import com.bazaarvoice.emodb.web.auth.Permissions;
 import com.bazaarvoice.emodb.web.auth.resource.NamedResource;
 import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
@@ -26,6 +31,7 @@ import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -33,9 +39,11 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
@@ -46,12 +54,37 @@ import static java.util.Objects.requireNonNull;
 @Api (value="Queue: " , description = "All Queue operations")
 public class QueueResource1 {
 
+    //private final MetricRegistry _metricRegistry;
     private final QueueService _queueService;
     private final QueueServiceAuthenticator _queueClient;
+    private final Meter _messageCount_qr1;
+    private final Meter _nullPollsCount_qr1;
 
-    public QueueResource1(QueueService queueService, QueueServiceAuthenticator queueClient) {
+    private final Meter _sendCount_qr1;
+    private final Meter _sendNullCount_qr1;
+
+    private final Meter _sendBatch_qr1;
+
+    private final Meter _sendBatchNull_qr1;
+
+    private final ParameterStoreUtil _parameterStoreUtil;
+
+    private final StepFunctionService _stepFunctionService;
+
+    public QueueResource1(QueueService queueService, QueueServiceAuthenticator queueClient, MetricRegistry metricRegistry) {
+        //this._metricRegistry = metricRegistry;
+
         _queueService = requireNonNull(queueService, "queueService");
         _queueClient = requireNonNull(queueClient, "queueClient");
+        _parameterStoreUtil = new ParameterStoreUtil();
+        _stepFunctionService = new StepFunctionService();
+        _messageCount_qr1 = metricRegistry.meter(MetricRegistry.name(QueueResource1.class, "polledMessageCount_qr1"));
+        _nullPollsCount_qr1 = metricRegistry.meter(MetricRegistry.name(QueueResource1.class, "nullPollsCount_qr1"));
+        _sendCount_qr1= metricRegistry.meter(MetricRegistry.name(QueueResource1.class,"sendCount_qr1"));
+        _sendNullCount_qr1= metricRegistry.meter(MetricRegistry.name(QueueResource1.class,"sendNullCount_qr1"));
+        _sendBatch_qr1= metricRegistry.meter(MetricRegistry.name(QueueResource1.class,"sendBatch_qr1"));
+        _sendBatchNull_qr1= metricRegistry.meter(MetricRegistry.name(QueueResource1.class,"sendBatchNull_qr1"));
+
     }
 
     @POST
@@ -65,6 +98,13 @@ public class QueueResource1 {
     )
     public SuccessResponse send(@PathParam("queue") String queue, Object message) {
         // Not partitioned--any server can write messages to Cassandra.
+
+        if (message == null) {
+            _sendNullCount_qr1.mark();
+        }
+        else{
+            _sendCount_qr1.mark();
+        }
         _queueService.send(queue, message);
         return SuccessResponse.instance();
     }
@@ -79,8 +119,33 @@ public class QueueResource1 {
             response = SuccessResponse.class
     )
     public SuccessResponse sendBatch(@PathParam("queue") String queue, Collection<Object> messages) {
+
+        if (messages == null || messages.isEmpty()) {
+            _sendBatchNull_qr1.mark(); // Increment the sendnull meter
+        }
+        else {
+            _sendBatch_qr1.mark(messages.size());
+        }
         // Not partitioned--any server can write messages to Cassandra.
         _queueService.sendAll(queue, messages);
+        return SuccessResponse.instance();
+    }
+
+
+// endpoint to write to cassandra after throttled messages come from kafka
+    @POST
+    @Path("{queue}/sendbatch1")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @RequiresPermissions("queue|post|{queue}")
+    @Timed(name = "bv.emodb.queue.QueueResource1.sendBatch1", absolute = true)
+    @ApiOperation (value = "Send a Batch.",
+            notes = "Returns a SuccessResponse..",
+            response = SuccessResponse.class
+    )
+    public SuccessResponse sendBatch1(@PathParam("queue") String queue, Collection<Object> events) {
+        //TODO change query param name / type
+        // Not partitioned--any server can write messages to Cassandra.
+        _queueService.sendAll(queue, events, true);
         return SuccessResponse.instance();
     }
 
@@ -126,6 +191,17 @@ public class QueueResource1 {
         }
     }
 
+    @GET
+    @Path("{queue}/uncached_size")
+    @RequiresPermissions("queue|get_status|{queue}")
+    @Timed(name = "bv.emodb.queue.QueueResource1.getUncachedMessageCount", absolute = true)
+    @ApiOperation (value = "gets the uncached Message count.",
+            notes = "Returns a long.",
+            response = long.class
+    )
+    public long getUncachedMessageCount(@PathParam("queue") String queue) {
+        return _queueService.getUncachedSize(queue);
+    }
 
     @GET
     @Path("{queue}/claimcount")
@@ -168,7 +244,14 @@ public class QueueResource1 {
                               @QueryParam("ttl") @DefaultValue("30") SecondsParam claimTtl,
                               @QueryParam("limit") @DefaultValue("10") IntParam limit,
                               @Authenticated Subject subject) {
-        return getService(partitioned, subject.getAuthenticationId()).poll(queue, claimTtl.get(), limit.get());
+        List<Message> polledMessages = getService(partitioned, subject.getAuthenticationId()).poll(queue, claimTtl.get(), limit.get());
+        if(polledMessages.isEmpty()){
+            _nullPollsCount_qr1.mark();
+        }
+        else{
+            _messageCount_qr1.mark(polledMessages.size());
+        }
+        return polledMessages;
     }
 
     @POST
@@ -266,6 +349,36 @@ public class QueueResource1 {
                                  @Authenticated Subject subject) {
         getService(partitioned, subject.getAuthenticationId()).purge(queue);
         return SuccessResponse.instance();
+    }
+
+    @PUT
+    @Path("/UpdateParameterStore")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @ApiOperation (value = "update param operation at aws parameter store .",
+            notes = "Returns a SuccessResponse.", response = SuccessResponse.class)
+    public SuccessResponse updateParam(Map<String, String> keyValuePair) {
+        String key = keyValuePair.keySet().iterator().next();
+        String value = keyValuePair.get(key);
+
+        Long update_version = _parameterStoreUtil.updateParameter(key, value);
+        return SuccessResponse.instance().with(ImmutableMap.of("status", "200 | ssm-parameter updated successfully, update_version: " + update_version));
+    }
+
+    @PUT
+    @Path("/{queue_type}/{queue_name}/QueueExecutionAttributes")
+    @RequiresPermissions("queue|poll|{queue_name}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @ApiOperation (value = "update queue execution attributes .", notes = "Returns a SuccessResponse.", response = SuccessResponse.class)
+    public SuccessResponse updateQueueExecutionAttributes(@PathParam("queue_type") String queueType, @PathParam("queue_name") String queueName, QueueExecutionAttributes newExecAttributes) {
+        newExecAttributes.setQueueName(queueName);
+        newExecAttributes.setQueueType(queueType);
+        _stepFunctionService.startSFNWithAttributes(newExecAttributes);
+
+        if("DISABLED".equals(newExecAttributes.getStatus())) {
+            return SuccessResponse.instance().with(ImmutableMap.of("status", "200 | step function successfully stopped(if any execution existed) as status=DISABLED was provided"));
+        } else {
+            return SuccessResponse.instance().with(ImmutableMap.of("status", "200 | step function successfully re-started, or started with updated attributes"));
+        }
     }
 
     private QueueService getService(BooleanParam partitioned, String apiKey) {

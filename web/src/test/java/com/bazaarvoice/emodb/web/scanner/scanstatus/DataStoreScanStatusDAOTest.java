@@ -6,6 +6,7 @@ import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.bazaarvoice.emodb.sor.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.web.scanner.ScanDestination;
 import com.bazaarvoice.emodb.web.scanner.ScanOptions;
 import com.codahale.metrics.MetricRegistry;
@@ -22,6 +23,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
+import static org.mockito.Mockito.mock;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
@@ -33,7 +35,7 @@ public class DataStoreScanStatusDAOTest {
 
     @BeforeMethod
     public void setUp() {
-        _dataStore = new InMemoryDataStore(new MetricRegistry());
+        _dataStore = new InMemoryDataStore(new MetricRegistry(), mock(KafkaProducerService.class));
         _dao = new DataStoreScanStatusDAO(_dataStore, "scan_table", "app_global:sys");
     }
 

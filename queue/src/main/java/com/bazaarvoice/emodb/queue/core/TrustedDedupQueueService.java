@@ -92,6 +92,11 @@ public class TrustedDedupQueueService implements AuthDedupQueueService {
     }
 
     @Override
+    public void sendAll(String apiKey, String queue, Collection<?> messages, boolean isFlush) {
+        _dedupQueueService.sendAll(queue, messages, isFlush);
+    }
+
+    @Override
     public void sendAll(String apiKey, Map<String, ? extends Collection<?>> messagesByQueue) {
         _dedupQueueService.sendAll(messagesByQueue);
     }

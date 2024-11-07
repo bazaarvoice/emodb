@@ -41,6 +41,9 @@ public interface OwnerAwareDatabus {
     long getEventCount(String ownerId, String subscription)
         throws UnauthorizedSubscriptionException;
 
+    public long getMasterEventCountUncached(String ownerId)
+            throws UnauthorizedSubscriptionException;
+
     long getEventCountUpTo(String ownerId, String subscription, long limit)
         throws UnauthorizedSubscriptionException;
 

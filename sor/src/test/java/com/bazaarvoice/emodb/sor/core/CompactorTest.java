@@ -16,6 +16,7 @@ import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
 import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.bazaarvoice.emodb.sor.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.test.SystemClock;
 import com.bazaarvoice.emodb.sor.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.table.db.Table;
@@ -485,7 +486,7 @@ public class CompactorTest {
             }
         };
 
-        final DataStore dataStore = new InMemoryDataStore(dataDAO, new MetricRegistry());
+        final DataStore dataStore = new InMemoryDataStore(dataDAO, new MetricRegistry(), mock(KafkaProducerService.class));
 
         // Create a table for our test
         dataStore.createTable(tableName,
@@ -571,7 +572,7 @@ public class CompactorTest {
         // Configure the data DAO to read 10 columns initially, causing other column reads to be read lazily
         dataDAO.setColumnBatchSize(10);
 
-        final DataStore dataStore = new InMemoryDataStore(dataDAO, new MetricRegistry());
+        final DataStore dataStore = new InMemoryDataStore(dataDAO, new MetricRegistry(), mock(KafkaProducerService.class));
 
         // Create a table for our test
         dataStore.createTable(tableName,

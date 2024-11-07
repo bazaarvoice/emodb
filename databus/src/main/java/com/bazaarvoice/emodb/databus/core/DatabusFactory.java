@@ -79,6 +79,11 @@ public class DatabusFactory {
             }
 
             @Override
+            public long getMasterCount() {
+                return _ownerAwareDatabus.getMasterEventCountUncached(ownerId);
+            }
+
+            @Override
             public long getClaimCount(String subscription) {
                 return _ownerAwareDatabus.getClaimCount(ownerId, subscription);
             }

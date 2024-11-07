@@ -8,19 +8,7 @@ import com.bazaarvoice.emodb.common.json.LoggingIterator;
 import com.bazaarvoice.emodb.common.json.OrderedJson;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.datacenter.api.DataCenter;
-import com.bazaarvoice.emodb.sor.api.Audit;
-import com.bazaarvoice.emodb.sor.api.Change;
-import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
-import com.bazaarvoice.emodb.sor.api.Coordinate;
-import com.bazaarvoice.emodb.sor.api.DataStore;
-import com.bazaarvoice.emodb.sor.api.FacadeOptions;
-import com.bazaarvoice.emodb.sor.api.Intrinsic;
-import com.bazaarvoice.emodb.sor.api.PurgeStatus;
-import com.bazaarvoice.emodb.sor.api.Table;
-import com.bazaarvoice.emodb.sor.api.TableOptions;
-import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
-import com.bazaarvoice.emodb.sor.api.Update;
-import com.bazaarvoice.emodb.sor.api.WriteConsistency;
+import com.bazaarvoice.emodb.sor.api.*;
 import com.bazaarvoice.emodb.sor.core.DataStoreAsync;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
@@ -946,6 +934,23 @@ public class DataStoreResource1 {
                 header("X-BV-Exception", UnsupportedOperationException.class.getName()).
                 build();
     }
+
+    @POST
+    @Path("{channel}/sendbatch1")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Timed(name = "bv.emodb.sor.DataStoreResource1.updateRef", absolute = true)
+    @ApiOperation(value = "Updates a reference",
+            notes = "Updates a reference",
+            response = SuccessResponse.class
+    )
+    public SuccessResponse updateRefToDatabus(List<String> updateRefs,
+                                              @Authenticated Subject subject) {
+        _log.info("Inside updateRefToDatabus datastore : {}", _dataStore.getClass().getName());
+        // Perform the update by writing to Databus
+        _dataStore.updateRefInDatabus(updateRefs);
+        return SuccessResponse.instance();
+    }
+
 
     private UUID parseUuidOrTimestamp(@Nullable String string, boolean rangeUpperEnd) {
         if (string == null) {

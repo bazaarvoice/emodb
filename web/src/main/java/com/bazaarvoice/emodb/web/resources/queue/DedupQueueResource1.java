@@ -10,6 +10,8 @@ import com.bazaarvoice.emodb.web.auth.Permissions;
 import com.bazaarvoice.emodb.web.auth.resource.NamedResource;
 import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
@@ -48,10 +50,23 @@ public class DedupQueueResource1 {
 
     private final DedupQueueService _queueService;
     private final DedupQueueServiceAuthenticator _queueClient;
+    private final Meter _nullPollDedupCount;
+    private final Meter _messageDedupCount;
+    private final Meter _sendDedupCount;
+    private final Meter _sendNullDedupCount;
+    private final Meter _sendBatchNullDedupCount;
+    private final Meter _sendBatchDedupCount;
 
-    public DedupQueueResource1(DedupQueueService queueService, DedupQueueServiceAuthenticator queueClient) {
+
+    public DedupQueueResource1(DedupQueueService queueService, DedupQueueServiceAuthenticator queueClient, MetricRegistry metricRegistry) {
         _queueService = requireNonNull(queueService, "queueService");
         _queueClient = requireNonNull(queueClient, "queueClient");
+        _nullPollDedupCount = metricRegistry.meter(MetricRegistry.name(DedupQueueResource1.class, "nullPollsDedupCount"));
+        _messageDedupCount = metricRegistry.meter(MetricRegistry.name(DedupQueueResource1.class, "polledMessageDedupCount"));
+        _sendDedupCount= metricRegistry.meter(MetricRegistry.name(DedupQueueResource1.class,"sendDedupCount"));
+        _sendNullDedupCount= metricRegistry.meter(MetricRegistry.name(DedupQueueResource1.class,"sendNullDedupCount"));
+        _sendBatchDedupCount= metricRegistry.meter(MetricRegistry.name(DedupQueueResource1.class,"sendBatchDedupCount"));
+        _sendBatchNullDedupCount= metricRegistry.meter(MetricRegistry.name(DedupQueueResource1.class,"sendBatchNullDedupCount"));
     }
 
     @POST
@@ -65,6 +80,12 @@ public class DedupQueueResource1 {
     )
     public SuccessResponse send(@PathParam("queue") String queue, Object message) {
         // Not partitioned--any server can write messages to Cassandra.
+        if (message == null) {
+            _sendNullDedupCount.mark();
+        }
+        else{
+            _sendDedupCount.mark();
+        }
         _queueService.send(queue, message);
         return SuccessResponse.instance();
     }
@@ -80,7 +101,27 @@ public class DedupQueueResource1 {
     )
     public SuccessResponse sendBatch(@PathParam("queue") String queue, Collection<Object> messages) {
         // Not partitioned--any server can write messages to Cassandra.
+        if (messages == null || messages.isEmpty()) {
+            _sendBatchNullDedupCount.mark(); // Increment the sendnull meter
+        }
+        else {
+            _sendBatchDedupCount.mark(messages.size());
+        }
         _queueService.sendAll(queue, messages);
+        return SuccessResponse.instance();
+    }
+    @POST
+    @Path("{queue}/sendbatch1")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @RequiresPermissions("queue|post|{queue}")
+    @Timed(name = "bv.emodb.dedupq.DedupQueueResource1.sendBatch", absolute = true)
+    @ApiOperation (value = "Send a Batch.",
+            notes = "Returns a SuccessResponse",
+            response = SuccessResponse.class
+    )
+    public SuccessResponse sendBatch1(@PathParam("queue") String queue, Collection<Object> messages) {
+        // Not partitioned--any server can write messages to Cassandra.
+        _queueService.sendAll(queue, messages,true);
         return SuccessResponse.instance();
     }
 
@@ -127,6 +168,18 @@ public class DedupQueueResource1 {
         }
     }
 
+    @GET
+    @Path("{queue}/uncached_size")
+    @RequiresPermissions("queue|get_status|{queue}")
+    @Timed(name = "bv.emodb.dedupq.DedupQueueResource1.getUncachedMessageCount", absolute = true)
+    @ApiOperation (value = "gets the uncached Message count.",
+            notes = "Returns a long.",
+            response = long.class
+    )
+    public long getUncachedMessageCount(@PathParam("queue") String queue) {
+        return _queueService.getUncachedSize(queue);
+    }
+
 
     @GET
     @Path("{queue}/claimcount")
@@ -171,7 +224,13 @@ public class DedupQueueResource1 {
                               @QueryParam("ttl") @DefaultValue("30") SecondsParam claimTtl,
                               @QueryParam("limit") @DefaultValue("10") IntParam limit,
                               @Authenticated Subject subject) {
-        return getService(partitioned, subject.getAuthenticationId()).poll(queue, claimTtl.get(), limit.get());
+
+        List<Message> polledMessages = getService(partitioned, subject.getAuthenticationId()).poll(queue, claimTtl.get(), limit.get());
+        _messageDedupCount.mark(polledMessages.size());
+        if(polledMessages.isEmpty()){
+            _nullPollDedupCount.mark();
+        }
+        return polledMessages;
     }
 
     @POST

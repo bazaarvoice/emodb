@@ -10,6 +10,7 @@ import com.bazaarvoice.emodb.sor.db.astyanax.AstyanaxBlockedDataReaderDAO;
 import com.bazaarvoice.emodb.sor.db.astyanax.ChangeEncoder;
 import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.bazaarvoice.emodb.sor.kafka.KafkaProducerService;
 import com.bazaarvoice.emodb.sor.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.astyanax.PlacementCache;
@@ -43,7 +44,7 @@ public class MinSplitSizeTest {
             }
         };
 
-        DataStore dataStore = new InMemoryDataStore(dataDao, new MetricRegistry());
+        DataStore dataStore = new InMemoryDataStore(dataDao, new MetricRegistry(), mock(KafkaProducerService.class));
 
         dataStore.createTable("table", new TableOptionsBuilder().setPlacement("default").build(),
                 Collections.emptyMap(), new AuditBuilder().build());

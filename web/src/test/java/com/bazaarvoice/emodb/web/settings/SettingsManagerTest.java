@@ -6,6 +6,7 @@ import com.bazaarvoice.emodb.cachemgr.api.InvalidationScope;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
+import com.bazaarvoice.emodb.sor.kafka.KafkaProducerService;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.cache.Cache;
 import com.google.inject.util.Providers;
@@ -32,7 +33,7 @@ public class SettingsManagerTest {
 
     @BeforeMethod
     public void setUp() {
-        _dataStore = new InMemoryDataStore(new MetricRegistry());
+        _dataStore = new InMemoryDataStore(new MetricRegistry(), mock(KafkaProducerService.class));
         _cacheRegistry = mock(CacheRegistry.class);
         _cacheHandle = mock(CacheHandle.class);
         when(_cacheRegistry.register(eq("settings"), any(Cache.class), eq(true))).thenReturn(_cacheHandle);

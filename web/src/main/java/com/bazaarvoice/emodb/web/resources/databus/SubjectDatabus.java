@@ -52,6 +52,8 @@ public interface SubjectDatabus {
 
     long getEventCountUpTo(Subject subject, String subscription, long limit);
 
+    long getMasterCount(Subject subject);
+
     long getClaimCount(Subject subject, String subscription);
 
     Iterator<Event> peek(Subject subject, String subscription, int limit);
