@@ -266,6 +266,6 @@ public interface DataStore {
      * This method is a no-op in the default implementation. It is used by the Databus to update the reference
      */
     default void updateRefInDatabus(List<String> updateRefs) {
-        System.out.println("Inside Default updateRefInDatabus");
+        
     }
 }

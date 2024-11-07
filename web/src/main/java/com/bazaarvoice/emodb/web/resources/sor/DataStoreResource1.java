@@ -948,7 +948,6 @@ public class DataStoreResource1 {
         _log.info("Inside updateRefToDatabus datastore : {}", _dataStore.getClass().getName());
         // Perform the update by writing to Databus
         _dataStore.updateRefInDatabus(updateRefs);
-        _log.info("Finished updateRefToDatabus updateRefs : {}", updateRefs);
         return SuccessResponse.instance();
     }
 
