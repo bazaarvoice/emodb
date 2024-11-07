@@ -60,4 +60,13 @@ public final class UpdateRefModel {
         return hash(_table, _key, _changeId, _tags);
     }
 
+    @Override
+    public String toString() {
+        return "{" +
+                "_table:'" + _table + '\'' +
+                ", _key:'" + _key + '\'' +
+                ", _changeId:" + _changeId +
+                ", _tags:" + _tags +
+                '}';
+    }
 }

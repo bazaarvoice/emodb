@@ -1,8 +1,12 @@
 package com.bazaarvoice.emodb.sor.core;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static java.util.Objects.hash;
 import static java.util.Objects.requireNonNull;
@@ -17,7 +21,9 @@ public final class UpdateRef {
     private final UUID _changeId;
     private final Set<String> _tags;
 
-    public UpdateRef(String table, String key, UUID changeId, Set<String> tags) {
+
+    @JsonCreator
+    public UpdateRef(@JsonProperty("table") String table,@JsonProperty("key") String key,@JsonProperty("changeId") UUID changeId,@JsonProperty("tags") Set<String> tags) {
         _table = requireNonNull(table, "table");
         _key = requireNonNull(key, "key");
         _changeId = requireNonNull(changeId, "changeId");
@@ -60,4 +66,13 @@ public final class UpdateRef {
         return hash(_table, _key, _changeId, _tags);
     }
 
+    @Override
+    public String toString() {
+        return "{" +
+                "\"table\":\"" + _table + "\"" +
+                ",\"key\":\"" + _key + "\"" +
+                ",\"changeId\":\"" + _changeId +"\""+
+                ",\"tags\":" + _tags.stream() .map(item -> "\"" + item + "\"") .collect(Collectors.toSet()) +
+                "}";
+    }
 }
