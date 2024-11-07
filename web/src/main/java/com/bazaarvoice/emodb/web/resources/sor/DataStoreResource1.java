@@ -943,50 +943,13 @@ public class DataStoreResource1 {
             notes = "Updates a reference",
             response = SuccessResponse.class
     )
-    public SuccessResponse updateRefToDatabus(InputStream in,
-                                              @QueryParam("consistency") @DefaultValue("STRONG") WriteConsistencyParam consistency,
-                                              @QueryParam("tag") List<String> tags,
+    public SuccessResponse updateRefToDatabus(List<String> updateRefs,
                                               @Authenticated Subject subject) {
-        Set<String> tagsSet = (tags == null) ? ImmutableSet.of() : Sets.newHashSet(tags);
-        Iterable<UpdateRefModel> updateRefs = asSubjectSafeUpdateRefModelIterable(new JsonStreamingArrayParser<>(in, UpdateRefModel.class), subject, true);
         // Perform the update by writing to Databus
-        _dataStore.updateRefInDatabus(updateRefs, tagsSet, false);
+        _dataStore.updateRefInDatabus(updateRefs);
         return SuccessResponse.instance();
     }
 
-    /**
-     * Takes an update ref stream from a subject and performs the following actions on it:
-     * 1. Checks that the subject has permission to update the record being updated
-     * 2. Applies any active rate limiting for updates by the subject
-     */
-    private Iterable<UpdateRefModel> asSubjectSafeUpdateRefModelIterable(Iterator<UpdateRefModel> updateRefs, final Subject subject, final boolean isFacade) {
-        return Iterables.filter(
-                OneTimeIterable.wrap(updateRefs),
-                new Predicate<UpdateRefModel>() {
-                    @Override
-                    public boolean apply(UpdateRefModel updateRefModel) {
-                        NamedResource resource = new NamedResource(updateRefModel.getTable());
-                        boolean hasPermission;
-                        if (isFacade) {
-                            hasPermission = subject.hasPermission(Permissions.updateFacade(resource));
-                        } else {
-                            hasPermission = subject.hasPermission(Permissions.updateSorTable(resource));
-                        }
-
-                        if (!hasPermission) {
-                            throw new UnauthorizedException("not authorized to update table " + updateRefModel.getTable());
-                        }
-
-                        // Facades are a unique case used internally for shoveling data across data centers, so don't rate
-                        // limit facade updates.
-                        if (!isFacade) {
-                            _updateThrottle.beforeUpdate(subject.getId());
-                        }
-
-                        return true;
-                    }
-                });
-    }
 
     private UUID parseUuidOrTimestamp(@Nullable String string, boolean rangeUpperEnd) {
         if (string == null) {

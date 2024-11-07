@@ -36,6 +36,8 @@ import com.codahale.metrics.Counter;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
@@ -69,6 +71,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
@@ -1042,29 +1045,25 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         return MetricRegistry.name("bv.emodb.sor", "DefaultDataStore", name);
     }
 
-    private Iterable<UpdateRef> convertToUpdateRef(Iterable<UpdateRefModel> apiUpdateRefs) {
-        List<com.bazaarvoice.emodb.sor.core.UpdateRef> coreUpdateRefs = new ArrayList<>();
-        for (UpdateRefModel apiUpdateRefModel : apiUpdateRefs) {
-            String tableName = apiUpdateRefModel.getTable();
-            String key = apiUpdateRefModel.getKey();
-            UUID changeId = apiUpdateRefModel.getChangeId();
-            Set<String> tags = apiUpdateRefModel.getTags();
-            coreUpdateRefs.add(new com.bazaarvoice.emodb.sor.core.UpdateRef(tableName, key, changeId, tags));
-        }
-        return coreUpdateRefs;
-    }
-
     @Override
-    public void updateRefInDatabus(Iterable<UpdateRefModel> updateRefs, Set<String> tags, boolean isFacade) {
-        Iterator<UpdateRef> updateRefsIter = convertToUpdateRef(updateRefs).iterator();
-        if (!updateRefsIter.hasNext()) {
-            return;
+    public void updateRefInDatabus(List<String> updateRefsModel) {
+        try {
+            List<UpdateRef> updateRefModelList = updateRefsModel.stream()
+                    .map(string -> {
+                        try {
+                            return new ObjectMapper().readValue(string, UpdateRef.class);
+                        } catch (JsonProcessingException e) {
+                            _log.error("Error In Parsing The Message: " , e);
+                            throw new RuntimeException(e);
+                        }
+                    })
+                    .collect(Collectors.toList());
+            if(!updateRefModelList.isEmpty()){
+                _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefModelList);
+                _log.info("Successfully wrote {} number of msgs to databus", updateRefModelList.size());
+            }
+        } catch (Exception e) {
+            _log.info("Error in writing updateRef to databus {}", e.getMessage());
         }
-        List<UpdateRef> updateRefList = new ArrayList<>();
-        while (updateRefsIter.hasNext()) {
-            UpdateRef updateRef = updateRefsIter.next();
-            updateRefList.add(updateRef);
-        }
-        _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefList);
     }
 }
