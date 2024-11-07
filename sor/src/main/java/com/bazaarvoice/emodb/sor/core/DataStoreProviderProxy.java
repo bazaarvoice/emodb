@@ -208,4 +208,9 @@ public class DataStoreProviderProxy implements DataStore {
     public URI getStashRoot() throws StashNotAvailableException {
         return _local.get().getStashRoot();
     }
+
+    @Override
+    public void updateRefInDatabus(List<String> updateRefs) {
+        _local.get().updateRefInDatabus(updateRefs);
+    }
 }

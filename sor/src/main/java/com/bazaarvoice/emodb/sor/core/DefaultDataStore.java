@@ -1053,7 +1053,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                         try {
                             return new ObjectMapper().readValue(string, UpdateRef.class);
                         } catch (JsonProcessingException e) {
-                            _log.error("Error In Parsing The Message: " , e);
+                            _log.error("Error In Parsing The Message for {}" , string, e);
                             throw new RuntimeException(e);
                         }
                     })
@@ -1063,7 +1063,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                 _log.info("Successfully wrote {} number of msgs to databus", updateRefModelList.size());
             }
         } catch (Exception e) {
-            _log.info("Error in writing updateRef to databus {}", e.getMessage());
+            _log.info("Error in writing updateRef to databus ", e);
         }
     }
 }

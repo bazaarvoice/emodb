@@ -945,6 +945,7 @@ public class DataStoreResource1 {
     )
     public SuccessResponse updateRefToDatabus(List<String> updateRefs,
                                               @Authenticated Subject subject) {
+        _log.info("Inside updateRefToDatabus datastore : {}", _dataStore.getClass().getName());
         // Perform the update by writing to Databus
         _dataStore.updateRefInDatabus(updateRefs);
         return SuccessResponse.instance();
