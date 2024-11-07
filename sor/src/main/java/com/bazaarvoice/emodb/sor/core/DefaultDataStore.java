@@ -1058,7 +1058,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                         }
                     })
                     .collect(Collectors.toList());
-            if(!updateRefsModelList.isEmpty()){
+            if(!updateRefModelList.isEmpty()){
                 _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefModelList);
                 _log.info("Successfully wrote {} number of msgs to databus", updateRefModelList.size());
             }
