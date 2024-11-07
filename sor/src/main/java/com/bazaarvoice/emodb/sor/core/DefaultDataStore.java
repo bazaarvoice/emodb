@@ -1047,6 +1047,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     @Override
     public void updateRefInDatabus(List<String> updateRefsModel) {
+        _log.info("Started Writing to Databus in DefaultDataStore");
         try {
             List<UpdateRef> updateRefModelList = updateRefsModel.stream()
                     .map(string -> {
