@@ -943,14 +943,12 @@ public class DataStoreResource1 {
             notes = "Updates a reference",
             response = SuccessResponse.class
     )
-    public SuccessResponse updateRefToDatabus(InputStream in,
-                                              @QueryParam("consistency") @DefaultValue("STRONG") WriteConsistencyParam consistency,
-                                              @QueryParam("tag") List<String> tags,
+    public SuccessResponse updateRefToDatabus(List<String> updateRefs,
                                               @Authenticated Subject subject) {
-        Set<String> tagsSet = (tags == null) ? ImmutableSet.of() : Sets.newHashSet(tags);
-        Iterable<UpdateRefModel> updateRefs = asSubjectSafeUpdateRefModelIterable(new JsonStreamingArrayParser<>(in, UpdateRefModel.class), subject, true);
+        _log.info("Inside updateRefToDatabus {} {}", updateRefs, _dataStore.getClass().getName());
         // Perform the update by writing to Databus
-        _dataStore.updateRefInDatabus(updateRefs, tagsSet, false);
+        _dataStore.updateRefInDatabus(updateRefs);
+        _log.info("Finishing updateRefToDatabus {}", updateRefs);
         return SuccessResponse.instance();
     }
 
