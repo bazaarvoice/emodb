@@ -146,28 +146,7 @@ public class ScanRange implements Comparable<ScanRange> {
             }
         }
 
-        if (intersections.size() > 1) {
-            // For consistency always return the intersections sorted from low- to high-range.
-            Collections.sort(intersections);
-
-            // If multiple ranges are contiguous then join them.  This can happen if one of the ranges is "all".
-            for (int i = intersections.size() - 1; i > 0; i--) {
-                if (intersections.get(i-1)._to.equals(intersections.get(i)._from)) {
-                    intersections.set(i-1, ScanRange.create(intersections.get(i-1)._from, intersections.get(i)._to));
-                    intersections.remove(i);
-                }
-            }
-
-            // If the intersections represent a contiguous high- to low-end wrapped range then combine them.
-            if (intersections.size() == 2 &&
-                    intersections.get(0)._from.equals(MIN_VALUE) && intersections.get(1)._to.equals(MAX_VALUE)) {
-                ScanRange combined = ScanRange.create(intersections.get(1)._from, intersections.get(0)._to);
-                intersections.clear();
-                intersections.add(combined);
-            }
-        }
-
-        return intersections;
+        return combine(intersections);
     }
 
     @Nullable
@@ -185,6 +164,102 @@ public class ScanRange implements Comparable<ScanRange> {
         }
 
         return null;
+    }
+
+    public List<ScanRange> union(ScanRange other) {
+        return union(this, other);
+    }
+
+    /**
+     * Returns the union of two ScanRanges.  If the ranges do not intersect then the union is each individual range.
+     * Therefore this method will always return a list of one or two ranges, depending on whether there was a gap
+     * between the token ranges.
+     *
+     * @return The minimal list of scan ranges representing the union of the two ranges.
+     */
+    public static List<ScanRange> union(ScanRange left, ScanRange right) {
+        List<ScanRange> unwrappedLeft = left.unwrapped();
+        List<ScanRange> unwrappedRight = right.unwrapped();
+
+        boolean leftWrapped = unwrappedLeft.size() > 1;
+        boolean rightWrapped = unwrappedRight.size() > 1;
+
+        if (!leftWrapped && !rightWrapped) {
+            // Neither side wrapped the token range, so a simple union is all that is required.
+            // Save some cycles by comparing the ranges directly.
+            ScanRange union = unionUnwrapped(left, right);
+            if (union == null) {
+                return ImmutableList.of(left, right);
+            }
+            return ImmutableList.of(union);
+        }
+
+        List<ScanRange> reducedLeft  = Lists.newArrayList(unwrappedLeft);
+        List<ScanRange> reducedRight  = Lists.newArrayList(unwrappedRight);
+
+        for (int l=0; l < reducedLeft.size(); l++) {
+            for (int r=0; r < reducedRight.size(); r++) {
+                ScanRange union = unionUnwrapped(reducedLeft.get(l), reducedRight.get(r));
+                if (union != null) {
+                    reducedLeft.set(l, union);
+                    reducedRight.remove(r);
+                    break;
+                }
+            }
+        }
+
+        if (reducedRight.isEmpty() && reducedLeft.size() == 1) {
+            return reducedLeft;
+        }
+
+        List<ScanRange> union = Lists.newArrayListWithCapacity(reducedLeft.size() + reducedRight.size());
+        union.addAll(reducedLeft);
+        union.addAll(reducedRight);
+
+        return combine(union);
+    }
+
+    @Nullable
+    private static ScanRange unionUnwrapped(ScanRange left, ScanRange right) {
+        if (left._from.equals(right._to) || right._from.equals(left._to) || intersectionUnwrapped(left, right) != null) {
+            return new ScanRange(
+                    compare(left._from, right._from) < 0 ? left._from : right._from,
+                    compare(left._to, right._to) > 0 ? left._to : right._to);
+        }
+
+        return null;
+    }
+
+    /**
+     * Combines multiple ranges resulting from an intersection or union operations.  All ranges are guaranteed possibly
+     * be adjacent but never intersect.
+     */
+    private static List<ScanRange> combine(List<ScanRange> ranges) {
+        if (ranges.size() > 1) {
+            // For consistency always return the ranges sorted from low- to high-range.
+            Collections.sort(ranges);
+
+            // If multiple ranges are contiguous then join them.  This can happen if one of the ranges is "all".
+            for (int i = ranges.size() - 1; i > 0; i--) {
+                ScanRange union = unionUnwrapped(ranges.get(i-1), ranges.get(i));
+                if (union != null) {
+                    ranges.set(i-1, union);
+                    ranges.remove(i);
+                }
+            }
+
+            // If the ranges represent a contiguous high- to low-end wrapped range then combine them.
+            int numRanges = ranges.size();
+            if (numRanges >= 2 &&
+                    ranges.get(0)._from.equals(MIN_VALUE) && ranges.get(numRanges-1)._to.equals(MAX_VALUE)) {
+                ScanRange combined = ScanRange.create(ranges.get(numRanges-1)._from, ranges.get(0)._to);
+                ranges.remove(numRanges-1);
+                ranges.remove(0);
+                ranges.add(combined);
+            }
+        }
+
+        return ranges;
     }
 
     @Override
