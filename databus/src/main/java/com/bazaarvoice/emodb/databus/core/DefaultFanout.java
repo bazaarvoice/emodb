@@ -15,10 +15,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
-import com.google.common.collect.LinkedListMultimap;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
+import com.google.common.collect.*;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -192,87 +189,90 @@ public class DefaultFanout extends AbstractScheduledService {
 
     @VisibleForTesting
     boolean copyEvents(List<EventData> rawEvents) {
-        // Read the list of subscriptions *after* reading events from the event store to avoid race conditions with
-        // creating a new subscription.
+        _log.info("Entering copyEvents with {} raw events.", rawEvents.size());
+
+        if (rawEvents.isEmpty()) {
+            _log.warn("No events to process.");
+            return true;
+        }
+
+        rawEvents.forEach(event -> _log.info("Event received: ID={}, Data={}", event.getId(), event.getData()));
+
         final Timer.Context subTime = _fetchSubscriptionsTimer.time();
         Iterable<OwnedSubscription> subscriptions = _subscriptionsSupplier.get();
         subTime.stop();
+
+        _log.info("Fetched {} subscriptions.", Iterables.size(subscriptions));
 
         List<Date> lastMatchEventBatchTimes = Collections.synchronizedList(Lists.newArrayList());
 
         try (final Timer.Context ignored = _e2eFanoutTimer.time()) {
             final List<Future<?>> futures = new LinkedList<>();
-            // Copy the events to all the destination channels.
-            for (final List<EventData> rawEventPartition : Lists.partition(rawEvents, (int) Math.ceil(1.0 * rawEvents.size() / 8))) {
+            int partitionSize = (int) Math.ceil(1.0 * rawEvents.size() / 8);
+            _log.info("Partitioning {} events into batches of {}.", rawEvents.size(), partitionSize);
+
+            for (final List<EventData> rawEventPartition : Lists.partition(rawEvents, partitionSize)) {
+                _log.info("Processing partition with {} events.", rawEventPartition.size());
+
                 futures.add(_fanoutPool.submit(() -> {
                     try {
-                        // multimap is not threadsafe
                         final List<String> eventKeys = new LinkedList<>();
                         final ListMultimap<String, ByteBuffer> eventsByChannel = LinkedListMultimap.create();
                         SubscriptionEvaluator.MatchEventData lastMatchEventData = null;
                         int numOutboundReplicationEvents = 0;
+
                         try (Timer.Context ignored1 = _fanoutTimer.time()) {
                             for (EventData rawEvent : rawEventPartition) {
                                 ByteBuffer eventData = rawEvent.getData();
-
                                 SubscriptionEvaluator.MatchEventData matchEventData;
                                 try (Timer.Context ignored2 = _fetchMatchEventDataTimer.time()) {
                                     matchEventData = _subscriptionEvaluator.getMatchEventData(eventData);
+                                    _log.info("Match event data fetched for event ID={}.", rawEvent.getId());
                                 } catch (OrphanedEventException e) {
-                                    // There's a 2 second window where a race condition exists such that a newly created
-                                    // table may exist but due to caching the table may be cached as unknown.  To allow
-                                    // plenty of room for error wait until over 30 seconds after the event was written
-                                    // before dropping the event.  After this the event must be orphaned because
-                                    // the associated table was dropped.
+                                    _log.warn("Orphaned event detected: ID={}, EventTime={}.", rawEvent.getId(), e.getEventTime());
                                     if (e.getEventTime().until(_clock.instant(), ChronoUnit.SECONDS) > 30) {
                                         eventKeys.add(rawEvent.getId());
+                                        _log.warn("Dropping orphaned event ID={} after 30 seconds.", rawEvent.getId());
                                     }
                                     continue;
                                 }
-
                                 eventKeys.add(rawEvent.getId());
-
-                                // Copy to subscriptions in the current data center.
                                 Timer.Context matchTime = _matchSubscriptionsTimer.time();
                                 int subscriptionCount = 0;
                                 for (OwnedSubscription subscription : subscriptions) {
-                                    subscriptionCount += 1;
+                                    subscriptionCount++;
                                     if (_subscriptionEvaluator.matches(subscription, matchEventData)) {
                                         eventsByChannel.put(subscription.getName(), eventData);
+                                        _log.info("Event ID={} matched with subscription {}.", rawEvent.getId(), subscription.getName());
                                     }
                                 }
                                 matchTime.stop();
                                 _subscriptionMatchEvaluations.mark(subscriptionCount);
+                                _log.info("Event ID={} processed with {} subscriptions.", rawEvent.getId(), subscriptionCount);
 
-                                // Copy to queues for eventual delivery to remote data centers.
-                                try (Timer.Context ignored4 = _replicateTimer.time()) {
-                                    if (_replicateOutbound) {
+                                if (_replicateOutbound) {
+                                    try (Timer.Context ignored4 = _replicateTimer.time()) {
                                         for (DataCenter dataCenter : matchEventData.getTable().getDataCenters()) {
                                             if (!dataCenter.equals(_currentDataCenter)) {
-                                                int partition = _outboundPartitionSelector.getPartition(matchEventData.getKey());
-                                                String channel = ChannelNames.getReplicationFanoutChannel(dataCenter, partition);
+                                                String channel = ChannelNames.getReplicationFanoutChannel(dataCenter, _outboundPartitionSelector.getPartition(matchEventData.getKey()));
                                                 eventsByChannel.put(channel, eventData);
                                                 numOutboundReplicationEvents++;
+                                                _log.info("Event ID={} replicated to data center {}.", rawEvent.getId(), dataCenter.getName());
                                             }
                                         }
                                     }
                                 }
-
-                                // Flush to cap the amount of memory used to buffer events.
                                 if (eventsByChannel.size() >= FLUSH_EVENTS_THRESHOLD) {
+                                    _log.info("Flushing {} events to channels.", eventsByChannel.size());
                                     flush(eventKeys, eventsByChannel, numOutboundReplicationEvents);
                                     numOutboundReplicationEvents = 0;
                                 }
-
-                                // Track the final match event data record returned
                                 lastMatchEventData = matchEventData;
                             }
-
-                            // Final flush.
                             flush(eventKeys, eventsByChannel, numOutboundReplicationEvents);
-
                             if (lastMatchEventData != null) {
                                 lastMatchEventBatchTimes.add(lastMatchEventData.getEventTime());
+                                _log.info("Added last match event time: {}.", lastMatchEventData.getEventTime());
                             }
                         }
                     } catch (Throwable t) {
@@ -284,26 +284,22 @@ public class DefaultFanout extends AbstractScheduledService {
 
             for (final Future<?> future : futures) {
                 Futures.getUnchecked(future);
+                _log.info("Future processed.");
             }
 
-            // Update the lag metrics based on the last event returned.  This isn't perfect for several reasons:
-            // 1. In-order delivery is not guaranteed
-            // 2. The event time is based on the change ID which is close-to but not precisely the time the update occurred
-            // 3. Injected events have artificial change IDs which don't correspond to any clock-based time
-            // However, this is still a useful metric because:
-            // 1. Delivery is in-order the majority of the time
-            // 2. Change IDs are typically within milliseconds of update times
-            // 3. Injected events are extremely rare and should be avoided outside of testing anyway
-            // 4. The lag only becomes a concern on the scale of minutes, far above the uncertainty introduced by the above
             Date lastMatchEventTime = lastMatchEventBatchTimes.stream().max(Date::compareTo).orElse(null);
             if (lastMatchEventTime != null) {
+                _log.info("Updating lag metrics with last match event time: {}.", lastMatchEventTime);
                 updateLagMetrics(lastMatchEventTime);
             }
+        } catch (Exception e) {
+            _log.error("Error during event processing: {}", e.getMessage(), e);
+            return false;
         }
 
+        _log.info("Exiting copyEvents successfully.");
         return true;
     }
-
     private void updateLagMetrics(@Nullable Date eventTime) {
         int lagSeconds = eventTime == null ? 0 : (int) TimeUnit.MILLISECONDS.toSeconds(_clock.millis() - eventTime.getTime());
         // As a performance savings only update the metric if both of the following are true:
