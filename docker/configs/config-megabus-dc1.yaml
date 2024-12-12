@@ -166,7 +166,7 @@ kafka:
     bufferMemory: 33554432 # 32MB
 
 megabus:
-  applicationId: megabus-dc1
+  applicationId: megabus-test-dc1
   refResolverConsumerGroupName: emodb.dc1.megabus.resolver
   delayProcessorConsumerGroupName: emodb.dc1.megabus.delay
   megabusRefTopic:
