@@ -135,6 +135,9 @@ public class AthenaAuditWriter implements AuditStore {
         if (s3AuditRoot.endsWith("/")) {
             s3AuditRoot = s3AuditRoot.substring(0, s3AuditRoot.length() - 1);
         }
+        _log.warn("value of com.google.common.io.Files.createTempDir() " + com.google.common.io.Files.createTempDir());
+        _log.warn("value of _stagingDir " + stagingDir);
+
         _s3AuditRoot = s3AuditRoot;
 
         checkArgument(stagingDir.exists(), "Staging directory must exist");
