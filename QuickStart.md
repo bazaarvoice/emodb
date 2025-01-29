@@ -1,6 +1,6 @@
 ### Starting EmoDB locally using only EmoDB binaries 
 
-To start EmoDB locally, simply download the [EmoDB binaries] (https://github.com/bazaarvoice/emodb/releases), and run the following:
+To start EmoDB locally, simply download the [EmoDB binaries] (https://github.com/bvengineering/emodb/releases), and run the following:
 
 ```
 $> ./start-local.sh
