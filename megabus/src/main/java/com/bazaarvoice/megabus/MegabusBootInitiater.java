@@ -3,10 +3,14 @@ package com.bazaarvoice.megabus;
 import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.megabus.refproducer.MegabusRefProducerManager;
 import com.google.common.util.concurrent.AbstractIdleService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static java.util.Objects.requireNonNull;
 
 public class MegabusBootInitiater extends AbstractIdleService {
+
+    private static final Logger _log = LoggerFactory.getLogger(MegabusBootInitiater.class);
 
     public static final String SERVICE_NAME = "megabus-boot-initiater";
 
@@ -26,6 +30,7 @@ public class MegabusBootInitiater extends AbstractIdleService {
     @Override
     protected void startUp() {
         _megabusRefProducerManager.createRefSubscriptions();
+        _log.info("Starting up serice {} in MegabusBootInitiater with application ID {}", SERVICE_NAME, _applicationId);
         switch (_megabusBootDAO.getBootStatus(_applicationId)) {
             case NOT_STARTED:
                 _megabusBootDAO.initiateBoot(_applicationId, _megabusTopic);

@@ -56,6 +56,7 @@ public class MegabusBootWorkflowManager implements Managed {
                                       MegabusRefProducerManager refProducerManager,
                                       @TableEventProcessorService Service tableEventProcessorService,
                                       MegabusBootDAO statusDAO) {
+        _log.info("Initializing megabus boot in MegabusBootWorkflowManager with application id {}", megabusApplicationId);
         _applicationId = megabusApplicationId;
         _bootInitiater = new LeaderService(curator, LEADER_DIR, selfHostAndPort.toString(),
                 MegabusBootInitiater.SERVICE_NAME, 1, TimeUnit.MINUTES,

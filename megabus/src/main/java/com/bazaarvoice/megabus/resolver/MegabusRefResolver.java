@@ -156,6 +156,8 @@ public class MegabusRefResolver extends KafkaStreamsService {
 
     private ResolutionResult resolveRefs(Collection<MegabusRef> refs) {
 
+        _log.info("Resolving refs in MegabusRefResolver");
+
         // If isDeleted() is true, then this batch was the result of a table event, and we should propogate null's. Additionally,
         // all refs in the batch should have isDeleted() == true. A batch having some refs with true and some with false is an invalid state.
         if (refs.stream().anyMatch(ref -> ref.getRefType() == MegabusRef.RefType.DELETED)) {
