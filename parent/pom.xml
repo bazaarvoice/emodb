@@ -6,7 +6,7 @@
         <groupId>com.bazaarvoice.commons</groupId>
         <artifactId>bv-opensource-super-pom</artifactId>
         <version>1.12</version>
-        <relativePath />
+        <relativePath/>
     </parent>
 
     <groupId>com.bazaarvoice.emodb</groupId>
@@ -28,7 +28,7 @@
         <dropwizard-metrics-datadog.version>1.1.13</dropwizard-metrics-datadog.version>
         <cassandra.version>3.11.12</cassandra.version>
         <cassandra-maven-plugin.version>${cassandra.version}.1</cassandra-maven-plugin.version>
-        <curator.version>2.4.2</curator.version>
+        <curator.version>2.9.0</curator.version>
         <curator-jersey2.version>4.2.0</curator-jersey2.version>
         <curator-extensions.version>1.4.2</curator-extensions.version>
         <dropwizard.version>0.7.1</dropwizard.version>
@@ -47,7 +47,7 @@
         <slf4j.version>1.7.36</slf4j.version>
         <commons-io.version>2.7</commons-io.version>
         <commons-compress.version>1.21</commons-compress.version>
-        <aws-sdk.version>1.11.1034</aws-sdk.version>
+        <aws-sdk.version>1.12.566</aws-sdk.version>
         <javassist.version>3.20.0-GA</javassist.version>
         <jodatime-version>2.9.9</jodatime-version>
         <jersey.version>1.19.4</jersey.version>
@@ -972,9 +972,9 @@
                                     <version>[${java.minimum.version},)</version>
                                     <message>requires ${java.minimum.version}+</message>
                                 </requireJavaVersion>
-                                <dependencyConvergence />
-                                <requireUpperBoundDeps />
-                                <banDuplicatePomDependencyVersions />
+                                <dependencyConvergence/>
+                                <requireUpperBoundDeps/>
+                                <banDuplicatePomDependencyVersions/>
                                 <bannedDependencies>
                                     <excludes>
                                         <!-- This should not exist until DW 0.8.x+ upgrade -->
