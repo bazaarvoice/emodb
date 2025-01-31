@@ -1,10 +1,10 @@
 source "https://rubygems.org"
 
-gem "jekyll", "~> 3.0"
+gem "jekyll", "~> 3.9", ">= 3.9.0"
 gem "jekyll-sitemap"
 gem "jekyll-gist"
 gem 'rake'
 gem 'puma'
 gem "rack-jekyll"
 gem "rouge"
-gem "kramdown"
+gem "kramdown", ">= 2.3.1"
